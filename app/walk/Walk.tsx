@@ -1,0 +1,337 @@
+"use client";
+
+import Link from "next/link";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { nearestAhead } from "@/lib/hazard/corridor";
+import { DEBUG_OVERLAY, SENSING } from "@/lib/shared/params";
+import {
+  errorText,
+  startSensing,
+  type Cue,
+  type Granted,
+  type SensingSession,
+  type SessionSummary,
+} from "@/lib/xr/session";
+import type { SensingUpdate } from "@/lib/xr/types";
+import DebugOverlay, { type DebugView } from "./DebugOverlay";
+import { askLocation, locationPermission, watchLocation, type Fix } from "./location";
+import StopButton from "./StopButton";
+import { LINES, say, unlockVoice } from "./voice";
+
+type Phase = "ready" | "starting" | "running" | "ended";
+type Support = "checking" | "ok" | "none";
+
+const DEBUG_KEY = "beluga.debug";
+
+function readDebugDefault(): boolean {
+  try {
+    return localStorage.getItem(DEBUG_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function saveDebugDefault(on: boolean): void {
+  try {
+    localStorage.setItem(DEBUG_KEY, on ? "1" : "0");
+  } catch {
+    // Private mode: the switch still works for this visit.
+  }
+}
+
+async function requestWakeLock(): Promise<WakeLockSentinel | null> {
+  try {
+    return "wakeLock" in navigator ? await navigator.wakeLock.request("screen") : null;
+  } catch {
+    return null;
+  }
+}
+
+interface Latest {
+  update: SensingUpdate | null;
+  nearest: number | null;
+  fix: Fix | null;
+  granted: Granted | null;
+}
+
+export default function Walk() {
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const glRef = useRef<WebGL2RenderingContext | null>(null);
+  const sessionRef = useRef<SensingSession | null>(null);
+  const audioRef = useRef<AudioContext | null>(null);
+  const cleanupRef = useRef<Array<() => void>>([]);
+  const debugRef = useRef(false);
+  const latestRef = useRef<Latest>({ update: null, nearest: null, fix: null, granted: null });
+
+  const [support, setSupport] = useState<Support>("checking");
+  const [needLocation, setNeedLocation] = useState(false);
+  const [phase, setPhase] = useState<Phase>("ready");
+  const [session, setSession] = useState<SensingSession | null>(null);
+  const [debug, setDebug] = useState(false);
+  const [view, setView] = useState<DebugView | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [summary, setSummary] = useState<SessionSummary | null>(null);
+
+  const runCleanups = useCallback(() => {
+    cleanupRef.current.splice(0).forEach((fn) => fn());
+  }, []);
+
+  useEffect(() => {
+    const overlay = overlayRef.current;
+    // Taps on the overlay must not also fire an XR select.
+    const stopSelect = (e: Event) => e.preventDefault();
+    overlay?.addEventListener("beforexrselect", stopSelect);
+
+    const check = async () => {
+      const canvas = document.createElement("canvas");
+      const gl = canvas.getContext("webgl2", { xrCompatible: true, alpha: true, antialias: false });
+      glRef.current = gl;
+      let supported = false;
+      try {
+        supported = Boolean(gl && navigator.xr && (await navigator.xr.isSessionSupported("immersive-ar")));
+      } catch {
+        supported = false;
+      }
+      setSupport(supported ? "ok" : "none");
+      setNeedLocation((await locationPermission()) === "prompt");
+      const on = readDebugDefault();
+      debugRef.current = on;
+      setDebug(on);
+    };
+    void check();
+
+    return () => {
+      overlay?.removeEventListener("beforexrselect", stopSelect);
+      sessionRef.current?.stop();
+      runCleanups();
+    };
+  }, [runCleanups]);
+
+  // Numbers for the overlay refresh a few times a second, not on every update.
+  useEffect(() => {
+    if (phase !== "starting" && phase !== "running") return;
+    const id = window.setInterval(() => {
+      setView({ ...latestRef.current, stats: sessionRef.current?.stats() ?? null });
+    }, DEBUG_OVERLAY.refreshMs);
+    return () => window.clearInterval(id);
+  }, [phase]);
+
+  const onUpdate = useCallback((update: SensingUpdate) => {
+    latestRef.current.update = update;
+    // Out to the full depth range, so the tape-measure check works past the corridor's 3 m.
+    latestRef.current.nearest = update.tracking ? nearestAhead(update, SENSING.depthMaxM) : null;
+  }, []);
+
+  const onCue = useCallback((cue: Cue) => say(cue), []);
+
+  const onEnd = useCallback(
+    (result: SessionSummary) => {
+      sessionRef.current = null;
+      setSession(null);
+      runCleanups();
+      // A session that never got going is reported by the start handler instead.
+      if (!result.granted) return;
+      setPhase("ended");
+      setSummary(result);
+      say("stopped");
+      if (debugRef.current) {
+        console.info("[beluga walk] summary", result);
+        // Lands in the dev server terminal (or Vercel logs) for testers. No location in it.
+        void fetch("/api/device-check", { method: "POST", body: JSON.stringify({ kind: "walk", ...result }) }).catch(
+          () => {},
+        );
+      }
+    },
+    [runCleanups],
+  );
+
+  const start = () => {
+    const overlay = overlayRef.current;
+    const gl = glRef.current;
+    if (!overlay || !gl || support !== "ok") return;
+
+    // startSensing calls requestSession before anything else in this tap.
+    const started = startSensing({ overlayRoot: overlay, gl, onUpdate, onCue, onEnd });
+    sessionRef.current = started;
+
+    // The same tap has to resume audio and unlock speech, or Chrome keeps both silent.
+    audioRef.current ??= new AudioContext({ latencyHint: "interactive" });
+    void audioRef.current.resume();
+    unlockVoice();
+    void requestWakeLock().then((lock) => {
+      if (!lock) return;
+      if (sessionRef.current === started) cleanupRef.current.push(() => void lock.release());
+      else void lock.release();
+    });
+    cleanupRef.current.push(
+      watchLocation((fix) => {
+        latestRef.current.fix = fix;
+      }),
+    );
+
+    latestRef.current = { update: null, nearest: null, fix: latestRef.current.fix, granted: null };
+    setSession(started);
+    setMessage(null);
+    setSummary(null);
+    setView(null);
+    setPhase("starting");
+
+    started.ready.then(
+      (granted) => {
+        latestRef.current.granted = granted;
+        setPhase((p) => (p === "starting" ? "running" : p));
+        if (!granted.depth) {
+          say("no_depth");
+          setMessage(LINES.no_depth);
+        }
+      },
+      (err: unknown) => {
+        if (sessionRef.current === started) sessionRef.current = null;
+        setSession(null);
+        runCleanups();
+        setPhase("ready");
+        say("start_failed");
+        setMessage(`beluga could not start: ${errorText(err)}`);
+      },
+    );
+  };
+
+  const toggleDebug = () => {
+    const next = !debug;
+    debugRef.current = next;
+    setDebug(next);
+    saveDebugDefault(next);
+  };
+
+  const allowLocation = async () => {
+    await askLocation();
+    setNeedLocation((await locationPermission()) === "prompt");
+  };
+
+  const inAr = phase === "starting" || phase === "running";
+  const update = view?.update ?? null;
+  let status: string | null = null;
+  if (phase === "starting") status = "Starting";
+  else if (update && !update.tracking) status = "Hold steady";
+  else if (update?.calibrating) status = "Take three slow steps";
+
+  return (
+    <div
+      ref={overlayRef}
+      onTouchStart={(e) => {
+        // Three fingers toggle the debug overlay. TalkBack keeps multi-finger gestures, so this is for sighted testers.
+        if (inAr && e.touches.length === 3) toggleDebug();
+      }}
+      className={`min-h-dvh w-full ${inAr ? "bg-transparent" : "bg-background"} text-foreground`}
+    >
+      {inAr ? (
+        <main className="flex min-h-dvh flex-col justify-between gap-3 p-3">
+          <div className="flex flex-col gap-2">
+            {status && (
+              <p role="status" className="self-start rounded bg-black/75 px-3 py-1 text-lg font-semibold text-white">
+                {status}
+              </p>
+            )}
+            {message && (
+              <p role="alert" className="rounded bg-red-900/90 px-3 py-2 text-white">
+                {message}
+              </p>
+            )}
+            {debug && <DebugOverlay view={view} session={session} />}
+          </div>
+          <StopButton onStop={() => sessionRef.current?.stop()} />
+        </main>
+      ) : (
+        <main className="mx-auto flex w-full max-w-xl flex-col gap-4 p-4">
+          <header className="flex flex-col gap-2">
+            <h1 className="text-4xl font-bold">beluga</h1>
+            <p className="text-lg">
+              Plays a sound from the side of obstacles in your path. It works alongside your cane or guide dog, and it can
+              miss things.
+            </p>
+          </header>
+
+          {support === "none" && (
+            <p role="alert" className="rounded-lg bg-red-900 p-3">
+              This browser can&apos;t start an AR session. Use Chrome on an Android phone with ARCore, and run the device
+              check below to see what is missing.
+            </p>
+          )}
+
+          {needLocation && (
+            <div className="flex flex-col gap-2">
+              <p>
+                Location marks where hazard reports happen, to about 100 m. Chrome can&apos;t ask during a session, so it
+                asks now.
+              </p>
+              <button
+                type="button"
+                onClick={allowLocation}
+                className="min-h-16 rounded-lg border-2 border-yellow-300 px-4 text-lg font-semibold"
+              >
+                Allow location
+              </button>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={start}
+            disabled={support !== "ok"}
+            className="min-h-24 rounded-lg bg-yellow-300 px-4 text-2xl font-bold text-black disabled:opacity-50"
+          >
+            {support === "checking" ? "Checking this phone" : phase === "ended" ? "Start again" : "Start"}
+          </button>
+
+          {message && (
+            <p role="alert" className="rounded-lg bg-red-900 p-3">
+              {message}
+            </p>
+          )}
+
+          {summary && debug && <Summary summary={summary} />}
+
+          <label className="flex min-h-16 items-center gap-3 text-lg">
+            <input type="checkbox" checked={debug} onChange={toggleDebug} className="h-6 w-6" />
+            Show the debug overlay (a three-finger tap also toggles it during a session)
+          </label>
+          <Link href="/walk/check" className="text-lg underline">
+            Device check
+          </Link>
+        </main>
+      )}
+    </div>
+  );
+}
+
+function metres(value: number | null): string {
+  return value === null ? "not measured" : `${value.toFixed(2)} m`;
+}
+
+// The last session's numbers against the Phase 1 targets.
+function Summary({ summary }: { summary: SessionSummary }) {
+  const { floor } = summary;
+  return (
+    <section className="flex flex-col gap-1 rounded-lg border border-neutral-600 p-3 tabular-nums">
+      <h2 className="text-lg font-semibold">Last session</h2>
+      <p>
+        {Math.round(summary.durationS)} s, ended by {summary.reason}
+        {summary.error && `: ${summary.error}`}
+      </p>
+      <p>
+        {summary.updateRate.toFixed(1)} updates/s (target about 10), {summary.frameRate.toFixed(0)} frames/s
+      </p>
+      <p>Tracking lost {Math.round(summary.trackingLostShare * 100)}% of the time</p>
+      <p>
+        Depth valid{" "}
+        {summary.depthValidShare === null ? "never" : `${Math.round(summary.depthValidShare * 100)}% of points`}
+      </p>
+      <p>
+        Floor {floor.source.replace("_", " ")}
+        {floor.calibratedAfterS !== null && ` after ${floor.calibratedAfterS.toFixed(1)} s`}, moved{" "}
+        {metres(floor.driftM)} since (target 0.20 m or less)
+      </p>
+      <p>Phone {metres(floor.phoneAboveFloorM)} above the floor on average</p>
+    </section>
+  );
+}

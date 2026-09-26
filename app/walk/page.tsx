@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import DeviceCheck from "./check/DeviceCheck";
+import Walk from "./Walk";
 
-export const metadata: Metadata = { title: "beluga device check" };
+export const metadata: Metadata = { title: "beluga" };
 
-// Phase 0: the device check. Phase 1 replaces this with the walking app.
 export default function WalkPage() {
-  return <DeviceCheck />;
+  return <Walk />;
 }
