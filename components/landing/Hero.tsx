@@ -39,7 +39,7 @@ export function Hero() {
         className="absolute inset-x-0 bottom-0 -z-10 h-1/2 bg-linear-to-b from-transparent to-background"
       />
       <Spotlight />
-      <Water className="absolute inset-x-0 bottom-0 -z-10 h-48 opacity-60 sm:h-64" />
+      <Water className="absolute inset-x-0 bottom-0 -z-10 h-48 opacity-60 [mask-image:linear-gradient(to_bottom,black_35%,transparent)] sm:h-64" />
 
       <div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-[1.15fr_1fr] lg:gap-6">
         <div className="relative z-10 order-2 lg:order-1">

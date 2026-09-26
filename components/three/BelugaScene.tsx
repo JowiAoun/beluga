@@ -125,9 +125,9 @@ function Beluga({ still, progress, onReady }: { still: boolean; progress: Motion
       if (!ring) return;
       ring.visible = !still;
       const phase = (t / RING_SECONDS + i / RINGS) % 1;
-      ring.position.set(MELON.x + 0.4 + phase * 2.4, MELON.y + phase * 0.15, MELON.z);
-      ring.scale.setScalar(0.25 + phase * 1.6);
-      (ring.material as THREE.MeshBasicMaterial).opacity = Math.sin(phase * Math.PI) * 0.55;
+      ring.position.set(MELON.x + 0.3 + phase * 1.6, MELON.y, MELON.z);
+      ring.scale.setScalar(0.2 + phase * 1.05);
+      (ring.material as THREE.MeshBasicMaterial).opacity = Math.sin(phase * Math.PI) * (1 - phase) * 0.9;
     });
   });
 
