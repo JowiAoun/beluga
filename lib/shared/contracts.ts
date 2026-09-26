@@ -314,3 +314,16 @@ export interface PerfSnapshot {
 export interface PerfResponse extends DashboardResponse {
   latest: PerfSnapshot | null;
 }
+
+// Ask the data (Phase 7 stretch): a planner's question to the data agent on the dashboard.
+export const AskDataRequestSchema = z.object({
+  question: z.string().trim().min(3).max(200),
+});
+export type AskDataRequest = z.infer<typeof AskDataRequestSchema>;
+
+export interface AskDataResponse extends DashboardResponse {
+  answer: string;
+  // Each lookup tool the agent called, with the filters it chose.
+  lookups: { tool: string; filters: Record<string, string> }[];
+  latencyMs: number;
+}

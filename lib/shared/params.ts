@@ -260,6 +260,12 @@ export const DASHBOARD = {
   cellsAndStationsPollMs: 15_000,
   queueLimit: 25,
   feedLimit: 20,
+  // Ask the data (Phase 7 stretch): rows per lookup sent to the agent, how long a lookup may take,
+  // the whole answer's time limit, and the default for DATA_HOURLY_BUDGET.
+  askDataRows: 10,
+  askDataLookupMs: 3000,
+  askDataTimeoutMs: 15_000,
+  askDataHourlyBudget: 60,
 } as const;
 
 export const SEED = {

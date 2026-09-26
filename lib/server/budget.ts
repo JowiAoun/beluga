@@ -1,21 +1,21 @@
 import "server-only";
 
-// Hourly call budgets for /api/triage and /api/ask, so a bug or a stranger can't drain the
-// ElevenLabs credits. The count lives in the `api_budget` table, shared by every server instance.
-// If the database can't be reached, each instance keeps its own count in memory instead.
+// Hourly call budgets for /api/triage, /api/ask and Ask the data, so a bug or a stranger can't
+// drain the ElevenLabs credits. The count lives in the `api_budget` table, shared by every server
+// instance. If the database can't be reached, each instance keeps its own count in memory instead.
 
-import { DATABASE, NETWORK } from "@/lib/shared/params";
+import { DASHBOARD, DATABASE, NETWORK } from "@/lib/shared/params";
 import { db, inTime } from "./db/client";
 import { envNumber } from "./env";
 
-export type BudgetRoute = "triage" | "ask";
+export type BudgetRoute = "triage" | "ask" | "data";
 
 const HOUR_MS = 60 * 60 * 1000;
 
 function limitFor(route: BudgetRoute): number {
-  return route === "triage"
-    ? envNumber("TRIAGE_HOURLY_BUDGET", NETWORK.triageHourlyBudget)
-    : envNumber("ASK_HOURLY_BUDGET", NETWORK.askHourlyBudget);
+  if (route === "triage") return envNumber("TRIAGE_HOURLY_BUDGET", NETWORK.triageHourlyBudget);
+  if (route === "ask") return envNumber("ASK_HOURLY_BUDGET", NETWORK.askHourlyBudget);
+  return envNumber("DATA_HOURLY_BUDGET", DASHBOARD.askDataHourlyBudget);
 }
 
 const memory = new Map<string, number>();

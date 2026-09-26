@@ -1,14 +1,23 @@
 import "server-only";
 
-// Best Use of ElevenLabs: the two image-capable agents that see for beluga, each with one client
-// tool that carries its answer back. `npm run agents` creates or
-// updates them from this file, so a prompt change is a commit. Prompts are the Phase 5 wording.
+// Best Use of ElevenLabs: the two agents that see for beluga, each with a Gemini model from the
+// ElevenLabs list and one client tool that carries its answer back, and the Ask the data agent on
+// the dashboard (Phase 7 stretch). `npm run agents` creates or updates them from this file, so a
+// prompt change is a commit. Prompts are the Phase 5 wording.
 
 import type { TriageHazard } from "@/lib/shared/contracts";
-import { CIVIC_CATEGORIES, SCENE_CONTEXTS, WAY_AROUND, type SceneContext } from "@/lib/shared/enums";
+import {
+  CIVIC_CATEGORIES,
+  DASHBOARD_WINDOWS,
+  SCENE_CONTEXTS,
+  SOURCE_FILTERS,
+  WAY_AROUND,
+  type SceneContext,
+} from "@/lib/shared/enums";
+import { STATIONS } from "@/lib/shared/stations";
 import { NO_CATEGORY } from "./answers";
 
-export type AgentKey = "triage" | "ask";
+export type AgentKey = "triage" | "ask" | "data";
 
 interface JsonProperty {
   type: "string" | "number" | "integer" | "boolean";
@@ -16,19 +25,26 @@ interface JsonProperty {
   enum?: readonly string[];
 }
 
+export interface ToolSpec {
+  name: string;
+  description: string;
+  properties: Record<string, JsonProperty>;
+  required: string[];
+}
+
 export interface AgentSpec {
   key: AgentKey;
   name: string;
   // Where the backend finds the agent's id once `npm run agents` has made it.
-  idEnv: "ELEVENLABS_TRIAGE_AGENT_ID" | "ELEVENLABS_ASK_AGENT_ID";
+  idEnv: "ELEVENLABS_TRIAGE_AGENT_ID" | "ELEVENLABS_ASK_AGENT_ID" | "ELEVENLABS_DATA_AGENT_ID";
   llm: string;
   prompt: string;
-  tool: {
-    name: string;
-    description: string;
-    properties: Record<string, JsonProperty>;
-    required: string[];
-  };
+  // Takes one photo per conversation (file input on).
+  seesPhotos: boolean;
+  // Carries the answer back and ends the turn.
+  tool: ToolSpec;
+  // Tools the backend answers with data before the answer comes (Ask the data only).
+  lookups?: ToolSpec[];
 }
 
 const BOX = {
@@ -62,6 +78,73 @@ const ASK_PROMPT =
   "its box. For traffic or walk signals say only what the signal appears to show; never say it is safe to cross. " +
   "Never describe people's faces or identities. Answer only by calling ask_answer, once.";
 
+const DATA_PROMPT =
+  "You answer questions from city staff about beluga's hazard data around Ottawa's O-Train stations. beluga users " +
+  "are blind and low-vision pedestrians whose phones report hazards anonymously. Answer in one or two short, plain " +
+  "sentences. Take every number from the lookup tools and never guess one. Use the time window the question asks " +
+  "for, or 7d when it doesn't say. Every lookup says includesSimulated: when it is true, say the numbers include " +
+  "simulated demo data, and never call them live. Times are Ottawa time. Use Canadian spelling, like metres. If " +
+  "the tools can't answer the question, say so. Answer only by calling data_answer, once.";
+
+const WINDOW = {
+  type: "string",
+  description: "Time window: 1h, 24h, 7d or 14d. Use 7d when the question doesn't say.",
+  enum: DASHBOARD_WINDOWS,
+} as const;
+const SOURCE = {
+  type: "string",
+  description: "live for real reports, simulated for the demo data, both for all. Use both unless asked.",
+  enum: SOURCE_FILTERS,
+} as const;
+const CATEGORY = {
+  type: "string",
+  description: "One report category, or all.",
+  enum: [...CIVIC_CATEGORIES, "all"],
+} as const;
+const STATION = {
+  type: "string",
+  description: "One O-Train station id, or all.",
+  enum: [...STATIONS.map((st) => st.id), "all"],
+} as const;
+
+const DATA_LOOKUPS: ToolSpec[] = [
+  {
+    name: "fix_first_queue",
+    description:
+      "The fix-first list: places ranked by a score from severity, distinct reporters, near-misses, how recent, " +
+      "and nearness to a station. Returns the top 10, or the top 10 within a kilometre of one station.",
+    properties: { window: WINDOW, category: CATEGORY, station: STATION, source: SOURCE },
+    required: ["window", "category", "station", "source"],
+  },
+  {
+    name: "check_now",
+    description:
+      "Spots with a severity 4 report (a fall risk, like a drop or a missing edge strip) in the last 14 days, " +
+      "newest day first. These need a check before they reach the top of the fix-first list.",
+    properties: { category: CATEGORY, source: SOURCE },
+    required: ["category", "source"],
+  },
+  {
+    name: "busiest_cells",
+    description: "Map cells of about 150 m with the most hazard events, near-misses and reports. Returns the top 10.",
+    properties: { window: WINDOW, source: SOURCE },
+    required: ["window", "source"],
+  },
+  {
+    name: "station_near_misses",
+    description:
+      "Near-misses per O-Train station over the last 7 days, most first. For one station, also its busiest hours.",
+    properties: { station: STATION, source: SOURCE },
+    required: ["station", "source"],
+  },
+  {
+    name: "recent_reports",
+    description: "The latest civic reports, newest first, up to 10.",
+    properties: { category: CATEGORY, source: SOURCE },
+    required: ["category", "source"],
+  },
+];
+
 export const AGENTS: Record<AgentKey, AgentSpec> = {
   triage: {
     key: "triage",
@@ -69,6 +152,7 @@ export const AGENTS: Record<AgentKey, AgentSpec> = {
     idEnv: "ELEVENLABS_TRIAGE_AGENT_ID",
     llm: "gpt-4.1-mini",
     prompt: TRIAGE_PROMPT,
+    seesPhotos: true,
     tool: {
       name: "triage_answer",
       description: "Returns the triage answers for the photo. Call it exactly once.",
@@ -121,6 +205,7 @@ export const AGENTS: Record<AgentKey, AgentSpec> = {
     idEnv: "ELEVENLABS_ASK_AGENT_ID",
     llm: "gemini-3.5-flash-lite",
     prompt: ASK_PROMPT,
+    seesPhotos: true,
     tool: {
       name: "ask_answer",
       description: "Returns the spoken answer. Call it exactly once.",
@@ -131,6 +216,23 @@ export const AGENTS: Record<AgentKey, AgentSpec> = {
       },
       required: ["answer"],
     },
+  },
+  data: {
+    key: "data",
+    name: "beluga data",
+    idEnv: "ELEVENLABS_DATA_AGENT_ID",
+    llm: "gemini-3.5-flash-lite",
+    prompt: DATA_PROMPT,
+    seesPhotos: false,
+    tool: {
+      name: "data_answer",
+      description: "Returns the answer to the question. Call it exactly once, after the lookups.",
+      properties: {
+        answer: { type: "string", description: "One or two short, plain sentences with the numbers from the lookups." },
+      },
+      required: ["answer"],
+    },
+    lookups: DATA_LOOKUPS,
   },
 };
 

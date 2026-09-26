@@ -1,5 +1,5 @@
-// Best Use of ElevenLabs: creates or updates beluga's two agents (triage and Ask) and their client
-// tools from lib/server/agents/config.ts, so the agents' setup lives in the repo.
+// Best Use of ElevenLabs: creates or updates beluga's three agents (triage, Ask and Ask the data)
+// and their client tools from lib/server/agents/config.ts, so the agents' setup lives in the repo.
 //
 // Run `npm run agents`, then copy the printed ids into .env.local and Vercel.
 // Run `npm run agents -- --check photo.jpg` for the Phase 5 image check: one triage turn on the
@@ -7,7 +7,7 @@
 // Run `npm run agents -- --sweep` to delete every finished conversation both agents still have.
 
 import { readFileSync } from "node:fs";
-import { AGENTS, triageNote, type AgentSpec } from "@/lib/server/agents/config";
+import { AGENTS, triageNote, type AgentSpec, type ToolSpec } from "@/lib/server/agents/config";
 import { deleteConversation, runAgentTurn, sweepConversations } from "@/lib/server/agents/turn";
 
 const API = "https://api.elevenlabs.io/v1";
@@ -51,24 +51,28 @@ async function checkModels(): Promise<void> {
   for (const agent of Object.values(AGENTS)) {
     const model = llms?.find((m) => m.llm === agent.llm);
     if (!model) fail(`${agent.llm} isn't in this account's model list. Pick another in lib/server/agents/config.ts.`);
+    if (!agent.seesPhotos) {
+      console.info(`${agent.name}: ${agent.llm}`);
+      continue;
+    }
     if (!model.supports_image_input) fail(`${agent.llm} can't see images. Pick another in lib/server/agents/config.ts.`);
     console.info(`${agent.name}: ${agent.llm} takes images`);
   }
 }
 
-function toolBody(agent: AgentSpec) {
+function toolBody(tool: ToolSpec) {
   return {
     tool_config: {
       type: "client",
-      name: agent.tool.name,
-      description: agent.tool.description,
+      name: tool.name,
+      description: tool.description,
       expects_response: true,
       response_timeout_secs: 10,
       parameters: {
         type: "object",
-        required: agent.tool.required,
+        required: tool.required,
         properties: Object.fromEntries(
-          Object.entries(agent.tool.properties).map(([name, p]) => [
+          Object.entries(tool.properties).map(([name, p]) => [
             name,
             { type: p.type, description: p.description, ...(p.enum ? { enum: [...p.enum] } : {}) },
           ]),
@@ -78,20 +82,20 @@ function toolBody(agent: AgentSpec) {
   };
 }
 
-async function upsertTool(agent: AgentSpec): Promise<string> {
+async function upsertTool(tool: ToolSpec): Promise<string> {
   const { tools } = await api<{ tools?: Array<{ id: string; tool_config?: { name?: string } }> }>(
-    `/convai/tools?search=${encodeURIComponent(agent.tool.name)}&types=client`,
+    `/convai/tools?search=${encodeURIComponent(tool.name)}&types=client`,
   );
-  const existing = tools?.find((t) => t.tool_config?.name === agent.tool.name);
+  const existing = tools?.find((t) => t.tool_config?.name === tool.name);
   if (existing) {
-    await api(`/convai/tools/${existing.id}`, { method: "PATCH", body: toolBody(agent) });
+    await api(`/convai/tools/${existing.id}`, { method: "PATCH", body: toolBody(tool) });
     return existing.id;
   }
-  const { id } = await api<{ id: string }>("/convai/tools", { method: "POST", body: toolBody(agent) });
+  const { id } = await api<{ id: string }>("/convai/tools", { method: "POST", body: toolBody(tool) });
   return id;
 }
 
-function agentBody(agent: AgentSpec, toolId: string) {
+function agentBody(agent: AgentSpec, toolIds: string[]) {
   return {
     name: agent.name,
     tags: ["beluga"],
@@ -100,14 +104,16 @@ function agentBody(agent: AgentSpec, toolId: string) {
         // Empty, so the agent waits for the frame instead of speaking first.
         first_message: "",
         language: "en",
-        prompt: { prompt: agent.prompt, llm: agent.llm, temperature: TEMPERATURE, tool_ids: [toolId] },
+        prompt: { prompt: agent.prompt, llm: agent.llm, temperature: TEMPERATURE, tool_ids: toolIds },
       },
       conversation: {
         text_only: true,
         max_duration_seconds: LONGEST_CONVERSATION_S,
         client_events: CLIENT_EVENTS,
         // Three, in case an upload that was cut short and sent again lands every time.
-        file_input: { enabled: true, max_files_in_memory: 1, max_files_per_conversation: 3 },
+        file_input: agent.seesPhotos
+          ? { enabled: true, max_files_in_memory: 1, max_files_per_conversation: 3 }
+          : { enabled: false },
       },
     },
     platform_settings: {
@@ -127,15 +133,15 @@ function agentBody(agent: AgentSpec, toolId: string) {
   };
 }
 
-async function upsertAgent(agent: AgentSpec, toolId: string): Promise<string> {
+async function upsertAgent(agent: AgentSpec, toolIds: string[]): Promise<string> {
   const existingId = process.env[agent.idEnv];
   if (existingId) {
-    await api(`/convai/agents/${existingId}`, { method: "PATCH", body: agentBody(agent, toolId) });
+    await api(`/convai/agents/${existingId}`, { method: "PATCH", body: agentBody(agent, toolIds) });
     return existingId;
   }
   const { agent_id: agentId } = await api<{ agent_id: string }>("/convai/agents/create", {
     method: "POST",
-    body: agentBody(agent, toolId),
+    body: agentBody(agent, toolIds),
   });
   return agentId;
 }
@@ -194,9 +200,11 @@ async function main(): Promise<void> {
   await checkModels();
   const lines: string[] = [];
   for (const agent of Object.values(AGENTS)) {
-    const toolId = await upsertTool(agent);
-    const agentId = await upsertAgent(agent, toolId);
-    console.info(`${agent.name}: agent ${agentId}, tool ${agent.tool.name} ${toolId}`);
+    const tools = [agent.tool, ...(agent.lookups ?? [])];
+    const toolIds: string[] = [];
+    for (const tool of tools) toolIds.push(await upsertTool(tool));
+    const agentId = await upsertAgent(agent, toolIds);
+    console.info(`${agent.name}: agent ${agentId}, tools ${tools.map((t) => t.name).join(", ")}`);
     lines.push(`${agent.idEnv}=${agentId}`);
   }
   console.info(`\nPut these in .env.local and in Vercel:\n${lines.join("\n")}`);

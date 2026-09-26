@@ -20,6 +20,7 @@ import {
 import { DASHBOARD } from "@/lib/shared/params";
 import { CATEGORY_NAMES, NO_REPORT_COLOUR, SCORE_COLOURS } from "./format";
 import { CellCard, CheckNow, Feed, feedKey, PerfPanel, QueueTable } from "./Panels";
+import AskData from "./AskData";
 import StationPanels from "./StationPanels";
 import { usePoll } from "./usePoll";
 
@@ -203,6 +204,7 @@ export default function Dashboard() {
         </div>
       </div>
 
+      <AskData />
       <StationPanels data={stations.data} selected={station} onSelect={setStation} />
       <Feed rows={feed.data?.rows ?? []} fresh={fresh} />
       <PerfPanel perf={perf?.latest ?? null} measuring={measuring} onMeasure={() => void measure()} />

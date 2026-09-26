@@ -1,8 +1,9 @@
 import "server-only";
 
 // Best Use of ElevenLabs: one text-only turn with an agent over its WebSocket. The frame goes up
-// as a file in the conversation, the agent sees it and answers by calling its client
-// tool, and the socket closes. The caller deletes the conversation afterwards (rule 5).
+// as a file in the conversation, the agent sees it with Gemini and answers by calling its client
+// tool, and the socket closes. The caller deletes the conversation afterwards (rule 5). Ask the
+// data sends no frame; its agent calls lookup tools first, and the backend answers them with data.
 
 import { env } from "../env";
 import type { AgentSpec } from "./config";
@@ -45,7 +46,10 @@ const LIVE: TurnDeps = {
 export interface AgentTurn {
   agent: AgentSpec;
   text: string;
-  jpeg: Uint8Array;
+  // The frame the agent sees. Without one the text goes alone.
+  jpeg?: Uint8Array;
+  // Answers the agent's lookup tools (AgentSpec.lookups). What it returns goes back as JSON.
+  onLookup?: (tool: string, parameters: unknown) => Promise<unknown>;
   // Epoch milliseconds by which the answer must be in.
   deadline: number;
   // Called once the conversation exists, so the caller can delete it later whatever happens.
@@ -140,6 +144,7 @@ export async function runAgentTurn(turn: AgentTurn, deps: TurnDeps = LIVE): Prom
             if (!id) return fail("no conversation id");
             conversationId = id;
             turn.onConversation?.(id);
+            if (!turn.jpeg) return send({ type: "user_message", text: turn.text });
             uploadFrame(id, turn.jpeg, key, turn.deadline, deps).then(
               (fileId) =>
                 // Both spellings, as the ElevenLabs client sends them: `file` alone is the older one.
@@ -159,6 +164,17 @@ export async function runAgentTurn(turn: AgentTurn, deps: TurnDeps = LIVE): Prom
           case "client_tool_call": {
             const call = message.client_tool_call;
             if (!call?.tool_call_id) return;
+            const reply = (result: string, isError: boolean) => {
+              if (!settled) send({ type: "client_tool_result", tool_call_id: call.tool_call_id, result, is_error: isError });
+            };
+            const { onLookup } = turn;
+            if (onLookup && call.tool_name && turn.agent.lookups?.some((l) => l.name === call.tool_name)) {
+              onLookup(call.tool_name, call.parameters).then(
+                (result) => reply(JSON.stringify(result), false),
+                (err: unknown) => reply(`lookup failed: ${err instanceof Error ? err.message : String(err)}`, true),
+              );
+              return;
+            }
             const ours = call.tool_name === turn.agent.tool.name;
             send({
               type: "client_tool_result",
