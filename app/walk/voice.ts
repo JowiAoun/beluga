@@ -9,6 +9,8 @@ export const LINES = {
   no_ar: "This phone can't run beluga. It needs Chrome with AR support.",
   start_failed: "beluga could not start.",
   no_depth: "No depth on this phone. Obstacle alerts can't run.",
+  ask_offline: "Ask is offline. Obstacle alerts still on.",
+  sorry: "Sorry, I couldn't see that.",
 } as const;
 
 export type Line = keyof typeof LINES;

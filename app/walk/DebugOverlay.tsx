@@ -22,6 +22,7 @@ export interface DebugView {
   stats: LiveStats | null;
   audio: AudioStats | null;
   detect: DetectStats | null;
+  lastAsk: { ms: number; outcome: string } | null;
 }
 
 // The same side the sound plays from: metres off the walking line, not the angle.
@@ -141,6 +142,11 @@ export default function DebugOverlay({ view, session }: { view: DebugView | null
       {view?.audio && <p>{describeSound(view.audio)}</p>}
       {view?.detect && <p>{describeDetector(view.detect)}</p>}
       {view?.detect && update && <p>{describeGate(view.detect, update.t)}</p>}
+      {view?.lastAsk && (
+        <p>
+          Last Ask: {view.lastAsk.outcome.replace("_", " ")} in {(view.lastAsk.ms / 1000).toFixed(1)} s (target under 3 s)
+        </p>
+      )}
       {stats && (
         <p>
           {stats.updateRate.toFixed(1)} updates/s, {stats.frameRate.toFixed(0)} frames/s, {stats.processingMs.toFixed(1)} ms per update

@@ -2,6 +2,7 @@
 // per hazard, and a quiet keep-alive so Bluetooth never sleeps between warnings. Part of the
 // safety loop, so it never touches the network: every sound is in memory before the walk starts.
 
+import { priorityOf } from "@/lib/hazard/engine";
 import type { HazardUpdate } from "@/lib/shared/contracts";
 import { SOUND_IDS, type SoundId } from "@/lib/shared/enums";
 import { AUDIO } from "@/lib/shared/params";
@@ -89,6 +90,8 @@ export class AudioEngine {
   private scene: Scene = QUIET;
   private timer: ReturnType<typeof setInterval> | null = null;
   private keepAlive: AudioBufferSourceNode | null = null;
+  // The spoken Ask answer, while it plays.
+  private answer: { playing: Playing; placer: Placer; ducked: boolean } | null = null;
 
   constructor(
     private readonly ctx: AudioContext,
@@ -169,6 +172,7 @@ export class AudioEngine {
     if (this.timer !== null) clearInterval(this.timer);
     this.timer = null;
     this.scene = QUIET;
+    this.stopAnswer();
     this.apply(this.scheduler.clear());
     this.keepAlive?.stop();
     this.keepAlive?.disconnect();
@@ -193,6 +197,46 @@ export class AudioEngine {
 
   private tick(): void {
     this.apply(this.scheduler.tick(this.ctx.currentTime, this.scene));
+    this.fitAnswer();
+  }
+
+  // An Ask answer from the side of the object it describes. It plays under any hazard, 12 dB down,
+  // and stops for a drop-off or head-height hazard: warnings always come first.
+  playAnswer(buffer: AudioBuffer, pan: Pan): void {
+    this.stopAnswer();
+    const placer = createPlacer(this.ctx, this.master, pan, this.ears);
+    const playing = this.startSound(buffer, 1, placer, this.ctx.currentTime, false);
+    const answer = { playing, placer, ducked: false };
+    playing.source.onended = () => {
+      playing.gain.disconnect();
+      placer.disconnect();
+      if (this.answer === answer) this.answer = null;
+    };
+    this.answer = answer;
+    this.fitAnswer();
+  }
+
+  stopAnswer(): void {
+    if (!this.answer) return;
+    this.fade(this.answer.playing, this.ctx.currentTime);
+    this.answer = null;
+  }
+
+  answerPlaying(): boolean {
+    return this.answer !== null;
+  }
+
+  private fitAnswer(): void {
+    const answer = this.answer;
+    if (!answer) return;
+    if (this.scene.hazards.some((h) => priorityOf(h) <= 2)) {
+      this.stopAnswer();
+      return;
+    }
+    const ducked = this.voices.size > 0;
+    if (ducked === answer.ducked) return;
+    answer.ducked = ducked;
+    answer.placer.input.gain.setTargetAtTime(ducked ? dbToGain(AUDIO.askDuckDb) : 1, this.ctx.currentTime, LEVEL_SECONDS);
   }
 
   private apply(actions: Action[]): void {

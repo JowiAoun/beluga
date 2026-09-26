@@ -18,6 +18,8 @@ import {
   type SessionSummary,
 } from "@/lib/xr/session";
 import type { SensingUpdate } from "@/lib/xr/types";
+import { askAboutView } from "./ask";
+import AskButton from "./AskButton";
 import DebugOverlay, { type DebugView } from "./DebugOverlay";
 import { askLocation, locationPermission, watchLocation, type Fix } from "./location";
 import StopButton from "./StopButton";
@@ -61,12 +63,14 @@ interface Latest {
   // Newest first. Phase 9 queues these for sending; until then the overlay shows them.
   events: HazardEvent[];
   floorSlope: number | null;
+  // The last Ask, for the debug overlay.
+  lastAsk: { ms: number; outcome: string } | null;
 }
 
 const RECENT_EVENTS = 5;
 
 function freshLatest(fix: Fix | null = null): Latest {
-  return { update: null, nearest: null, fix, granted: null, hazards: [], events: [], floorSlope: null };
+  return { update: null, nearest: null, fix, granted: null, hazards: [], events: [], floorSlope: null, lastAsk: null };
 }
 
 export default function Walk() {
@@ -91,6 +95,7 @@ export default function Walk() {
   const [view, setView] = useState<DebugView | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [summary, setSummary] = useState<SessionSummary | null>(null);
+  const [asking, setAsking] = useState(false);
 
   const runCleanups = useCallback(() => {
     cleanupRef.current.splice(0).forEach((fn) => fn());
@@ -263,6 +268,27 @@ export default function Walk() {
     );
   };
 
+  // One frame to the Ask agent; the answer plays from the object's side, under any warning.
+  const ask = async () => {
+    const session = sessionRef.current;
+    const ctx = audioRef.current;
+    const sound = soundRef.current;
+    if (!session || !ctx || !sound || asking) return;
+    setAsking(true);
+    sound.play("listening");
+    const began = performance.now();
+    try {
+      const result = await askAboutView(session, ctx, latestRef.current.update?.fov.horizontal ?? 40);
+      if (result.kind === "audio") sound.playAnswer(result.buffer, result.pan);
+      else if (result.kind === "text") speakText(result.meta.answer);
+      else say(result.kind === "offline" ? "ask_offline" : "sorry");
+      const outcome = result.kind === "text" && result.meta.voiceFailed ? "phone voice" : result.kind;
+      latestRef.current.lastAsk = { ms: Math.round(performance.now() - began), outcome };
+    } finally {
+      setAsking(false);
+    }
+  };
+
   const toggleDebug = () => {
     const next = !debug;
     debugRef.current = next;
@@ -318,6 +344,7 @@ export default function Walk() {
             )}
             {debug && <DebugOverlay view={view} session={session} />}
           </div>
+          <AskButton asking={asking} onAsk={() => void ask()} />
           <StopButton onStop={() => sessionRef.current?.stop()} />
         </main>
       ) : (
