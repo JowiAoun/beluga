@@ -32,7 +32,7 @@ import { askLocation, locationPermission, watchLocation, type Fix } from "./loca
 import StopButton from "./StopButton";
 import MicrophoneSetup from "./MicrophoneSetup";
 import VoiceAsk from "./VoiceAsk";
-import { LINES, say, speakLocalText, unlockVoice } from "./voice";
+import { LINES, say, speakLocalText, speakText, unlockVoice } from "./voice";
 
 type Phase = "ready" | "starting" | "running" | "ended";
 type Support = "checking" | "ok" | "none";

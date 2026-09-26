@@ -226,8 +226,8 @@ export class AudioEngine {
   // An Ask answer from the side of the object it describes. It plays under any hazard, 12 dB down,
   // and stops for a drop-off or head-height hazard: warnings always come first.
   playAnswer(buffer: AudioBuffer, pan: Pan): boolean {
-    if (this.scene.hazards.some((h) => h.active && priorityOf(h) <= 2)) return false;
     this.stopAnswer();
+    if (this.scene.hazards.some((h) => h.active && priorityOf(h) <= 2)) return false;
     const placer = createPlacer(this.ctx, this.master, pan, this.ears);
     const playing = this.startSound(buffer, 1, placer, this.ctx.currentTime, false);
     const answer = { playing, placer, ducked: false };
@@ -334,27 +334,6 @@ export class AudioEngine {
     }
     let at = this.ctx.currentTime;
     for (const buffer of buffers) at = this.playBuffer(buffer!, pan, 1, at) + CLIP_GAP_S;
-  }
-
-  stopAnswer(): void {
-    if (this.answer) this.fade(this.answer, this.ctx.currentTime);
-    this.answer = null;
-  }
-
-  // Nonessential speech yields to head-height and drop-off warnings.
-  playAnswer(buffer: AudioBuffer, pan: Pan): boolean {
-    this.stopAnswer();
-    if (this.scene.hazards.some((hazard) => hazard.active && priorityOf(hazard) <= 2)) return false;
-    const placer = createPlacer(this.ctx, this.master, pan, this.ears);
-    const level = this.scene.hazards.some((hazard) => hazard.active) ? dbToGain(AUDIO.askDuckDb) : 1;
-    const playing = this.startSound(buffer, level, placer, this.ctx.currentTime, false);
-    this.answer = playing;
-    playing.source.onended = () => {
-      playing.gain.disconnect();
-      placer.disconnect();
-      if (this.answer === playing) this.answer = null;
-    };
-    return true;
   }
 
   private startSound(buffer: AudioBuffer, level: number, placer: Placer, at: number, loop: boolean): Playing {

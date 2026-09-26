@@ -247,6 +247,7 @@ export const DATABASE = {
   compressAfterDays: 7,
   deleteRawAfterDays: 180,
   clientMaxConnections: 2,
+  clientConnectTimeoutS: 2,
   clientIdleTimeoutS: 20,
   freeServiceLimitMb: 750,
 } as const;

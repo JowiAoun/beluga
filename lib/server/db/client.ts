@@ -17,6 +17,7 @@ export function db(): postgres.Sql {
     client = postgres(DATABASE_URL, {
       ssl: local ? false : "require",
       max: DATABASE.clientMaxConnections,
+      connect_timeout: DATABASE.clientConnectTimeoutS,
       idle_timeout: DATABASE.clientIdleTimeoutS,
       onnotice: () => {},
     });
