@@ -82,7 +82,7 @@ Load both in `app/layout.tsx` with `next/font/google` (`Atkinson_Hyperlegible_Ne
 - Nothing flashes more than 3 times a second.
 - Anything that moves by itself for more than 5 seconds stops when the **Pause motion** switch in the navbar is on (WCAG 2.2.2). The switch is saved on the device.
 - With `prefers-reduced-motion`, nothing moves by itself. Fades stay. 3D scenes show their still image.
-- `/walk` gets no Motion library, no canvas and no view transitions. Its setup screens use CSS transitions only, and nothing animates during a walk: the GPU belongs to depth and the detector.
+- `/walk` gets no Motion library and no view transitions. Its setup screens use CSS transitions and the 3D beluga (`app/walk/WalkBeluga.tsx`). Tapping Start swaps the whole screen, which unmounts the canvas and frees its GPU context, so nothing 3D or animated runs during a walk: the GPU belongs to depth and the detector.
 
 ## Libraries
 
@@ -258,9 +258,9 @@ Desktop first for the demo laptop, then phones.
 
 ### Walk `/walk`, `/walk/check`, `/walk/sounds`
 
-No Motion, no canvas and no view transitions on these pages.
+No Motion and no view transitions on these pages. The only canvas is the 3D beluga on the `/walk` setup and start screens, and it's gone before a walk starts.
 
-- **Setup**: the 2D mascot at the top, step dots ("2 of 5"), the new buttons and the height in big Mono digits. A CSS slide between steps.
+- **Setup**: the 3D beluga at the top (its still with reduced motion, no WebGL2 or offline), step dots ("2 of 5"), the new buttons and the height in big Mono digits. A CSS slide between steps.
 - **During a walk**: new colours and font only, with no animation, blur or shadow. The status pill, Ask and Stop keep their sizes, and Stop keeps its hold-to-fill.
 - **`/walk/sounds`**: a head seen from above with a dot moving to each side, in CSS.
 - **`/walk/check`**: checklist cards, each result as a word and an icon.
