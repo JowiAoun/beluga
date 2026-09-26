@@ -10,8 +10,6 @@ import {
 } from "@tabler/icons-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { BelugaMark } from "@/components/brand/Logo";
-import { SonarRings } from "@/components/brand/SonarRings";
 import { AudioEngine } from "@/lib/audio/engine";
 import { decodeLibrary, fetchLibrary, isClipId, type RawLibrary } from "@/lib/audio/library";
 import { DetectPipeline } from "@/lib/detect/pipeline";
@@ -32,6 +30,7 @@ import {
 import { CameraDeniedError, startCameraSensing } from "@/lib/xr/cameraSession";
 import { ArUnavailableError, forgetLevel, savedLevel, SESSION_LEVELS } from "@/lib/xr/request";
 import type { SensingUpdate } from "@/lib/xr/types";
+import { WalkBeluga } from "./WalkBeluga";
 import { askAboutView } from "./ask";
 import { encodeClip } from "@/lib/replay/format";
 import { CLIP_SECONDS, Recorder } from "@/lib/replay/recorder";
@@ -603,15 +602,7 @@ export default function Walk() {
         <main className="mx-auto flex w-full max-w-xl flex-col gap-5 px-4 pt-10 pb-16">
           <header className="relative isolate flex flex-col items-center gap-2 text-center">
             <div aria-hidden className="absolute -inset-x-4 -top-10 -z-10 h-96 bg-dots mask-fade opacity-70" />
-            <div className="relative">
-              <span
-                aria-hidden
-                className="absolute inset-0 scale-150 rounded-full bg-[radial-gradient(closest-side,rgb(56_189_248/0.2),transparent)] contrast-more:hidden"
-              />
-              {/* Out of the forehead, where belugas echolocate from. */}
-              <SonarRings className="top-[30%] left-[70%] size-52 -translate-1/2" />
-              <BelugaMark size={512} className="relative size-36" />
-            </div>
+            <WalkBeluga className="w-64 max-w-full" />
             <h1 className="text-5xl font-extrabold tracking-tight">beluga</h1>
             <p className="max-w-[34ch] text-xl text-balance text-muted">
               Plays a sound from the side of obstacles in your path. It works alongside your cane or guide dog, and it
