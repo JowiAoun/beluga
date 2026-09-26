@@ -345,6 +345,9 @@ export default function Walk() {
           <Link href="/walk/check" className="text-lg underline">
             Device check
           </Link>
+          <Link href="/walk/sounds" className="text-lg underline">
+            Sound check and blindfold test
+          </Link>
         </main>
       )}
     </div>
