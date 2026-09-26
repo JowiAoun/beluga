@@ -15,6 +15,8 @@ export const LINES = {
   sorry: "Sorry, I couldn't see that.",
   camera_only:
     "Camera-only mode. It warns about things it can name, like people, bikes and chairs, and yellow edge strips. No step warnings.",
+  tap_camera: "Tap the screen once to start the camera.",
+  camera_denied: "beluga needs the camera. Allow it in the browser's settings for this site, then tap Start again.",
 } as const;
 
 export type Line = keyof typeof LINES;

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AudioEngine } from "@/lib/audio/engine";
-import { decodeLibrary, fetchLibrary, type RawLibrary } from "@/lib/audio/library";
+import { decodeLibrary, fetchLibrary, isClipId, type RawLibrary } from "@/lib/audio/library";
 import { DetectPipeline } from "@/lib/detect/pipeline";
 import { withStrip } from "@/lib/detect/strip";
 import { CameraOnlyEngine } from "@/lib/hazard/cameraOnly";
@@ -19,7 +19,7 @@ import {
   type SensingSession,
   type SessionSummary,
 } from "@/lib/xr/session";
-import { startCameraSensing } from "@/lib/xr/cameraSession";
+import { CameraDeniedError, startCameraSensing } from "@/lib/xr/cameraSession";
 import { ArUnavailableError, forgetLevel, savedLevel, SESSION_LEVELS } from "@/lib/xr/request";
 import type { SensingUpdate } from "@/lib/xr/types";
 import { askAboutView } from "./ask";
@@ -85,6 +85,9 @@ interface Latest {
 }
 
 const RECENT_EVENTS = 5;
+const CAMERA_HELP =
+  "beluga needs the camera. On an iPhone, tap aA in Safari's address bar, then Website Settings, and set Camera " +
+  "to Allow. In Chrome, tap the icon left of the address, then Permissions, and allow Camera. Then tap Start again.";
 // Start waits this long at most for the recorded sounds.
 const SOUNDS_WAIT_MS = 8000;
 
@@ -287,8 +290,9 @@ export default function Walk() {
     if (result.events.length > 0) latest.events = [...result.events.reverse(), ...latest.events].slice(0, RECENT_EVENTS);
   }, []);
 
+  // Recorded clips where there is one; the phone's voice for the rest.
   const onCue = useCallback((cue: Cue) => {
-    if (soundRef.current) soundRef.current.say([cue]);
+    if (soundRef.current && isClipId(cue)) soundRef.current.say([cue]);
     else speakLocalText(LINES[cue]);
   }, []);
 
@@ -332,7 +336,7 @@ export default function Walk() {
     // AR, the motion sensors and the camera for camera mode.
     if (how === "camera") {
       if (!video) return;
-      started = startCameraSensing({ video, userHeightM: settingsRef.current.heightM, onUpdate, onEnd });
+      started = startCameraSensing({ video, userHeightM: settingsRef.current.heightM, onUpdate, onCue, onEnd });
     } else {
       if (!overlay || !gl) return;
       started = startSensing({ overlayRoot: overlay, gl, onUpdate, onCue, onEnd });
@@ -427,6 +431,11 @@ export default function Walk() {
         if (err instanceof ArUnavailableError && supportFor(false) === "camera") {
           setSupport("camera");
           start("camera");
+          return;
+        }
+        if (err instanceof CameraDeniedError) {
+          say("camera_denied");
+          setMessage(CAMERA_HELP);
           return;
         }
         say("start_failed");

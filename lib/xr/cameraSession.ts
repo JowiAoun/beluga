@@ -10,6 +10,7 @@ import { NO_DEPTH } from "./depth";
 import { perspectiveFor, type FieldOfView } from "./projection";
 import type {
   CapturedFrame,
+  Cue,
   DetectorSink,
   EndReason,
   Granted,
@@ -26,8 +27,18 @@ export interface CameraSensingOptions {
   // The phone sits at CAMERA_MODE.chestShare of this above the floor.
   userHeightM: number;
   onUpdate: (update: SensingUpdate) => void;
+  // "tap_camera" when the browser won't play the camera until the next tap.
+  onCue?: (cue: Cue) => void;
   // Called once when a session that started has ended, for any reason.
   onEnd: (summary: SessionSummary) => void;
+}
+
+// The camera was refused for this site, now or earlier.
+export class CameraDeniedError extends Error {
+  constructor() {
+    super("the camera isn't allowed for this site");
+    this.name = "CameraDeniedError";
+  }
 }
 
 // Device orientation angles in degrees, as the W3C spec defines them.
@@ -114,6 +125,11 @@ function errorText(err: unknown): string {
 // keeps it. The camera prompt follows.
 export function startCameraSensing(options: CameraSensingOptions): SensingSession {
   const motionAsked = askMotion();
+  // iOS plays a video later only if play() was first called in a tap. The element has no picture
+  // yet, so this play() fails; what counts is that the tap started it.
+  options.video.muted = true;
+  options.video.playsInline = true;
+  void options.video.play().catch(() => {});
   const media = navigator.mediaDevices?.getUserMedia
     ? navigator.mediaDevices.getUserMedia({
         video: {
@@ -124,6 +140,12 @@ export function startCameraSensing(options: CameraSensingOptions): SensingSessio
         audio: false,
       })
     : Promise.reject(new Error("This browser can't use the camera"));
+  const camera = media.catch((err: unknown) => {
+    if (err instanceof DOMException && (err.name === "NotAllowedError" || err.name === "SecurityError")) {
+      throw new CameraDeniedError();
+    }
+    throw err;
+  });
 
   const { video, onUpdate, onEnd } = options;
   const heightM = options.userHeightM * CAMERA_MODE.chestShare;
@@ -155,6 +177,15 @@ export function startCameraSensing(options: CameraSensingOptions): SensingSessio
   const onHidden = () => {
     if (document.visibilityState === "hidden") end("hidden");
   };
+  // After a refused play(): the next tap anywhere starts the camera. Touch taps count on their
+  // end, so these two events and not pointerdown.
+  const onTap = () => {
+    video.play().then(() => {
+      document.removeEventListener("click", onTap, true);
+      document.removeEventListener("touchend", onTap, true);
+      live.cameraError = null;
+    }, () => {});
+  };
   window.addEventListener("deviceorientation", onTilt);
 
   function summary(): SessionSummary {
@@ -181,6 +212,8 @@ export function startCameraSensing(options: CameraSensingOptions): SensingSessio
     timers = [];
     window.removeEventListener("deviceorientation", onTilt);
     document.removeEventListener("visibilitychange", onHidden);
+    document.removeEventListener("click", onTap, true);
+    document.removeEventListener("touchend", onTap, true);
     for (const track of stream?.getTracks() ?? []) track.stop();
     video.srcObject = null;
     detectorSinks.clear();
@@ -246,7 +279,8 @@ export function startCameraSensing(options: CameraSensingOptions): SensingSessio
   }
 
   function detectorFrame() {
-    if (detectorSinks.size === 0 || !frameContext || !video.videoWidth) return;
+    // A paused video holds one old picture: nothing new to look at.
+    if (detectorSinks.size === 0 || !frameContext || !video.videoWidth || video.paused) return;
     try {
       const size = draw(frameCanvas, frameContext, Math.max(DETECTOR.inputWidth, DETECTOR.inputHeight));
       const { data } = frameContext.getImageData(0, 0, size.width, size.height);
@@ -259,16 +293,24 @@ export function startCameraSensing(options: CameraSensingOptions): SensingSessio
     }
   }
 
-  const ready: Promise<Granted> = Promise.all([media, motionAsked]).then(async ([s]) => {
+  const ready: Promise<Granted> = Promise.all([camera, motionAsked]).then(async ([s, motion]) => {
     stream = s;
     if (endReason) {
       cleanUp();
       throw new Error("Stopped before the camera started");
     }
-    video.muted = true;
-    video.playsInline = true;
+    if (!motion) setup.refused.push("motion sensors: not allowed, so the phone is taken as upright");
     video.srcObject = s;
-    await video.play();
+    try {
+      await video.play();
+    } catch (err) {
+      if (!(err instanceof DOMException && err.name === "NotAllowedError")) throw err;
+      // iOS can refuse to play outside a tap (in Low Power Mode, for one).
+      live.cameraError = "waiting for a tap to start the camera";
+      document.addEventListener("click", onTap, true);
+      document.addEventListener("touchend", onTap, true);
+      options.onCue?.("tap_camera");
+    }
     for (const track of s.getVideoTracks()) track.addEventListener("ended", () => end("ended"));
     document.addEventListener("visibilitychange", onHidden);
     granted = { depth: false, camera: true, hitTest: false, domOverlay: true, localFloor: false };

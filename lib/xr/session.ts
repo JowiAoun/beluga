@@ -13,7 +13,7 @@ import { TrackingMonitor } from "./tracking";
 import type { FloorSource, SensingUpdate, Vec3 } from "./types";
 
 // Voice lines the session asks for. The app decides how they sound.
-export type Cue = "take_steps" | "calibrated" | "hold_steady";
+export type Cue = "take_steps" | "calibrated" | "hold_steady" | "tap_camera";
 
 // stop: the Stop button. hidden: the app left the screen. error: something threw.
 // ended: Chrome ended the session, for example on the back button.
