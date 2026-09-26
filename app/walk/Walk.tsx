@@ -1,7 +1,17 @@
 "use client";
 
+import {
+  IconAlertTriangle,
+  IconChevronRight,
+  IconHeadphones,
+  IconInfoCircle,
+  IconMapPin,
+  IconPlayerPlayFilled,
+} from "@tabler/icons-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { BelugaMark } from "@/components/brand/Logo";
+import { SonarRings } from "@/components/brand/SonarRings";
 import { AudioEngine } from "@/lib/audio/engine";
 import { decodeLibrary, fetchLibrary, isClipId, type RawLibrary } from "@/lib/audio/library";
 import { DetectPipeline } from "@/lib/detect/pipeline";
@@ -38,6 +48,8 @@ import StopButton from "./StopButton";
 import MicrophoneSetup from "./MicrophoneSetup";
 import VoiceAsk from "./VoiceAsk";
 import { LINES, say, speakLocalText, speakText, unlockVoice } from "./voice";
+import { cn } from "@/lib/utils";
+import { CHECKBOX, LINK_ROW, PANEL, PRIMARY, SECONDARY } from "./styles";
 
 type Phase = "ready" | "starting" | "running" | "ended";
 // ok: WebXR AR. camera: camera mode, for a browser without AR (an iPhone) or a phone that refused
@@ -207,9 +219,11 @@ export default function Walk() {
       const sound = soundRef.current;
       const ctx = audioRef.current;
       if (raw && sound && ctx) void decodeLibrary(ctx, raw).then((library) => sound.useLibrary(library));
-      setSoundStatus(raw?.offlineReady
-        ? "Spoken labels saved on this device for offline playback."
-        : "Offline tones are ready. Recorded labels could not be saved; a local device voice may be used.");
+      setSoundStatus(
+        raw?.offlineReady
+          ? "Spoken labels saved on this device for offline playback."
+          : "Offline tones are ready. Recorded labels could not be saved; a local device voice may be used.",
+      );
     });
     // Reporting starts off until the user turns it on; an older consent counts as off.
     reportingRef.current ??= new Reporting();
@@ -287,7 +301,8 @@ export default function Walk() {
     }
     latest.hazards = heard;
     if (result.floor) latest.floorSlope = result.floor.slope;
-    if (result.events.length > 0) latest.events = [...result.events.reverse(), ...latest.events].slice(0, RECENT_EVENTS);
+    if (result.events.length > 0)
+      latest.events = [...result.events.reverse(), ...latest.events].slice(0, RECENT_EVENTS);
   }, []);
 
   // Recorded clips where there is one; the phone's voice for the rest.
@@ -412,9 +427,9 @@ export default function Walk() {
           setCameraOnly(cameraOnlyRef.current);
           say("no_depth");
           const detectorError = detectRef.current?.stats().error;
-          setMessage(detectorError
-            ? `No depth is available, and the object detector failed: ${detectorError}`
-            : LINES.no_depth);
+          setMessage(
+            detectorError ? `No depth is available, and the object detector failed: ${detectorError}` : LINES.no_depth,
+          );
         } else if (!granted.depth || cameraOnlyRef.current) {
           cameraOnlyRef.current = true;
           setCameraOnly(true);
@@ -544,17 +559,15 @@ export default function Walk() {
               <p
                 role="status"
                 aria-atomic="true"
-                className={`self-start rounded-lg border-2 px-4 py-3 text-2xl font-bold ${
-                  status === "Calibrated"
-                    ? "border-emerald-300 bg-emerald-950 text-white"
-                    : "border-white bg-black text-white"
+                className={`self-start rounded-2xl border-2 bg-abyss px-4 py-3 text-2xl font-bold ${
+                  status === "Calibrated" ? "border-sonar text-sonar" : "border-foreground text-foreground"
                 }`}
               >
                 {status}
               </p>
             )}
             {message && (
-              <p role="alert" className="rounded bg-red-900/90 px-3 py-2 text-white">
+              <p role="alert" className="rounded-2xl bg-danger px-4 py-3 text-xl text-white">
                 {message}
               </p>
             )}
@@ -563,7 +576,7 @@ export default function Walk() {
                 type="button"
                 onClick={record}
                 disabled={recording !== null}
-                className="min-h-12 self-start rounded-lg bg-black/75 px-3 font-semibold text-white"
+                className="min-h-12 self-start rounded-2xl border border-white/30 bg-abyss px-4 font-semibold text-foreground"
               >
                 {recording === null
                   ? `Record a ${CLIP_SECONDS} s replay`
@@ -573,34 +586,54 @@ export default function Walk() {
             {debug && <DebugOverlay view={view} session={session} />}
           </div>
           <AskButton asking={asking} onAsk={() => void ask()} />
-          {phase === "running" && session && <VoiceAsk
-            session={session} microphone={microphone}
-            getAudio={() => audioRef.current} getEngine={() => soundRef.current}
-            getFov={() => latestRef.current.update?.fov.horizontal}
-          />}
+          {phase === "running" && session && (
+            <VoiceAsk
+              session={session}
+              microphone={microphone}
+              getAudio={() => audioRef.current}
+              getEngine={() => soundRef.current}
+              getFov={() => latestRef.current.update?.fov.horizontal}
+            />
+          )}
           <StopButton onStop={() => sessionRef.current?.stop()} />
         </main>
       ) : (
-        <main className="mx-auto flex w-full max-w-xl flex-col gap-4 p-4">
-          <header className="flex flex-col gap-2">
-            <h1 className="text-4xl font-bold">beluga</h1>
-            <p className="text-lg">
-              Plays a sound from the side of obstacles in your path. It works alongside your cane or guide dog, and it can
-              miss things.
+        <main className="mx-auto flex w-full max-w-xl flex-col gap-5 px-4 pt-10 pb-16">
+          <header className="relative isolate flex flex-col items-center gap-2 text-center">
+            <div aria-hidden className="absolute -inset-x-4 -top-10 -z-10 h-96 bg-dots mask-fade opacity-70" />
+            <div className="relative">
+              <span
+                aria-hidden
+                className="absolute inset-0 scale-150 rounded-full bg-[radial-gradient(closest-side,rgb(56_189_248/0.2),transparent)] contrast-more:hidden"
+              />
+              {/* Out of the forehead, where belugas echolocate from. */}
+              <SonarRings className="top-[30%] left-[70%] size-52 -translate-1/2" />
+              <BelugaMark size={512} className="relative size-36" />
+            </div>
+            <h1 className="text-5xl font-extrabold tracking-tight">beluga</h1>
+            <p className="max-w-[34ch] text-xl text-balance text-muted">
+              Plays a sound from the side of obstacles in your path. It works alongside your cane or guide dog, and it
+              can miss things.
             </p>
           </header>
 
           {support === "camera" && (
-            <p className="rounded-lg border-2 border-yellow-300 p-3">
-              This browser can&apos;t run AR, so beluga uses camera mode. It warns about things it can name, like
-              people, bikes and chairs, and about yellow edge strips. It can&apos;t find steps or drop-offs.
+            <p className="flex gap-3 rounded-2xl border border-accent/30 bg-accent/5 p-4 text-lg">
+              <IconInfoCircle aria-hidden size={24} className="mt-0.5 shrink-0 text-accent" />
+              <span>
+                This browser can&apos;t run AR, so beluga uses camera mode. It warns about things it can name, like
+                people, bikes and chairs, and about yellow edge strips. It can&apos;t find steps or drop-offs.
+              </span>
             </p>
           )}
 
           {support === "none" && (
-            <p role="alert" className="rounded-lg bg-red-900 p-3">
-              This browser can&apos;t start an AR session. Use Chrome on an Android phone with ARCore, and run the device
-              check below to see what is missing.
+            <p role="alert" className="flex gap-3 rounded-2xl border border-red-400/40 bg-danger/40 p-4 text-lg">
+              <IconAlertTriangle aria-hidden size={24} className="mt-0.5 shrink-0 text-red-300" />
+              <span>
+                This browser can&apos;t start an AR session. Use Chrome on an Android phone with ARCore, and run the
+                device check below to see what is missing.
+              </span>
             </p>
           )}
 
@@ -614,16 +647,15 @@ export default function Walk() {
           ) : (
             <>
               {needLocation && (
-                <div className="flex flex-col gap-2">
-                  <p>
-                    Location marks where hazard reports happen, to about 100 m. Chrome can&apos;t ask during a session,
-                    so it asks now.
+                <div className={cn(PANEL, "flex flex-col gap-4")}>
+                  <p className="flex gap-3 text-xl">
+                    <IconMapPin aria-hidden size={24} className="mt-1 shrink-0 text-sonar" />
+                    <span>
+                      Location marks where hazard reports happen, to about 100 m. Chrome can&apos;t ask during a
+                      session, so it asks now.
+                    </span>
                   </p>
-                  <button
-                    type="button"
-                    onClick={allowLocation}
-                    className="min-h-16 rounded-lg border-2 border-yellow-300 px-4 text-lg font-semibold"
-                  >
+                  <button type="button" onClick={allowLocation} className={SECONDARY}>
                     Allow location
                   </button>
                 </div>
@@ -633,31 +665,42 @@ export default function Walk() {
                 type="button"
                 onClick={() => start()}
                 disabled={support === "checking" || support === "none" || soundsLoading}
-                className="min-h-24 rounded-lg bg-yellow-300 px-4 text-2xl font-bold text-black disabled:opacity-50"
+                className={cn(PRIMARY, "min-h-24 text-2xl")}
               >
-                {soundsLoading ? "Preparing sounds" : support === "checking" ? "Checking this phone" : phase === "ended" ? "Start again" : "Start"}
+                {!soundsLoading && support !== "checking" && <IconPlayerPlayFilled aria-hidden size={28} />}
+                {soundsLoading
+                  ? "Preparing sounds"
+                  : support === "checking"
+                    ? "Checking this phone"
+                    : phase === "ended"
+                      ? "Start again"
+                      : "Start"}
               </button>
 
-              <p role="status">{soundStatus}</p>
-              <Link href="/walk/practice" className="flex min-h-16 items-center justify-center rounded-lg border-2 border-yellow-300 p-3 text-xl font-semibold">
+              <p role="status" className="-mt-1 text-center text-lg text-muted">
+                {soundStatus}
+              </p>
+              <Link href="/walk/practice" className={SECONDARY}>
+                <IconHeadphones aria-hidden size={24} />
                 Learn the warning sounds
               </Link>
               <MicrophoneSetup value={microphone} onChange={setMicrophone} />
 
               {message && (
-                <p role="alert" className="rounded-lg bg-red-900 p-3">
-                  {message}
+                <p role="alert" className="flex gap-3 rounded-2xl border border-red-400/40 bg-danger/40 p-4 text-xl">
+                  <IconAlertTriangle aria-hidden size={24} className="mt-1 shrink-0 text-red-300" />
+                  <span>{message}</span>
                 </p>
               )}
 
               {summary && debug && <Summary summary={summary} />}
 
-              <section className="flex flex-col gap-2 rounded-lg border border-neutral-600 p-3">
-                <label className="flex min-h-16 items-center gap-3 text-lg font-semibold">
-                  <input type="checkbox" checked={reportingOn} onChange={toggleReporting} className="h-6 w-6" />
+              <section className={cn(PANEL, "flex flex-col gap-2")}>
+                <label className="flex min-h-16 items-center gap-4 text-xl font-semibold">
+                  <input type="checkbox" checked={reportingOn} onChange={toggleReporting} className={CHECKBOX} />
                   Help the city: share anonymous hazard reports
                 </label>
-                <p>
+                <p className="text-lg text-muted">
                   Sent: the hazard type, its distance, a rough location within about 100 metres, and the time. Never
                   sent: images, audio, your exact location or who you are.
                 </p>
@@ -667,7 +710,7 @@ export default function Walk() {
                 <button
                   type="button"
                   onClick={() => lastClipRef.current && download(lastClipRef.current)}
-                  className="min-h-16 rounded-lg border-2 border-neutral-500 px-4 text-lg"
+                  className={SECONDARY}
                 >
                   Save the last replay again
                 </button>
@@ -690,22 +733,26 @@ export default function Walk() {
                 <button
                   type="button"
                   onClick={() => reportingRef.current?.newReporter()}
-                  className="min-h-16 rounded-lg border-2 border-neutral-500 px-4 text-lg"
+                  className={cn(SECONDARY, "py-3 text-lg")}
                 >
                   New demo reporter (a fresh device key, so a second staged report isn&apos;t dropped as a repeat)
                 </button>
               )}
 
-              <label className="flex min-h-16 items-center gap-3 text-lg">
-                <input type="checkbox" checked={debug} onChange={toggleDebug} className="h-6 w-6" />
+              <label className="flex min-h-16 items-center gap-4 px-1 text-lg text-muted">
+                <input type="checkbox" checked={debug} onChange={toggleDebug} className={CHECKBOX} />
                 Show the debug overlay (a three-finger tap also toggles it during a session)
               </label>
-              <Link href="/walk/check" className="text-lg underline">
-                Device check
-              </Link>
-              <Link href="/walk/sounds" className="text-lg underline">
-                Sound check and blindfold test
-              </Link>
+              <div className="flex flex-col gap-3">
+                <Link href="/walk/check" className={LINK_ROW}>
+                  Device check
+                  <IconChevronRight aria-hidden size={24} className="shrink-0" />
+                </Link>
+                <Link href="/walk/sounds" className={LINK_ROW}>
+                  Sound check and blindfold test
+                  <IconChevronRight aria-hidden size={24} className="shrink-0" />
+                </Link>
+              </div>
             </>
           )}
         </main>
@@ -748,8 +795,8 @@ function metres(value: number | null): string {
 function Summary({ summary }: { summary: SessionSummary }) {
   const { floor } = summary;
   return (
-    <section className="flex flex-col gap-1 rounded-lg border border-neutral-600 p-3 tabular-nums">
-      <h2 className="text-lg font-semibold">Last session</h2>
+    <section className={cn(PANEL, "flex flex-col gap-1 text-lg tabular-nums")}>
+      <h2 className="mb-1 text-xl font-bold">Last session</h2>
       <p>
         {Math.round(summary.durationS)} s, ended by {summary.reason}
         {summary.error && `: ${summary.error}`}
