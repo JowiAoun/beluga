@@ -45,6 +45,7 @@ Devpost submission closes **10:00 EDT, Sunday Sept 27, 2026**, with a public Git
 | 12 phases in 14 hours. Built one after another, the phone alone (Phases 0 to 4) fills the day. | High | Four tracks in parallel, a thin end-to-end slice by 18:00, and cut checks at 20:00 and 23:00 (see "Tracks & timeline"). |
 | Several people and agents commit to one `main`. `package.json`, the lockfile and the shared modules conflict first. | Medium | Phase 0 adds every dependency and the shared modules in one commit. Each track owns its folders (Conventions). |
 | Every push to `main` builds on Vercel. The Hobby plan runs 1 build at a time and allows 100 deploys a day, so builds queue up. | Medium | Docs-only commits skip the build. Phone tests run on `localhost` over `adb reverse` (Local development). |
+| On the Hobby plan, a private repo only deploys commits by the Vercel team's owner. Every push by anyone else was blocked until Sept 26. | High | The repo is public (Devpost needs that anyway). Keep it public, and keep one Vercel project so each push builds once. |
 | DNS can take hours, and the domain was in Phase 10. | Medium | Started in Phase 0. |
 
 ### Sensing
