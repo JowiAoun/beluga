@@ -120,10 +120,13 @@ async function main(): Promise<number> {
     const loadSeconds = (Date.now() - began) / 1000;
     console.log(`Loaded ${counter.rows} simulated rows over ${SEED.days} days in ${loadSeconds.toFixed(1)} s.`);
 
-    // The 15-minute aggregate first: the daily one is built on it.
+    // The 15-minute aggregate first: the daily one is built on it. Only up to an hour ago, like the
+    // policies: refreshing to the end would also store today's unfinished day, and an aggregate's
+    // real-time part only reads raw rows newer than what is stored. Live reports later today would
+    // then stay out of the fix-first queue until tomorrow.
     for (const view of ["cell_15m", "cell_daily", "station_hourly", "cell_reporters_daily"]) {
       const started = Date.now();
-      await sql.unsafe(`call refresh_continuous_aggregate('${view}', null, null)`);
+      await sql.unsafe(`call refresh_continuous_aggregate('${view}', null, now() - interval '1 hour')`);
       console.log(`Refreshed ${view} in ${((Date.now() - started) / 1000).toFixed(1)} s.`);
     }
 
