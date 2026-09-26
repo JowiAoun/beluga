@@ -141,6 +141,14 @@ To deploy, import the repository into Vercel and set the same variables there.
 - Ask and reporting need a network. Warnings don't.
 - No blind or low-vision users co-designed this version. Next: co-design with CNIB, and a pilot with OC Transpo.
 
+## Credits
+
+- [Aceternity UI](https://ui.aceternity.com): the spotlight, encrypted text, glowing card border, and the ideas behind the navbar, bento grid and sticky steps. Free components, which can't be resold as a component library.
+- [Magic UI](https://magicui.design) (MIT): the number ticker, the animated beam and the border beam.
+- [React Bits](https://reactbits.dev) (MIT with Commons Clause): the idea behind the headings that come in word by word.
+- [Atkinson Hyperlegible](https://www.brailleinstitute.org/freefont/) by the Braille Institute: every word on the site.
+- [Tabler Icons](https://tabler.io/icons) (MIT): the icons.
+
 ## License
 
 MIT
