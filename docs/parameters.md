@@ -29,6 +29,9 @@ Copied from `docs/PLAN.md` on Sept 26, 2026. When this file and `lib/shared` dif
 | Near-miss distance | 1.0 m |
 | Stationary | < 0.1 m moved in 5 s |
 | Tracking-lost threshold | 1 s |
+| First floor value | median of 5 hit tests on flat ground 0.5 to 2 m below the phone, ray 45° below straight ahead |
+| Floor calibration | ends after 1.5 m of walking or 8 s, once it has 200 floor points |
+| Floor drift | every 5 s, 30% of the way to the median of floor points within ±0.1 m (at least 50) |
 
 ## Audio
 

@@ -49,6 +49,23 @@ export const SENSING = {
   stationaryWindowMs: 5000,
   trackingLostMs: 1000,
   holdSteadyCooldownMs: 10_000,
+
+  // First floor value: a hit test on a ray from the phone, this far below straight ahead.
+  floorHitRayDownDeg: 45,
+  // Up component of the hit surface's normal. A floor is close to 1, a wall close to 0.
+  floorHitMinUp: 0.9,
+  floorHitBelowCameraM: { min: 0.5, max: 2.0 },
+  floorHitSamples: 5,
+  // Floor candidates must sit at least this far below the phone, so a table top never counts.
+  floorMinBelowCameraM: 0.3,
+  // Calibration ends after three slow steps (this much walking) or this long, once it has enough points.
+  calibrationMoveM: 1.5,
+  calibrationMaxMs: 8000,
+  calibrationMinPoints: 200,
+  floorReestimateWeight: 0.3,
+  floorReestimateMinPoints: 50,
+  // Under this, the camera points nearly straight up or down, and its flattened forward is noise.
+  forwardMinFlat: 0.2,
 } as const;
 
 export const USER = {
@@ -138,6 +155,8 @@ export const FRAMES = {
   geminiLongEdgePx: 768,
   geminiJpegQuality: 0.7,
   maxFrameBytes: 400 * 1024,
+  // A requested frame that doesn't arrive in this time resolves as no frame.
+  captureWaitMs: 1000,
 } as const;
 
 export const NETWORK = {
@@ -209,4 +228,8 @@ export const SEED = {
   days: 14,
   minRows: 300_000,
   maxRows: 500_000,
+} as const;
+
+export const DEBUG_OVERLAY = {
+  refreshMs: 250,
 } as const;

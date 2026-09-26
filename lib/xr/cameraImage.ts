@@ -136,3 +136,17 @@ export function createCameraReader(gl: WebGL2RenderingContext, flipY = true): Ca
     },
   };
 }
+
+// Keeps the camera's aspect and shrinks it so the long edge fits. Never scales up.
+export function fitLongEdge(width: number, height: number, longEdge: number): { width: number; height: number } {
+  const scale = Math.min(1, longEdge / Math.max(width, height));
+  return { width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale)) };
+}
+
+export async function encodeJpeg(image: SmallImage, quality: number): Promise<Blob> {
+  const canvas = new OffscreenCanvas(image.width, image.height);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("No 2D canvas for the JPEG");
+  ctx.putImageData(new ImageData(image.data, image.width, image.height), 0, 0);
+  return canvas.convertToBlob({ type: "image/jpeg", quality });
+}
