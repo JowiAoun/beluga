@@ -102,6 +102,21 @@ describe("camera-only engine", () => {
     expect(engine.update(view(1600), same).hazards).toHaveLength(0);
   });
 
+  it("drops a thing the walker turns away from", () => {
+    const engine = new CameraOnlyEngine();
+    engine.update(view(0), chairAt(2));
+    const same = chairAt(2);
+    expect(engine.update(view(250), same).hazards).toHaveLength(1);
+    // Turned 40° right, the chair sits 1.3 m left of the walking line.
+    const r = (-40 * Math.PI) / 180;
+    const turned = {
+      ...view(350),
+      forward: { x: -Math.sin(r), z: -Math.cos(r) },
+      right: { x: Math.cos(r), z: -Math.sin(r) },
+    };
+    expect(engine.update(turned, same).hazards).toHaveLength(0);
+  });
+
   it("drops a first box that isn't seen again", () => {
     const engine = new CameraOnlyEngine();
     engine.update(view(0), chairAt(2));

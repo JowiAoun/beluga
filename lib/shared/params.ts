@@ -74,6 +74,9 @@ export const SENSING = {
   floorLineMinSpreadM: 0.3,
   // An obstacle covering at least this share of the corridor gets the "blocked" priority (3).
   blockedMinBlocking: 0.6,
+  // A hazard no longer seen stops once it sits this far outside the corridor: the user turned
+  // away from it or stepped around it.
+  forgetOutsideCorridorM: 0.25,
 } as const;
 
 export const USER = {

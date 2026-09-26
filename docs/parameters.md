@@ -17,7 +17,7 @@ Copied from `docs/PLAN.md` on Sept 26, 2026. When this file and `lib/shared` dif
 | Obstacle band | 0.15–1.4 m above floor |
 | Head-height band | 1.4 m up to the user's height + 0.1 m (default 1.95 m) |
 | Floor line slope clamp | ±10% |
-| Out-of-view memory | until passed, at most 3 s |
+| Out-of-view memory | until passed, at most 3 s, or 0.25 m outside the corridor |
 | Travel-direction blend | above 0.3 m/s, weight 0.5 |
 | Drop-off threshold | more than 0.15 m below floor (a single step is 15 to 18 cm) |
 | Lateral buckets | 5 |

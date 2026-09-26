@@ -224,6 +224,22 @@ describe("HazardEngine behaviour", () => {
     expect(after.map((h) => h.id)).toEqual(before.map((h) => h.id));
   });
 
+  it("stops a hazard at once when the user turns away from it", () => {
+    const engine = new HazardEngine();
+    const scene = [...floor(0, 0.3, 1.45), ...grid([-0.3, -0.1], [0, 1], [-1.5, -1.5])];
+    expect(settle(engine, scene).hazards).toHaveLength(1);
+    // Turned 40° right, the post is out of view and 1.1 m left of the walking line.
+    const r = (-40 * Math.PI) / 180;
+    const turned = {
+      ...at(0, [], 500),
+      worldFromView: yaw(-40, 0, 1.3, 0),
+      viewFromWorld: yaw(40, 0, -1.3, 0),
+      forward: { x: -Math.sin(r), z: -Math.cos(r) },
+      right: { x: Math.cos(r), z: -Math.sin(r) },
+    };
+    expect(engine.update(turned).hazards).toEqual([]);
+  });
+
   it("puts a drop-off first, then head height, then the nearest obstacle", () => {
     const scene = [
       ...floor(0, 0.3, 2.0),

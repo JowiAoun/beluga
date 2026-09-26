@@ -30,7 +30,7 @@ export interface LabelQuery {
 export type LabelFor = (hazard: LabelQuery) => DetectorClass | null;
 
 export interface EngineResult {
-  // Active hazards, most urgent first. Audio plays the first two.
+  // Active hazards, most urgent first. The audio picks which of them sound.
   hazards: HazardUpdate[];
   events: HazardEvent[];
   // The floor line this update used, for the debug overlay. Null while tracking is lost.
@@ -81,6 +81,11 @@ function relative(world: Vec3, update: SensingUpdate): { ahead: number; lateral:
     ahead: dx * update.forward.x + dz * update.forward.z,
     lateral: dx * update.right.x + dz * update.right.z,
   };
+}
+
+// Well to the side of the corridor, a hazard no longer seen is out of the way: the user turned or stepped around it.
+export function turnedAway(lateral: number): boolean {
+  return Math.abs(lateral) > SENSING.corridorHalfWidthM + SENSING.forgetOutsideCorridorM;
 }
 
 function inView(world: Vec3, update: SensingUpdate): boolean {
@@ -186,7 +191,7 @@ export class HazardEngine {
       const at = relative(track.world, update);
       track.distance = at.ahead;
       track.angle = angleOf(at.ahead, at.lateral);
-      if (at.ahead <= 0) continue;
+      if (at.ahead <= 0 || turnedAway(at.lateral)) continue;
       if (inView(track.world, update)) {
         track.outOfViewSince = null;
         if (++track.misses >= SENSING.deactivateAfterUpdates) continue;

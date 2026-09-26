@@ -12,7 +12,7 @@ import type { DetectorClass } from "@/lib/shared/enums";
 import { CAMERA_ONLY, CAMERA_ONLY_HEIGHTS_M, SENSING } from "@/lib/shared/params";
 import { rayToHeight } from "@/lib/xr/geometry";
 import type { SensingUpdate, Vec3 } from "@/lib/xr/types";
-import { priorityOf, type EngineResult, type HazardEvent } from "./engine";
+import { priorityOf, turnedAway, type EngineResult, type HazardEvent } from "./engine";
 
 // A box placed on the floor, inside the corridor.
 export interface Spot {
@@ -115,8 +115,8 @@ export class CameraOnlyEngine {
     this.tracks = this.tracks.filter((track) => t - track.seenAt <= CAMERA_ONLY.holdMs);
     for (const track of this.tracks) {
       const at = relative(track.world, update);
-      // Passed it.
-      if (at.ahead <= 0) {
+      // Passed it, or turned away from it.
+      if (at.ahead <= 0 || turnedAway(at.lateral)) {
         track.seenAt = -Infinity;
         continue;
       }

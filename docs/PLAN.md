@@ -548,7 +548,7 @@ Heights are measured from a floor line that can slope. Each update, fit height a
 - Track hazards across updates by kind + bucket (allowing one bucket of drift per update).
 - A hazard becomes active after appearing in 3 consecutive updates, and inactive after 6 consecutive updates without it.
 - Distance and angle are smoothed with a short exponential average (weight 0.5 on the new value) to stop sound jitter.
-- Out-of-view memory: a hazard that leaves the camera's view (off the bottom or side edge) keeps its last world position. It keeps sounding, placed from the user's current pose, until the user has passed it or 3 s go by. It deactivates early only when its position is back in view and empty. Without this, a knee-high box drops out of view at about 1 m and the warning stops right when it matters most.
+- Out-of-view memory: a hazard that leaves the camera's view (off the bottom or side edge) keeps its last world position. It keeps sounding, placed from the user's current pose, until the user has passed it or 3 s go by. It deactivates early when its position is back in view and empty, or when it sits more than 0.25 m outside the corridor because the user turned away or stepped around it. Without this, a knee-high box drops out of view at about 1 m and the warning stops right when it matters most.
 - The remembered position is the part that stays in view longest: the top of an obstacle, the bottom of a head-height board. When the near part has left the view but the far part still shows (the top of a low box), the nearer remembered spot wins, or the distance would stop falling right before impact.
 
 ### Priorities and output
@@ -1114,7 +1114,7 @@ The repo is public, the README renders with working links and images, no secret 
 | Obstacle band | 0.15–1.4 m above floor |
 | Head-height band | 1.4 m up to the user's height + 0.1 m (default 1.95 m) |
 | Floor line slope clamp | ±10% |
-| Out-of-view memory | until passed, at most 3 s |
+| Out-of-view memory | until passed, at most 3 s, or 0.25 m outside the corridor |
 | Travel-direction blend | above 0.3 m/s, weight 0.5 |
 | Drop-off threshold | more than 0.15 m below floor (a single step is 15 to 18 cm) |
 | Lateral buckets | 5 |
