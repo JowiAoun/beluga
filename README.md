@@ -10,7 +10,7 @@ beluga is a research prototype built at Hack the Hill III. It is not a medical d
 
 ## Demo
 
-- Try it: [www.beluga.surf/walk](https://www.beluga.surf/walk), in Chrome on an Android phone with ARCore depth
+- Try it: [www.beluga.surf/walk](https://www.beluga.surf/walk), in Chrome on an Android phone with ARCore depth. Safari on an iPhone runs camera mode
 - City dashboard: [www.beluga.surf/map](https://www.beluga.surf/map)
 - Landing page: [beluga.surf](https://beluga.surf)
 
@@ -135,6 +135,7 @@ To deploy, import the repository into Vercel and set the same variables there.
 
 - Depth needs a phone with ARCore depth and a little motion. Glass, dark and shiny floors leave holes in it.
 - Without depth, camera-only mode warns about the things the detector can name and about yellow edge strips, but finds no steps or drop-offs. The strip check goes by colour alone, so a yellow mat counts too.
+- Safari has no WebXR AR, so an iPhone runs camera mode: the camera and the tilt sensors, with the floor taken to be a chest height below the phone. The same goes for an Android phone that refuses every AR setup.
 - Bone conduction gives weaker left and right than headphones, and no up or down.
 - The detector knows common objects only: there is no scooter class, so a scooter shows up as a bike, a motorcycle or nothing.
 - Ask and reporting need a network. Warnings don't.

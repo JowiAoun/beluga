@@ -1041,6 +1041,7 @@ Store consent (on/off + consent version number) on the phone; changeable any tim
 ### Depth-free fallback (only if the demo phone loses depth)
 
 - A settings switch "camera-only mode": no depth; hazards come from detector boxes only; distance estimated from box height for people (assume 1.7 m tall) and from box bottom position for ground objects; no drop-off detection. The overlay says "camera-only mode" and the pitch says depth-capable phones get edge warnings.
+- Built, and it turns on by itself without depth. Camera mode (`lib/xr/cameraSession.ts`) runs the same engine where there is no WebXR AR at all, such as Safari on an iPhone: the back camera through `getUserMedia`, the tilt from `deviceorientation` (iOS asks for it in the start tap), and the phone at 72% of the user's height.
 
 ### Stretch: tactile-strip detector
 
@@ -1208,6 +1209,8 @@ Drop-offs: same table shifted one band outward (start 3.5 m, continuous under 1.
 | If this fails | Do this |
 | --- | --- |
 | Demo phone has no WebXR depth | Borrow an ARCore-depth phone; else camera-only mode (Phase 10) and say so |
+| A phone says it runs AR, then refuses the session (NotSupportedError, seen on a OnePlus 13R) | Built in: the walk steps down to no depth, then no camera access, then camera mode, in the same tap, and keeps what worked. `/walk/check` names each setup the phone refused |
+| An iPhone, or any browser without WebXR AR | Camera mode: `getUserMedia` and the motion sensors, the floor a chest height below the phone, hazards from the detector's boxes and yellow strips. No steps or drop-offs |
 | Camera access not granted inside AR | Use depth-only sounds and disable Ask and triage (no frames to send); warnings still work. Say so in the limitations |
 | Detector too slow | Drop to 2 Hz, then disable; depth-only sounds |
 | Left and right still weak on the bone-conduction earbuds (under 8 of 10 in the blindfold test) | Full pan from 0.3 m off the walking line; say the side for every obstacle, not only named ones; try wired earbuds to tell a sound design problem from a bone conduction limit |
