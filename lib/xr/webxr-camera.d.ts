@@ -1,5 +1,11 @@
+/// <reference types="webxr" />
+
 // Chrome's raw camera access (the "camera-access" feature) is missing from @types/webxr.
 // https://immersive-web.github.io/raw-camera-access/
+
+interface Navigator {
+  xr?: XRSystem | undefined;
+}
 
 interface XRCamera {
   readonly width: number;
