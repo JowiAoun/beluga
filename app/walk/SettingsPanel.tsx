@@ -7,6 +7,7 @@ import { STATIONS, type StationId } from "@/lib/shared/stations";
 import { cn } from "@/lib/utils";
 import { heightText, stepHeight, VOLUME_RANGE_DB, type Settings } from "./settings";
 import { CHECKBOX, PANEL, SECONDARY, SELECT } from "./styles";
+import VibrationControls from "./VibrationControls";
 
 const TOGGLE = "flex min-h-16 items-center gap-4 text-lg";
 const STEP_BUTTON = cn(SECONDARY, "flex-col gap-1 px-2 py-2 text-lg text-balance");
@@ -36,6 +37,7 @@ export default function SettingsPanel({
         />
       </summary>
       <div className="flex flex-col gap-5 border-t border-line p-5">
+        <VibrationControls settings={settings} onChange={set} />
         <div className="flex flex-col gap-3">
           <p className="text-lg">
             Height:{" "}

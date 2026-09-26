@@ -40,6 +40,8 @@ import ReplayPlayer from "./ReplayPlayer";
 import { Reporting } from "./reporting";
 import { DEFAULT_SETTINGS, readSettings, saveSettings, type Settings } from "./settings";
 import SettingsPanel from "./SettingsPanel";
+import VibrationControls from "./VibrationControls";
+import { HapticEngine } from "@/lib/haptics/engine";
 import AskButton from "./AskButton";
 import DebugOverlay, { type DebugView } from "./DebugOverlay";
 import { startHeadsetButton } from "./headset";
@@ -113,6 +115,7 @@ export default function Walk() {
   const sessionRef = useRef<SensingSession | null>(null);
   const audioRef = useRef<AudioContext | null>(null);
   const soundRef = useRef<AudioEngine | null>(null);
+  const hapticsRef = useRef<HapticEngine | null>(null);
   const libraryRef = useRef<RawLibrary | null>(null);
   const cleanupRef = useRef<Array<() => void>>([]);
   const debugRef = useRef(false);
@@ -274,6 +277,7 @@ export default function Walk() {
     const detect = detectRef.current;
     detect?.setEnabled(ready, update.t);
     if (!ready) {
+      hapticsRef.current?.stop();
       engineRef.current?.reset();
       cameraEngineRef.current?.reset();
       soundRef.current?.update([], update);
@@ -299,6 +303,7 @@ export default function Walk() {
       ? withStrip(result.hazards, detect?.stripFor(update) ?? null)
       : result.hazards;
     soundRef.current?.update(heard, update, reporting?.blocked);
+    hapticsRef.current?.update(heard, ready, performance.now());
     const gate = detect?.check(update, result.hazards, latest.fix);
     const session = sessionRef.current;
     if (reporting) {
@@ -323,6 +328,7 @@ export default function Walk() {
 
   // Recorded clips where there is one; the phone's voice for the rest.
   const onCue = useCallback((cue: Cue) => {
+    if (cue === "calibrated") hapticsRef.current?.calibrated(performance.now());
     if (soundRef.current && isClipId(cue)) soundRef.current.say([cue]);
     else speakLocalText(LINES[cue]);
   }, []);
@@ -387,6 +393,15 @@ export default function Walk() {
     sound.setVolume(settingsRef.current.volumeDb);
     sound.setAliveTick(settingsRef.current.aliveTick);
     soundRef.current = sound;
+    const haptics = new HapticEngine(settingsRef.current);
+    hapticsRef.current = haptics;
+    const stopHapticsWhenHidden = () => { if (document.hidden) haptics.stop(); };
+    document.addEventListener("visibilitychange", stopHapticsWhenHidden);
+    cleanupRef.current.push(() => {
+      haptics.stop();
+      if (hapticsRef.current === haptics) hapticsRef.current = null;
+      document.removeEventListener("visibilitychange", stopHapticsWhenHidden);
+    });
     // Tones play until the library is decoded, a moment later.
     const raw = libraryRef.current;
     if (raw) void decodeLibrary(ctx, raw).then((library) => sound.useLibrary(library));
@@ -513,6 +528,7 @@ export default function Walk() {
   };
 
   const changeSettings = (next: Settings) => {
+    hapticsRef.current?.configure(next);
     settingsRef.current = next;
     setSettings(next);
     saveSettings(next);
@@ -627,7 +643,11 @@ export default function Walk() {
             getAudio={() => audioRef.current} getEngine={() => soundRef.current}
             getFov={() => latestRef.current.update?.fov.horizontal}
           />}
-          <StopButton onStop={() => sessionRef.current?.stop()} />
+          <details className="rounded-lg bg-black/90 p-4 text-white">
+            <summary className="min-h-16 cursor-pointer text-xl font-semibold">Vibration settings</summary>
+            <VibrationControls settings={settings ?? DEFAULT_SETTINGS} onChange={(next) => changeSettings({ ...settingsRef.current, ...next })} />
+          </details>
+          <StopButton onStop={() => { hapticsRef.current?.stop(); sessionRef.current?.stop(); }} />
         </main>
       ) : (
         <main className="mx-auto flex w-full max-w-xl flex-col gap-5 px-4 pt-10 pb-16">
