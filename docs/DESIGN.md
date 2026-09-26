@@ -178,7 +178,7 @@ These belong to track D. Restyling `app/map` (track C) or `app/walk` (track A) g
 | --- | --- | --- | --- |
 | `public/3d/trekz-air.glb` | Done (390 KB, 120 KB after meshopt) | Hear a warning, then the exploded view | Shells, contact pads, rear pods, neckband. Hide `TrekzAir_wordmark_00`, `TrekzAir_wordmark_01` and `TrekzAir_emblem`: they carry the AfterShokz marks |
 | `public/3d/beluga.glb` | Done (560 KB, 146 KB after `dedup` and meshopt): the beluga riding a wave | Hero | Body, tail flukes, flippers, face, sunglasses, cane, wave, foam and droplets, 50 named parts. The parts are baked in place, so `BelugaScene.tsx` finds the tail and flipper pivots from their bounds |
-| `public/3d/phone-mount.glb` | Maybe later | How it works | Screen, lens, clamp, strap. Until then, a drei `RoundedBox` |
+| `public/3d/phone.glb` | Done (1.54 MB, 79 KB after `resize`, `webp` and meshopt) | How it works, step 1 | Frame, glass, display, camera plate and lenses, 31 named parts. Its OnePlus and Hasselblad marks are swapped for plain panels, and its screen shows the beluga walk screen. No mount yet |
 | `public/3d/scooter.glb` | Maybe later | How it works | Until then, boxes and cylinders |
 
 Built in code with no model: the walking corridor, the pole, the head-height sign, the step-down edge, the construction barrier, the tactile strip (repeated bumps), the sonar rings and the map's 3D cells.
@@ -301,7 +301,7 @@ Feature freeze is 02:00, Sunday Sept 27.
 
 When behind, cut from the top:
 
-1. The corridor in 3D (a 2D SVG animation takes its place)
+1. The corridor in 3D (done in `PhoneScene.tsx`; the 2D drawing is its still)
 2. The exploded view
 3. The 3D map (the flat squares stay)
 4. The view transitions
