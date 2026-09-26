@@ -39,26 +39,39 @@ describe("AR session setups", () => {
       "dom-overlay",
       "local-floor",
     ]);
-    expect(sessionInit(overlay, 1).optionalFeatures).not.toContain("camera-access");
-    const noDepth = sessionInit(overlay, 2);
+    expect(sessionInit(overlay, 1).depthSensing).toMatchObject({ depthTypeRequest: ["smooth"] });
+    expect(sessionInit(overlay, 3).depthSensing).toMatchObject({ matchDepthView: false });
+    expect(sessionInit(overlay).depthSensing).not.toHaveProperty("matchDepthView");
+    expect(sessionInit(overlay, 4).optionalFeatures).not.toContain("camera-access");
+    const noDepth = sessionInit(overlay, 5);
     expect(noDepth.optionalFeatures).not.toContain("depth-sensing");
     expect(noDepth.depthSensing).toBeUndefined();
+  });
+
+  it("tries depth other ways before dropping it", async () => {
+    // A phone that only takes raw depth.
+    const phone = fakeXr((init) =>
+      init.depthSensing && init.depthSensing.depthTypeRequest?.[0] !== "raw" ? refused() : null,
+    );
+    const first = await requestArSession(phone.xr, overlay);
+    expect(SESSION_LEVELS[first.level].name).toBe("raw depth");
+    expect(first.refused).toHaveLength(2);
+    expect(first.refused[0]).toBe(`${SESSION_LEVELS[0].name}: The specified session configuration is not supported.`);
   });
 
   it("keeps depth when the phone only refuses camera access", async () => {
     const phone = fakeXr((init) => (init.optionalFeatures?.includes("camera-access") ? refused() : null));
     const first = await requestArSession(phone.xr, overlay);
-    expect(first.level).toBe(1);
-    expect(phone.asked[1]).toContain("depth-sensing");
-    expect(first.refused).toEqual([`${SESSION_LEVELS[0].name}: The specified session configuration is not supported.`]);
+    expect(SESSION_LEVELS[first.level].name).toBe("no camera access");
+    expect(phone.asked[first.level]).toContain("depth-sensing");
   });
 
   it("drops depth when the phone refuses it, and starts there next time", async () => {
     const phone = fakeXr((init) => (init.optionalFeatures?.includes("depth-sensing") ? refused() : null));
     const first = await requestArSession(phone.xr, overlay);
-    expect(first.level).toBe(2);
-    expect(first.refused).toHaveLength(2);
-    expect(savedLevel()).toBe(2);
+    expect(SESSION_LEVELS[first.level].name).toBe("no depth");
+    expect(first.refused).toHaveLength(SESSION_LEVELS.length - 1);
+    expect(savedLevel()).toBe(first.level);
     const next = fakeXr(() => null);
     await requestArSession(next.xr, overlay);
     expect(next.asked).toHaveLength(1);

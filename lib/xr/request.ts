@@ -1,24 +1,33 @@
 // Asks Chrome for the AR session, stepping down when a phone refuses the setup. Some phones (a
 // OnePlus 13R, for one) say they can run AR, then reject a session with every optional feature
-// ("NotSupportedError"). Each try drops a feature: camera access first, since depth gives the real
-// warnings, then depth. What is left still warns: depth without labels, or camera-only mode on the
-// AR pose. When every try is refused, the walk falls back to camera mode (lib/xr/cameraSession.ts).
+// ("NotSupportedError") whenever depth is in it, though Google lists its Depth API. The spec says an
+// optional feature the phone can't give must be left out, not fail the session, so it is Chrome or
+// ARCore's setup that breaks. Depth gives the real warnings, so the next tries ask for it other
+// ways first: smooth or raw depth only, then depth that needn't match the view. Then camera access
+// goes, then depth. What is left still warns: depth without labels, or camera-only mode on the AR
+// pose. When every try is refused, the walk falls back to camera mode (lib/xr/cameraSession.ts).
 
 export interface SessionLevel {
   name: string;
   depth: boolean;
   camera: boolean;
+  // Extra depth settings. Chrome versions without them ignore them.
+  depthType?: XRDepthType;
+  matchDepthView?: boolean;
 }
 
 export const SESSION_LEVELS: readonly SessionLevel[] = [
   { name: "every feature", depth: true, camera: true },
+  { name: "smooth depth", depth: true, camera: true, depthType: "smooth" },
+  { name: "raw depth", depth: true, camera: true, depthType: "raw" },
+  { name: "depth apart from the view", depth: true, camera: true, matchDepthView: false },
   { name: "no camera access", depth: true, camera: false },
   { name: "no depth", depth: false, camera: true },
 ];
 
 // Chrome on ARCore has no float32 depth, so asking for it alone would return none.
 export function sessionInit(overlayRoot: Element, level = 0): XRSessionInit {
-  const { depth, camera } = SESSION_LEVELS[level];
+  const { depth, camera, depthType, matchDepthView } = SESSION_LEVELS[level];
   const optionalFeatures = [
     ...(depth ? ["depth-sensing"] : []),
     ...(camera ? ["camera-access"] : []),
@@ -34,6 +43,8 @@ export function sessionInit(overlayRoot: Element, level = 0): XRSessionInit {
           depthSensing: {
             usagePreference: ["cpu-optimized"],
             dataFormatPreference: ["luminance-alpha", "unsigned-short"],
+            ...(depthType ? { depthTypeRequest: [depthType] } : {}),
+            ...(matchDepthView === undefined ? {} : { matchDepthView }),
           },
         }
       : {}),
@@ -61,7 +72,8 @@ function refusedSetup(err: unknown): boolean {
 }
 
 // The level that worked on this phone, kept per browser version so an update tries them all again.
-const LEVEL_KEY = "beluga.xrLevel";
+// A new key whenever SESSION_LEVELS changes, so a saved number never points at another setup.
+const LEVEL_KEY = "beluga.xrLevel.v2";
 
 interface SavedLevel {
   level: number;

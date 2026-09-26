@@ -286,7 +286,16 @@ export function startSensing(options: SensingOptions): SensingSession {
     if (features.depth) {
       try {
         const info = frame.getDepthInformation(view);
-        if (info) depth = sampleDepth(info, projection, worldFromView, gridFor(fov));
+        // Depth that needn't match the view comes with its own camera; otherwise it is the view's.
+        if (info) {
+          const place = info.projectionMatrix && info.transform ? info : null;
+          depth = sampleDepth(
+            info,
+            place?.projectionMatrix ?? projection,
+            place?.transform?.matrix ?? worldFromView,
+            gridFor(fov),
+          );
+        }
         live.depthError = null;
       } catch (err) {
         live.depthError = errorText(err);
