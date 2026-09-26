@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { AudioStats } from "@/lib/audio/engine";
+import type { AudioStats, WarningSoundLog } from "@/lib/audio/engine";
 import { lateralOf, sideOf } from "@/lib/audio/placement";
 import type { DetectStats } from "@/lib/detect/pipeline";
 import type { ReportingStats } from "./reporting";
@@ -46,6 +46,16 @@ function describeSound(audio: AudioStats): string {
   });
   const lead = `looks ${audio.leadMs} ms ahead (Chrome says ${audio.outputLatencyMs} ms output latency)`;
   return `Sound ${audio.state}: ${voices.length > 0 ? voices.join("; ") : "silent"}. ${lead}`;
+}
+
+function describeWarning(warning: WarningSoundLog): string {
+  const label = warning.label === "unknown" ? "unknown label" : warning.label.replace(/_/g, " ");
+  const position = Math.abs(warning.lateral) < 0.08
+    ? `centre (${warning.angle.toFixed(0)}°)`
+    : `${Math.abs(warning.lateral).toFixed(2)} m ${warning.lateral < 0 ? "left" : "right"} (${Math.abs(warning.angle).toFixed(0)}° ${warning.angle < 0 ? "left" : "right"})`;
+  const cadence = warning.rhythm === "continuous" ? "continuous" : `every ${warning.repeatMs} ms`;
+  const repeated = warning.count > 1 ? `, ${warning.count} repeats` : "";
+  return `${warning.time}: ${warning.sound.replace(/_/g, " ")} because ${warning.reason}: ${warning.kind.replace(/_/g, " ")} / ${label}, ${warning.distance.toFixed(2)} m, ${position}, covers ${Math.round(warning.blocking * 100)}%, ${cadence}${repeated}`;
 }
 
 function describeDetector(detect: DetectStats): string {
@@ -154,6 +164,18 @@ export default function DebugOverlay({ view, session }: { view: DebugView | null
         </p>
       )}
       {view?.audio && <p>{describeSound(view.audio)}</p>}
+      {view?.audio && (
+        <section aria-label="Recent warning sounds" className="flex flex-col gap-1 border-t border-white/30 pt-1">
+          <p className="text-xs uppercase opacity-70">Why it beeped</p>
+          {view.audio.recentWarnings.length > 0 ? (
+            <ul className="flex flex-col gap-1">
+              {view.audio.recentWarnings.map((warning) => (
+                <li key={`${warning.id}:${warning.sound}`}>{describeWarning(warning)}</li>
+              ))}
+            </ul>
+          ) : <p className="opacity-70">No warning sounds yet.</p>}
+        </section>
+      )}
       {view?.detect && <p>{describeDetector(view.detect)}</p>}
       {view?.detect && update && <p>{describeGate(view.detect, update.t, view.reporting?.on ?? false)}</p>}
       {view?.reporting?.on && <p>{describeReporting(view.reporting)}</p>}

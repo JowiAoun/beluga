@@ -7,7 +7,7 @@ import type { HazardUpdate } from "@/lib/shared/contracts";
 import { SOUND_IDS, type SoundId } from "@/lib/shared/enums";
 import { AUDIO } from "@/lib/shared/params";
 import { isClipId, type ClipId, type DecodedLibrary } from "./library";
-import { createPlacer, DEFAULT_EARS, type EarSettings, type Pan, type Placer } from "./placement";
+import { createPlacer, DEFAULT_EARS, lateralOf, type EarSettings, type Pan, type Placer } from "./placement";
 import { QUIET, Scheduler, type Action, type Scene, type SoundInfo, type VoiceView } from "./scheduler";
 import { renderTone } from "./tones";
 
@@ -39,6 +39,7 @@ export interface AudioEngineOptions {
 
 export interface AudioStats {
   voices: VoiceView[];
+  recentWarnings: WarningSoundLog[];
   // "library" once the ElevenLabs sounds are decoded, "tones" before.
   source: "tones" | "library";
   // How far ahead the bands look, from Chrome's output latency.
@@ -47,11 +48,35 @@ export interface AudioStats {
   state: AudioContextState;
 }
 
+export interface WarningSoundLog {
+  id: string;
+  sound: SoundId;
+  kind: HazardUpdate["kind"];
+  label: HazardUpdate["label"];
+  distance: number;
+  angle: number;
+  lateral: number;
+  blocking: number;
+  reason: string;
+  rhythm: string;
+  repeatMs: number;
+  count: number;
+  time: string;
+}
+
 // Level changes glide over this time constant, in seconds, so they never click.
 const LEVEL_SECONDS = 0.03;
 
 // Silence between the word and the side in a voice clip, in seconds.
 const CLIP_GAP_S = 0.05;
+
+function warningReason(hazard: HazardUpdate, blocked: boolean): string {
+  if (hazard.kind === "drop_off") return "depth detected a drop-off";
+  if (hazard.kind === "head_height") return "depth detected a head-height obstacle";
+  if (blocked) return "triage marked the path blocked";
+  if (hazard.label !== "unknown") return `detector matched ${hazard.label.replace(/_/g, " ")}`;
+  return "depth detected an obstacle; no detector label matched";
+}
 
 function dbToGain(db: number): number {
   return 10 ** (db / 20);
@@ -94,6 +119,7 @@ export class AudioEngine {
   // Audio-clock time the last sound started, for the alive tick.
   private lastSoundAt = 0;
   private readonly oneShots = new Set<Playing>();
+  private recentWarnings: WarningSoundLog[] = [];
   // The spoken Ask answer, while it plays.
   private answer: { playing: Playing; placer: Placer; ducked: boolean } | null = null;
 
@@ -192,6 +218,7 @@ export class AudioEngine {
   stats(): AudioStats {
     return {
       voices: this.scheduler.snapshot(),
+      recentWarnings: this.recentWarnings.map((warning) => ({ ...warning })),
       source: this.source,
       leadMs: Math.round(this.leadS() * 1000),
       outputLatencyMs: Math.round(((this.ctx.outputLatency || 0) + this.ctx.baseLatency) * 1000),
@@ -291,6 +318,7 @@ export class AudioEngine {
         case "hit": {
           if (!voice) break;
           const sound = this.sounds[action.sound];
+          this.recordWarning(action.id, action.sound, "repeating");
           // One instance per hazard: the new repeat cuts the one still playing.
           if (voice.current) this.fade(voice.current, action.at);
           voice.current = this.startSound(sound.buffer, sound.gain, voice.placer, action.at, false);
@@ -303,6 +331,7 @@ export class AudioEngine {
         case "loop_start": {
           const loop = this.sounds[action.sound].loop;
           if (!voice || !loop) break;
+          this.recordWarning(action.id, action.sound, "continuous");
           if (voice.current) this.fade(voice.current, action.at);
           voice.current = null;
           voice.loop = this.startSound(loop, this.sounds[action.sound].gain, voice.placer, action.at, true);
@@ -334,6 +363,30 @@ export class AudioEngine {
     }
     let at = this.ctx.currentTime;
     for (const buffer of buffers) at = this.playBuffer(buffer!, pan, 1, at) + CLIP_GAP_S;
+  }
+
+  private recordWarning(id: string, sound: SoundId, rhythm: string): void {
+    const hazard = this.scene.hazards.find((item) => item.id === id);
+    if (!hazard) return;
+    const voice = this.scheduler.snapshot().find((item) => item.id === id);
+    const previous = this.recentWarnings.find((item) => item.id === id && item.sound === sound);
+    const warning: WarningSoundLog = {
+      id,
+      sound,
+      kind: hazard.kind,
+      label: hazard.label,
+      distance: voice?.distance ?? hazard.distance,
+      angle: hazard.angle,
+      lateral: lateralOf(hazard),
+      blocking: hazard.blocking,
+      reason: warningReason(hazard, this.scene.blocked?.has(id) ?? false),
+      rhythm,
+      repeatMs: voice?.repeatMs ?? 0,
+      count: previous?.count ?? 0,
+      time: new Date().toLocaleTimeString(),
+    };
+    warning.count++;
+    this.recentWarnings = [warning, ...this.recentWarnings.filter((item) => item !== previous)].slice(0, 6);
   }
 
   private startSound(buffer: AudioBuffer, level: number, placer: Placer, at: number, loop: boolean): Playing {
