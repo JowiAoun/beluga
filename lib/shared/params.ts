@@ -267,3 +267,25 @@ export const SEED = {
 export const DEBUG_OVERLAY = {
   refreshMs: 250,
 } as const;
+
+export const VOICE_ASK = {
+  recordingMaxMs: 10_000,
+  recordingBitsPerSecond: 64_000,
+  audioMaxBytes: 1024 * 1024,
+  questionMaxChars: 200,
+  transcriptionTimeoutMs: 15_000,
+  requestOverheadBytes: 8192,
+  clientTimeoutMs: 25_000,
+  budgetWindowMs: 60 * 60 * 1000,
+  maxConcurrent: 3,
+} as const;
+
+export const SOUND_CACHE = {
+  name: "beluga-sounds-v1",
+  fetchTimeoutMs: 8000,
+} as const;
+
+export const PRACTICE = {
+  repeats: 3,
+  repeatGapMs: 500,
+} as const;
