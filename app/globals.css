@@ -43,6 +43,7 @@
   --animate-float: float 7s ease-in-out infinite;
   --animate-rise: rise 0.9s var(--ease-water) both;
   --animate-shimmer: shimmer 6s linear infinite;
+  --animate-drift: drift 20s linear infinite;
 
   /* A sonar ring: grows out of its centre and fades. */
   @keyframes ring {
@@ -75,6 +76,11 @@
     to {
       opacity: 1;
       transform: translateY(0);
+    }
+  }
+  @keyframes drift {
+    to {
+      transform: translateX(-50%);
     }
   }
   @keyframes shimmer {
