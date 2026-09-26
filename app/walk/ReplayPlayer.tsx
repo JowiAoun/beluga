@@ -4,8 +4,11 @@
 // and sounds, at real time, with no AR session. The demo's backup on any phone or laptop, and a
 // way to hear a change to the engine on the same walk twice.
 
+import { IconArrowLeft, IconPlayerPlayFilled, IconPlayerStopFilled } from "@tabler/icons-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { BelugaMark } from "@/components/brand/Logo";
+import { cn } from "@/lib/utils";
 import { AudioEngine } from "@/lib/audio/engine";
 import { decodeLibrary, fetchLibrary, type RawLibrary } from "@/lib/audio/library";
 import { LabelMatcher } from "@/lib/detect/match";
@@ -17,6 +20,7 @@ import { decodeClip, type ReplayClip } from "@/lib/replay/format";
 import { SENSING } from "@/lib/shared/params";
 import DebugOverlay, { type DebugView } from "./DebugOverlay";
 import { readSettings } from "./settings";
+import { CHECKBOX, DANGER, LINK_ROW, PANEL, PRIMARY } from "./styles";
 import { speakText } from "./voice";
 
 const RECENT_EVENTS = 5;
@@ -145,40 +149,57 @@ export default function ReplayPlayer({ src }: { src: string }) {
   };
 
   return (
-    <main className="mx-auto flex w-full max-w-xl flex-col gap-4 p-4">
-      <header className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold">beluga replay</h1>
-        <p>
-          A recorded walk played through the real warning sounds, with no camera or AR session. Recorded, not live.
+    <main className="mx-auto flex w-full max-w-xl flex-col gap-5 px-4 pt-8 pb-12">
+      <header className="flex flex-col gap-4">
+        <div className="flex items-center gap-3">
+          <BelugaMark size={64} className="size-14" />
+          <h1 className="text-3xl font-extrabold tracking-tight">beluga replay</h1>
+        </div>
+        <p className="text-xl text-muted">
+          A recorded walk played through the real warning sounds, with no camera or AR session.{" "}
+          <span className="inline-block rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-base font-semibold text-accent">
+            Recorded, not live.
+          </span>
         </p>
       </header>
-      <p role="status" className="text-lg">
+      <p role="status" className="font-mono text-lg">
         {status}
       </p>
-      <label className="flex flex-col gap-1 text-lg">
-        Play a clip saved on this device
-        <input type="file" accept=".gz,.json,application/gzip,application/json" onChange={(e) => void pick(e.target.files?.[0])} />
-      </label>
-      <label className="flex min-h-12 items-center gap-3 text-lg">
-        <input type="checkbox" checked={loop} onChange={(e) => setLoop(e.target.checked)} className="h-6 w-6" disabled={playing} />
-        Start again at the end
-      </label>
+      <div className={cn(PANEL, "flex flex-col gap-4")}>
+        <label className="flex flex-col gap-3 text-lg">
+          Play a clip saved on this device
+          <input
+            type="file"
+            accept=".gz,.json,application/gzip,application/json"
+            onChange={(e) => void pick(e.target.files?.[0])}
+            className="text-base text-muted file:mr-3 file:min-h-12 file:rounded-xl file:border file:border-line file:bg-white/10 file:px-4 file:font-semibold file:text-foreground"
+          />
+        </label>
+        <label className="flex min-h-12 items-center gap-4 text-lg">
+          <input
+            type="checkbox"
+            checked={loop}
+            onChange={(e) => setLoop(e.target.checked)}
+            className={CHECKBOX}
+            disabled={playing}
+          />
+          Start again at the end
+        </label>
+      </div>
       {playing ? (
-        <button type="button" onClick={() => stopRef.current?.()} className="min-h-20 rounded-lg bg-red-800 text-2xl font-bold">
+        <button type="button" onClick={() => stopRef.current?.()} className={cn(DANGER, "min-h-20 text-2xl")}>
+          <IconPlayerStopFilled aria-hidden size={28} />
           Stop
         </button>
       ) : (
-        <button
-          type="button"
-          onClick={play}
-          disabled={!clip}
-          className="min-h-20 rounded-lg bg-yellow-300 text-2xl font-bold text-black disabled:opacity-50"
-        >
+        <button type="button" onClick={play} disabled={!clip} className={cn(PRIMARY, "min-h-20 text-2xl")}>
+          <IconPlayerPlayFilled aria-hidden size={28} />
           Play
         </button>
       )}
       {view && <DebugOverlay view={view} session={null} />}
-      <Link href="/walk" className="text-lg underline">
+      <Link href="/walk" className={cn(LINK_ROW, "justify-start")}>
+        <IconArrowLeft aria-hidden size={24} className="shrink-0" />
         Back to beluga
       </Link>
     </main>
