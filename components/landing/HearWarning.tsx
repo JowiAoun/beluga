@@ -223,7 +223,7 @@ export function HearWarning() {
 
         <div className="relative">
           <div aria-hidden className="absolute inset-[12%] rounded-full bg-sonar/10 blur-3xl contrast-more:hidden" />
-          <SceneSlot poster={<EarbudsPoster side={side} />} className="aspect-square w-full">
+          <SceneSlot poster={<EarbudsPoster side={side} />} className="mx-auto aspect-square w-full max-w-xl">
             {(controls) => <EarbudsScene side={side} progress={scrollYProgress} still={paused} {...controls} />}
           </SceneSlot>
         </div>

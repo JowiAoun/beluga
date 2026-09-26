@@ -64,7 +64,7 @@ export function Hero() {
             </p>
           </Reveal>
 
-          <Reveal delay={0.3} className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <Reveal delay={0.3} className="mt-8 flex flex-col gap-3 sm:flex-row [&>a]:whitespace-nowrap">
             <ButtonLink href="/walk" size="lg">
               Try beluga <span className="font-medium opacity-80">(Android Chrome)</span>
             </ButtonLink>

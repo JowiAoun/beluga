@@ -91,6 +91,8 @@ function Earbuds({
       const sway = still ? 0 : Math.sin(t * 0.5) * 0.35;
       root.current.rotation.y = smooth(root.current.rotation.y, sway + a * 0.5, delta, 2);
       root.current.position.y = still ? 0 : Math.sin(t * 0.8) * 0.003;
+      // Shrink a little as the parts spread, so they stay in the frame.
+      root.current.scale.setScalar(1 - a * 0.28);
     }
 
     ringClock.current = (ringClock.current + delta / 1.1) % 1;
