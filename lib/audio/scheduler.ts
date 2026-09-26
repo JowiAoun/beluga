@@ -59,7 +59,12 @@ export class Scheduler {
   private spoken = new Set<string>();
   private lastSaid = new Map<string, number>();
 
-  constructor(private readonly sounds: Readonly<Record<SoundId, SoundInfo>>) {}
+  constructor(private sounds: Readonly<Record<SoundId, SoundInfo>>) {}
+
+  // When the recorded library replaces the tones, lengths and loops change.
+  setSounds(sounds: Readonly<Record<SoundId, SoundInfo>>): void {
+    this.sounds = sounds;
+  }
 
   // What each voice is doing, for the debug overlay.
   snapshot(): VoiceView[] {

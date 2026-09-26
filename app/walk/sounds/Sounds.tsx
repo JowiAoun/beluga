@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { AudioEngine } from "@/lib/audio/engine";
+import { decodeFile, decodeLibrary, fetchLibrary, SOUNDS_PATH, type RawLibrary } from "@/lib/audio/library";
 import { panForLateral, type EarSettings, type Side } from "@/lib/audio/placement";
 import type { HazardUpdate } from "@/lib/shared/contracts";
 import type { HazardKind, SoundId } from "@/lib/shared/enums";
@@ -82,18 +83,20 @@ export default function Sounds() {
   const ctxRef = useRef<AudioContext | null>(null);
   const engineRef = useRef<AudioEngine | null>(null);
   const walkRef = useRef<number | null>(null);
+  const variantsRef = useRef(new Map<string, AudioBuffer>());
+  const [library, setLibrary] = useState<RawLibrary | null>(null);
   const [started, setStarted] = useState(false);
   const [ears, setEars] = useState<EarSettings>({ farEarCutDb: AUDIO.farEarCutDb, maxEarDelayMs: AUDIO.maxEarDelayMs });
   const [walking, setWalking] = useState<string | null>(null);
   const [test, setTest] = useState<TestState | null>(null);
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    void fetchLibrary().then(setLibrary);
+    return () => {
       if (walkRef.current !== null) window.clearInterval(walkRef.current);
       engineRef.current?.stop();
-    },
-    [],
-  );
+    };
+  }, []);
 
   // A new engine per setting, since the ears are fixed when a voice is built.
   const buildEngine = (next: EarSettings) => {
@@ -103,6 +106,22 @@ export default function Sounds() {
     const engine = new AudioEngine(ctx, { speak: speakText, ears: next });
     engine.start();
     engineRef.current = engine;
+    if (library) void decodeLibrary(ctx, library).then((decoded) => engine.useLibrary(decoded));
+  };
+
+  // Any variant from the library, fetched and decoded the first time it plays.
+  const playVariant = async (file: string) => {
+    const ctx = ctxRef.current;
+    if (!ctx) return;
+    let buffer = variantsRef.current.get(file);
+    if (!buffer) {
+      const response = await fetch(`${SOUNDS_PATH}/${file}`).catch(() => null);
+      const decoded = await decodeFile(ctx, response?.ok ? await response.arrayBuffer() : undefined);
+      if (!decoded) return;
+      buffer = decoded;
+      variantsRef.current.set(file, buffer);
+    }
+    engineRef.current?.playBuffer(buffer, 0);
   };
 
   const start = () => {
@@ -219,13 +238,19 @@ export default function Sounds() {
       <header className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold">beluga sounds</h1>
         <p>
-          Plays every warning sound through the earbuds, left, centre and right, and runs the blindfold test. These are
-          temporary tones until the ElevenLabs library is in.
+          Plays every warning sound through the earbuds, left, centre and right, and runs the blindfold test.{" "}
+          {library
+            ? `Sounds from the ElevenLabs library, made ${new Date(library.manifest.generatedAt).toLocaleString("en-CA")}.`
+            : "No ElevenLabs library yet (run npm run sounds), so these are temporary tones."}
         </p>
       </header>
 
       {!started ? (
-        <button type="button" onClick={start} className="min-h-24 rounded-lg bg-yellow-300 text-2xl font-bold text-black">
+        <button
+          type="button"
+          onClick={start}
+          className="min-h-24 rounded-lg bg-yellow-300 text-2xl font-bold text-black"
+        >
           Start sound
         </button>
       ) : (
@@ -260,15 +285,19 @@ export default function Sounds() {
           <section className="flex flex-col gap-2">
             <h2 className="text-xl font-semibold">Blindfold test</h2>
             <p>
-              {TEST_CUES} random cues from a pole {TEST_LATERAL_M} m left, ahead or {TEST_LATERAL_M} m right. The
-              wearer taps the side. The plan asks for {PASS_MARK} of {TEST_CUES}.
+              {TEST_CUES} random cues from a pole {TEST_LATERAL_M} m left, ahead or {TEST_LATERAL_M} m right. The wearer
+              taps the side. The plan asks for {PASS_MARK} of {TEST_CUES}.
             </p>
             {test && (
               <p role="status" className="text-lg font-semibold">
                 Last test: {correct} of {test.cues.length} correct, {correct >= PASS_MARK ? "pass" : "not yet"}
               </p>
             )}
-            <button type="button" onClick={startTest} className="min-h-16 rounded-lg bg-yellow-300 text-lg font-bold text-black">
+            <button
+              type="button"
+              onClick={startTest}
+              className="min-h-16 rounded-lg bg-yellow-300 text-lg font-bold text-black"
+            >
               Start the blindfold test
             </button>
           </section>
@@ -303,23 +332,32 @@ export default function Sounds() {
 
           <section className="flex flex-col gap-2">
             <h2 className="text-xl font-semibold">Each sound</h2>
+            {library && (
+              <p>
+                Numbered buttons play each ElevenLabs variant from the centre. To pick one, set its file in{" "}
+                <code>public/sounds/manifest.json</code>.
+              </p>
+            )}
             {SOUNDS.map(({ id, use }) => (
-              <div key={id} className="grid grid-cols-[1fr_repeat(3,4.5rem)] items-center gap-2">
-                <span>
-                  <span className="font-mono">{id}</span>
-                  <br />
-                  <span className="text-sm opacity-80">{use}</span>
-                </span>
-                {([-1, 0, 1] as const).map((pan) => (
-                  <button
-                    key={pan}
-                    type="button"
-                    onClick={() => engineRef.current?.play(id, pan)}
-                    className="min-h-12 rounded bg-neutral-800 font-semibold"
-                  >
-                    {pan < 0 ? "Left" : pan > 0 ? "Right" : "Centre"}
-                  </button>
-                ))}
+              <div key={id} className="flex flex-col gap-1">
+                <div className="grid grid-cols-[1fr_repeat(3,4.5rem)] items-center gap-2">
+                  <span>
+                    <span className="font-mono">{id}</span>
+                    <br />
+                    <span className="text-sm opacity-80">{use}</span>
+                  </span>
+                  {([-1, 0, 1] as const).map((pan) => (
+                    <button
+                      key={pan}
+                      type="button"
+                      onClick={() => engineRef.current?.play(id, pan)}
+                      className="min-h-12 rounded bg-neutral-800 font-semibold"
+                    >
+                      {pan < 0 ? "Left" : pan > 0 ? "Right" : "Centre"}
+                    </button>
+                  ))}
+                </div>
+                <Variants files={library?.manifest.sounds[id]} onPlay={(file) => void playVariant(file)} />
               </div>
             ))}
           </section>
@@ -330,5 +368,35 @@ export default function Sounds() {
         Back to beluga
       </Link>
     </main>
+  );
+}
+
+// One button per library variant and loop, with the one that plays in a walk marked.
+function Variants({
+  files,
+  onPlay,
+}: {
+  files: { file: string; variants: string[]; loop: string | null; loopVariants: string[] } | undefined;
+  onPlay: (file: string) => void;
+}) {
+  if (!files) return null;
+  const all = [
+    ...files.variants.map((file, i) => ({ file, name: `${i + 1}`, chosen: file === files.file })),
+    ...files.loopVariants.map((file, i) => ({ file, name: `loop ${i + 1}`, chosen: file === files.loop })),
+  ];
+  return (
+    <div className="flex flex-wrap gap-2">
+      {all.map(({ file, name, chosen }) => (
+        <button
+          key={file}
+          type="button"
+          onClick={() => onPlay(file)}
+          className={`min-h-12 min-w-12 rounded px-3 ${chosen ? "bg-yellow-300 font-bold text-black" : "bg-neutral-700"}`}
+        >
+          {name}
+          {chosen && " (in use)"}
+        </button>
+      ))}
+    </div>
   );
 }

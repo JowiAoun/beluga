@@ -5,6 +5,7 @@
 import type { HazardUpdate } from "@/lib/shared/contracts";
 import { SOUND_IDS, type SoundId } from "@/lib/shared/enums";
 import { AUDIO } from "@/lib/shared/params";
+import { isClipId, type ClipId, type DecodedLibrary } from "./library";
 import { createPlacer, DEFAULT_EARS, type EarSettings, type Pan, type Placer } from "./placement";
 import { QUIET, Scheduler, type Action, type Scene, type SoundInfo, type VoiceView } from "./scheduler";
 import { renderTone } from "./tones";
@@ -30,13 +31,15 @@ interface VoiceNodes {
 }
 
 export interface AudioEngineOptions {
-  // Speaks a voice clip's words while there are no recorded clips (Phase 3a).
+  // Speaks a voice clip's words when the recorded clips don't cover them.
   speak?: (text: string) => void;
   ears?: EarSettings;
 }
 
 export interface AudioStats {
   voices: VoiceView[];
+  // "library" once the ElevenLabs sounds are decoded, "tones" before.
+  source: "tones" | "library";
   // How far ahead the bands look, from Chrome's output latency.
   leadMs: number;
   outputLatencyMs: number;
@@ -45,6 +48,9 @@ export interface AudioStats {
 
 // Level changes glide over this time constant, in seconds, so they never click.
 const LEVEL_SECONDS = 0.03;
+
+// Silence between the word and the side in a voice clip, in seconds.
+const CLIP_GAP_S = 0.05;
 
 function dbToGain(db: number): number {
   return 10 ** (db / 20);
@@ -73,7 +79,9 @@ export class AudioEngine {
   private readonly limiter: DynamicsCompressorNode;
   private readonly master: GainNode;
   private readonly centre: Placer;
-  private readonly sounds: Record<SoundId, LoadedSound>;
+  private sounds: Record<SoundId, LoadedSound>;
+  private clips: Partial<Record<ClipId, AudioBuffer>> = {};
+  private source: AudioStats["source"] = "tones";
   private readonly scheduler: Scheduler;
   private readonly voices = new Map<string, VoiceNodes>();
   private readonly ears: EarSettings;
@@ -101,11 +109,28 @@ export class AudioEngine {
     this.master.connect(this.limiter);
     this.centre = createPlacer(ctx, this.master, 0, this.ears);
     this.sounds = loadTones(ctx);
+    this.scheduler = new Scheduler(this.soundInfo());
+  }
+
+  // Swaps in the ElevenLabs sounds and clips. Sounds missing from the library keep their tone.
+  useLibrary(library: DecodedLibrary): void {
+    const sounds = { ...this.sounds };
+    for (const id of SOUND_IDS) {
+      const sound = library.sounds[id];
+      if (sound) sounds[id] = { buffer: sound.buffer, loop: sound.loop, gain: dbToGain(sound.gainDb) };
+    }
+    this.sounds = sounds;
+    this.clips = library.clips;
+    this.source = Object.keys(library.sounds).length > 0 ? "library" : this.source;
+    this.scheduler.setSounds(this.soundInfo());
+  }
+
+  private soundInfo(): Record<SoundId, SoundInfo> {
     const info = {} as Record<SoundId, SoundInfo>;
     for (const id of SOUND_IDS) {
       info[id] = { durationS: this.sounds[id].buffer.duration, hasLoop: this.sounds[id].loop !== null };
     }
-    this.scheduler = new Scheduler(info);
+    return info;
   }
 
   start(): void {
@@ -123,13 +148,20 @@ export class AudioEngine {
 
   // A one-off sound, like the "reported" blip or an audition, from one side.
   play(sound: SoundId, pan: Pan = 0): void {
-    const placer = createPlacer(this.ctx, this.master, pan, this.ears);
     const { buffer, gain } = this.sounds[sound];
-    const playing = this.startSound(buffer, gain, placer, this.ctx.currentTime, false);
+    this.playBuffer(buffer, pan, gain);
+  }
+
+  // Any decoded buffer, such as a library variant on the audition page. Returns when it ends,
+  // on the audio clock.
+  playBuffer(buffer: AudioBuffer, pan: Pan = 0, level = 1, at = this.ctx.currentTime): number {
+    const placer = createPlacer(this.ctx, this.master, pan, this.ears);
+    const playing = this.startSound(buffer, level, placer, at, false);
     playing.source.onended = () => {
       playing.gain.disconnect();
       placer.disconnect();
     };
+    return Math.max(at, this.ctx.currentTime) + buffer.duration;
   }
 
   // Fades everything out and lets go of the mix. The AudioContext stays for the next session.
@@ -147,6 +179,7 @@ export class AudioEngine {
   stats(): AudioStats {
     return {
       voices: this.scheduler.snapshot(),
+      source: this.source,
       leadMs: Math.round(this.leadS() * 1000),
       outputLatencyMs: Math.round(((this.ctx.outputLatency || 0) + this.ctx.baseLatency) * 1000),
       state: this.ctx.state,
@@ -165,8 +198,7 @@ export class AudioEngine {
   private apply(actions: Action[]): void {
     for (const action of actions) {
       if (action.type === "say") {
-        // Until the recorded clips exist, the phone's own voice says it, from both sides.
-        this.speak?.(action.words.join(", "));
+        this.say(action.words, action.pan);
         continue;
       }
       const voice = this.voices.get(action.id);
@@ -221,6 +253,18 @@ export class AudioEngine {
         }
       }
     }
+  }
+
+  // Recorded clips play one after another from the hazard's side. Without all of them, the
+  // phone's own voice says the words, from both sides.
+  private say(words: string[], pan: Pan): void {
+    const buffers = words.map((word) => (isClipId(word) ? this.clips[word] : undefined));
+    if (buffers.some((b) => !b)) {
+      this.speak?.(words.join(", "));
+      return;
+    }
+    let at = this.ctx.currentTime;
+    for (const buffer of buffers) at = this.playBuffer(buffer!, pan, 1, at) + CLIP_GAP_S;
   }
 
   private startSound(buffer: AudioBuffer, level: number, placer: Placer, at: number, loop: boolean): Playing {

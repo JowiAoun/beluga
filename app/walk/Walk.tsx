@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AudioEngine } from "@/lib/audio/engine";
+import { decodeLibrary, fetchLibrary, type RawLibrary } from "@/lib/audio/library";
 import { nearestAhead } from "@/lib/hazard/corridor";
 import { HazardEngine, type HazardEvent } from "@/lib/hazard/engine";
 import type { HazardUpdate } from "@/lib/shared/contracts";
@@ -73,6 +74,7 @@ export default function Walk() {
   const sessionRef = useRef<SensingSession | null>(null);
   const audioRef = useRef<AudioContext | null>(null);
   const soundRef = useRef<AudioEngine | null>(null);
+  const libraryRef = useRef<RawLibrary | null>(null);
   const cleanupRef = useRef<Array<() => void>>([]);
   const debugRef = useRef(false);
   const latestRef = useRef<Latest>(freshLatest());
@@ -117,6 +119,10 @@ export default function Walk() {
       setDebug(on);
     };
     void check();
+    // The recorded sounds download now, so the walk itself needs no network.
+    void fetchLibrary().then((raw) => {
+      libraryRef.current = raw;
+    });
 
     return () => {
       overlay?.removeEventListener("beforexrselect", stopSelect);
@@ -195,6 +201,9 @@ export default function Walk() {
     const sound = new AudioEngine(ctx, { speak: speakText });
     sound.start();
     soundRef.current = sound;
+    // Tones play until the library is decoded, a moment later.
+    const raw = libraryRef.current;
+    if (raw) void decodeLibrary(ctx, raw).then((library) => sound.useLibrary(library));
     cleanupRef.current.push(() => {
       sound.stop();
       if (soundRef.current === sound) soundRef.current = null;
