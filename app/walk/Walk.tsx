@@ -269,7 +269,9 @@ export default function Walk() {
   let status: string | null = null;
   if (phase === "starting") status = "Starting";
   else if (update && !update.tracking) status = "Hold steady";
-  else if (update?.calibrating) status = "Take three slow steps";
+  else if (update?.calibrating) status = "Calibrating — take three slow steps";
+  else if (update?.floorSource === "calibrated") status = "Calibrated";
+  else if (update && view?.granted?.depth) status = "Floor estimated — calibration unavailable";
 
   return (
     <div
@@ -284,7 +286,15 @@ export default function Walk() {
         <main className="flex min-h-dvh flex-col justify-between gap-3 p-3">
           <div className="flex flex-col gap-2">
             {status && (
-              <p role="status" className="self-start rounded bg-black/75 px-3 py-1 text-lg font-semibold text-white">
+              <p
+                role="status"
+                aria-atomic="true"
+                className={`self-start rounded-lg border-2 px-4 py-3 text-2xl font-bold ${
+                  status === "Calibrated"
+                    ? "border-emerald-300 bg-emerald-950 text-white"
+                    : "border-white bg-black text-white"
+                }`}
+              >
                 {status}
               </p>
             )}
