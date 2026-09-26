@@ -16,7 +16,7 @@
     "db:migrate": "tsx --env-file-if-exists=.env.local db/migrate.ts",
     "seed": "tsx --env-file-if-exists=.env.local scripts/seed/index.ts",
     "sounds": "tsx --env-file-if-exists=.env.local scripts/sounds/index.ts",
-    "agents": "tsx --env-file-if-exists=.env.local scripts/agents/index.ts"
+    "agents": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/agents/index.ts"
   },
   "dependencies": {
     "@google/genai": "2.24.0",
