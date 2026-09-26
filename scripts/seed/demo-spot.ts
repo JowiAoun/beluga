@@ -8,6 +8,7 @@
 // `npm run demo-spot -- --remove` after the demo. Needs DATABASE_URL in .env.local.
 
 import postgres from "postgres";
+import { databaseUrl } from "@/db/url";
 import { deviceHash } from "@/lib/server/events";
 import { CIVIC_CATEGORIES, CONSENT_VERSION, type CivicCategory, type Severity } from "@/lib/shared/enums";
 import { cellOf, coarsen } from "@/lib/shared/geo";
@@ -49,7 +50,7 @@ function where(arg: string | undefined): { lat: number; lon: number; station: st
 }
 
 async function main(): Promise<void> {
-  const url = process.env.DATABASE_URL;
+  const url = databaseUrl(process.env.DATABASE_URL);
   if (!url) fail("Set DATABASE_URL in .env.local first.");
   const local = /@(localhost|127\.0\.0\.1)[:/]/.test(url);
   const sql = postgres(url, { ssl: local ? false : "require", max: 1, onnotice: () => {} });

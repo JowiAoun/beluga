@@ -23,10 +23,20 @@ const QuerySchema = z.object({
   station: z.enum(STATIONS.map((s) => s.id) as [string, ...string[]]).optional(),
 });
 
+// The error's code, which says why without saying anything secret: a Postgres code such as 42P01
+// (no such table: the migrations haven't run) or 28P01 (wrong password), or a connection one such
+// as ENOTFOUND or CONNECT_TIMEOUT. The message goes to the log only.
+function codeOf(err: unknown): string | null {
+  const code = (err as { code?: unknown } | null)?.code;
+  return typeof code === "string" && /^[A-Z0-9_]{2,40}$/.test(code) ? code : null;
+}
+
 function failed(err: unknown): Response {
   const outcome = err instanceof MissingEnvError ? "not_configured" : "database_unavailable";
-  console.error(JSON.stringify({ route: "dashboard", outcome }));
-  return Response.json({ error: outcome }, { status: 503 });
+  const code = codeOf(err);
+  const message = err instanceof Error ? err.message.slice(0, 200) : null;
+  console.error(JSON.stringify({ route: "dashboard", outcome, code, message }));
+  return Response.json({ error: outcome, code }, { status: 503 });
 }
 
 export async function GET(request: Request, ctx: RouteContext<"/api/dashboard/[view]">): Promise<Response> {

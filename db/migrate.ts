@@ -10,6 +10,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import postgres from "postgres";
+import { databaseUrl } from "./url";
 
 const DIR = path.join(import.meta.dirname, "migrations");
 
@@ -33,7 +34,7 @@ export function statements(text: string): string[] {
 }
 
 async function main(): Promise<number> {
-  const url = process.env.DATABASE_URL;
+  const url = databaseUrl(process.env.DATABASE_URL);
   if (!url) {
     console.error("DATABASE_URL is not set. Put the Tiger Cloud connection string in .env.local.");
     return 1;

@@ -7,6 +7,7 @@
 // Run `npm run db:smoke` with DATABASE_URL in `.env.local`.
 
 import postgres from "postgres";
+import { databaseUrl } from "./url";
 import ngeohash from "ngeohash";
 
 // The free service turns read-only at 750 MB.
@@ -297,7 +298,7 @@ function message(error: unknown) {
 }
 
 async function main() {
-  const url = process.env.DATABASE_URL;
+  const url = databaseUrl(process.env.DATABASE_URL);
   if (!url) {
     console.error("DATABASE_URL is not set.");
     console.error("Copy .env.example to .env.local, paste the Tiger Cloud connection string");

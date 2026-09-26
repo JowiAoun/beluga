@@ -1,12 +1,14 @@
 // Tiger Data prize: loads the simulated fortnight (scripts/seed/generate.ts) with COPY, refreshes
 // the four continuous aggregates, compresses the older week, and stores a performance snapshot.
 //
-// Run `npm run seed`. `npm run seed -- --reset` deletes simulated rows first (live rows stay).
+// Run `npm run seed`. `npm run seed -- --reset` deletes simulated rows first (live rows stay), and
+// `--if-empty` loads only when no simulated rows are there yet (Vercel builds run it).
 // Needs the migrations (`npm run db:migrate`) and DATABASE_URL in .env.local.
 
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import postgres from "postgres";
+import { databaseUrl } from "@/db/url";
 import { deviceHash } from "@/lib/server/events";
 import { measurePerf } from "@/lib/server/db/perf";
 import { CONSENT_VERSION } from "@/lib/shared/enums";
@@ -86,7 +88,7 @@ function* lines(counter: { rows: number }): Generator<string> {
 }
 
 async function main(): Promise<number> {
-  const url = process.env.DATABASE_URL;
+  const url = databaseUrl(process.env.DATABASE_URL);
   if (!url) {
     console.error("DATABASE_URL is not set. Put the Tiger Cloud connection string in .env.local.");
     return 1;
@@ -103,6 +105,10 @@ async function main(): Promise<number> {
 
     const [existing] = await sql<Array<{ n: number }>>`
       select count(*)::int as n from hazard_events where source = 'simulated'`;
+    if (existing.n > 0 && process.argv.includes("--if-empty")) {
+      console.log(`${existing.n} simulated rows are already loaded. Nothing to do.`);
+      return 0;
+    }
     if (existing.n > 0 && !process.argv.includes("--reset")) {
       console.error(`${existing.n} simulated rows are already loaded. Run npm run seed -- --reset to replace them.`);
       return 1;

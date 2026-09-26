@@ -6,6 +6,7 @@ import "server-only";
 
 import postgres from "postgres";
 import { DATABASE } from "@/lib/shared/params";
+import { databaseUrl } from "@/db/url";
 import { env } from "../env";
 
 let client: postgres.Sql | null = null;
@@ -25,14 +26,17 @@ function connect(url: string, readOnly: boolean): postgres.Sql {
 }
 
 export function db(): postgres.Sql {
-  client ??= connect(env("DATABASE_URL").DATABASE_URL, false);
+  client ??= connect(databaseUrl(env("DATABASE_URL").DATABASE_URL)!, false);
   return client;
 }
 
 // For Ask the data's lookups (Phase 7 stretch): the read-only role in DATABASE_URL_READONLY when
 // it is set, the main URL otherwise, and read-only transactions either way.
 export function readOnlyDb(): postgres.Sql {
-  readClient ??= connect(process.env.DATABASE_URL_READONLY || env("DATABASE_URL").DATABASE_URL, true);
+  readClient ??= connect(
+    databaseUrl(process.env.DATABASE_URL_READONLY) ?? databaseUrl(env("DATABASE_URL").DATABASE_URL)!,
+    true,
+  );
   return readClient;
 }
 
