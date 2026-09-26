@@ -15,10 +15,13 @@ export default function SettingsPanel({
   settings,
   onChange,
   onRunSetup,
+  noDepth = false,
 }: {
   settings: Settings;
   onChange: (next: Settings) => void;
   onRunSetup: () => void;
+  // This browser can't give depth at all (Safari on an iPhone), so camera-only mode is always on.
+  noDepth?: boolean;
 }) {
   const set = (patch: Partial<Settings>) => onChange({ ...settings, ...patch });
   return (
@@ -139,12 +142,14 @@ export default function SettingsPanel({
         <label className={TOGGLE}>
           <input
             type="checkbox"
-            checked={settings.cameraOnly}
+            checked={noDepth || settings.cameraOnly}
+            disabled={noDepth}
             onChange={(e) => set({ cameraOnly: e.target.checked })}
             className={CHECKBOX}
           />
-          Camera-only mode, for a phone without depth: warns about things it can name, like people, bikes and chairs,
-          and yellow edge strips, with no step warnings. It turns on by itself when depth is missing.
+          {noDepth
+            ? "Camera-only mode is always on in this browser: it can't measure depth, so beluga warns about things it can name, like people, bikes and chairs, and yellow edge strips. Chrome on an Android phone with depth adds step and drop-off warnings."
+            : "Camera-only mode, for a phone without depth: warns about things it can name, like people, bikes and chairs, and yellow edge strips, with no step warnings. It turns on by itself when depth is missing."}
         </label>
 
         <button type="button" onClick={onRunSetup} className={SECONDARY}>

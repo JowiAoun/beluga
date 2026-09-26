@@ -543,7 +543,9 @@ export default function Walk() {
         // Three fingers toggle the debug overlay. TalkBack keeps multi-finger gestures, so this is for sighted testers.
         if (inAr && e.touches.length === 3) toggleDebug();
       }}
-      className={`min-h-dvh w-full ${inAr ? "bg-transparent" : "bg-background"} text-foreground`}
+      // During a walk this box fills the screen (Chrome's AR overlay, or camera mode), so it
+      // scrolls itself when the debug numbers make it taller than the screen.
+      className={`w-full ${inAr ? "h-dvh overflow-y-auto overscroll-contain bg-transparent" : "min-h-dvh bg-background"} text-foreground`}
     >
       <video
         ref={videoRef}
@@ -719,6 +721,7 @@ export default function Walk() {
               {settings && (
                 <SettingsPanel
                   settings={settings}
+                  noDepth={support === "camera"}
                   onChange={changeSettings}
                   onRunSetup={() => {
                     // Setup again also tries every AR setup again, on a phone that refused some.

@@ -314,7 +314,11 @@ export default function DeviceCheck() {
   const fov = live?.fov;
 
   return (
-    <div ref={overlayRef} className={`min-h-dvh w-full ${inAr ? "bg-transparent" : "bg-background"} text-foreground`}>
+    // Chrome shows this box full screen during the AR check, so it scrolls itself then.
+    <div
+      ref={overlayRef}
+      className={`w-full ${inAr ? "h-dvh overflow-y-auto overscroll-contain bg-transparent" : "min-h-dvh bg-background"} text-foreground`}
+    >
       {inAr && (
         <div aria-hidden className="pointer-events-none fixed inset-0 flex items-center justify-center">
           <div className="h-10 w-10 rounded-full border-4 border-accent shadow-[0_0_0_2px_black]" />
