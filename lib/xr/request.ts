@@ -1,8 +1,8 @@
 // Asks Chrome for the AR session, stepping down when a phone refuses the setup. Some phones (a
 // OnePlus 13R, for one) say they can run AR, then reject a session with every optional feature
-// ("NotSupportedError"). Each try drops the likeliest culprit: depth first, then camera access.
-// What is left still warns: camera-only mode on the AR pose, or depth without labels. When every
-// try is refused, the walk falls back to camera mode (lib/xr/cameraSession.ts).
+// ("NotSupportedError"). Each try drops a feature: camera access first, since depth gives the real
+// warnings, then depth. What is left still warns: depth without labels, or camera-only mode on the
+// AR pose. When every try is refused, the walk falls back to camera mode (lib/xr/cameraSession.ts).
 
 export interface SessionLevel {
   name: string;
@@ -12,8 +12,8 @@ export interface SessionLevel {
 
 export const SESSION_LEVELS: readonly SessionLevel[] = [
   { name: "every feature", depth: true, camera: true },
-  { name: "no depth", depth: false, camera: true },
   { name: "no camera access", depth: true, camera: false },
+  { name: "no depth", depth: false, camera: true },
 ];
 
 // Chrome on ARCore has no float32 depth, so asking for it alone would return none.

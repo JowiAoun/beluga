@@ -1209,7 +1209,7 @@ Drop-offs: same table shifted one band outward (start 3.5 m, continuous under 1.
 | If this fails | Do this |
 | --- | --- |
 | Demo phone has no WebXR depth | Borrow an ARCore-depth phone; else camera-only mode (Phase 10) and say so |
-| A phone says it runs AR, then refuses the session (NotSupportedError, seen on a OnePlus 13R) | Built in: the walk steps down to no depth, then no camera access, then camera mode, in the same tap, and keeps what worked. `/walk/check` names each setup the phone refused |
+| A phone says it runs AR, then refuses the session (NotSupportedError, seen on a OnePlus 13R) | Built in: the walk steps down to no camera access (depth warnings stay), then no depth, then camera mode, in the same tap, and keeps what worked. `/walk/check` names each setup the phone refused |
 | An iPhone, or any browser without WebXR AR | Camera mode: `getUserMedia` and the motion sensors, the floor a chest height below the phone, hazards from the detector's boxes and yellow strips. No steps or drop-offs |
 | Camera access not granted inside AR | Use depth-only sounds and disable Ask and triage (no frames to send); warnings still work. Say so in the limitations |
 | Detector too slow | Drop to 2 Hz, then disable; depth-only sounds |

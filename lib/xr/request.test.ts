@@ -39,18 +39,26 @@ describe("AR session setups", () => {
       "dom-overlay",
       "local-floor",
     ]);
-    const noDepth = sessionInit(overlay, 1);
+    expect(sessionInit(overlay, 1).optionalFeatures).not.toContain("camera-access");
+    const noDepth = sessionInit(overlay, 2);
     expect(noDepth.optionalFeatures).not.toContain("depth-sensing");
     expect(noDepth.depthSensing).toBeUndefined();
-    expect(sessionInit(overlay, 2).optionalFeatures).not.toContain("camera-access");
+  });
+
+  it("keeps depth when the phone only refuses camera access", async () => {
+    const phone = fakeXr((init) => (init.optionalFeatures?.includes("camera-access") ? refused() : null));
+    const first = await requestArSession(phone.xr, overlay);
+    expect(first.level).toBe(1);
+    expect(phone.asked[1]).toContain("depth-sensing");
+    expect(first.refused).toEqual([`${SESSION_LEVELS[0].name}: The specified session configuration is not supported.`]);
   });
 
   it("drops depth when the phone refuses it, and starts there next time", async () => {
     const phone = fakeXr((init) => (init.optionalFeatures?.includes("depth-sensing") ? refused() : null));
     const first = await requestArSession(phone.xr, overlay);
-    expect(first.level).toBe(1);
-    expect(first.refused).toEqual([`${SESSION_LEVELS[0].name}: The specified session configuration is not supported.`]);
-    expect(savedLevel()).toBe(1);
+    expect(first.level).toBe(2);
+    expect(first.refused).toHaveLength(2);
+    expect(savedLevel()).toBe(2);
     const next = fakeXr(() => null);
     await requestArSession(next.xr, overlay);
     expect(next.asked).toHaveLength(1);
