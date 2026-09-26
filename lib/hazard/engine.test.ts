@@ -54,6 +54,23 @@ function settle(engine: HazardEngine, points: number[], updates = 4): EngineResu
 }
 
 describe("HazardEngine scenes", () => {
+  it("waits for successful calibration before detecting a wall and discards previous tracks", () => {
+    const engine = new HazardEngine();
+    const scene = [...floor(0, 0.3, 1.95), ...grid([-1, 1], [0, 2.5], [-2, -2], 0.1)];
+    for (const floorSource of ["guess", "hit_test"] as const) {
+      for (let i = 0; i < 10; i++) {
+        expect(engine.update({ ...at(0, scene, i * 100), floorSource, calibrating: i < 5 }))
+          .toEqual({ hazards: [], events: [], floor: null });
+      }
+    }
+    expect(settle(engine, scene).hazards).toHaveLength(1);
+    expect(engine.update({ ...at(0, scene, 1000), calibrating: true }).hazards).toEqual([]);
+    // Calibration frames did not build up a streak. Detection starts fresh after calibration.
+    expect(engine.update(at(0, scene, 1100)).hazards).toEqual([]);
+    expect(engine.update(at(0, scene, 1200)).hazards).toEqual([]);
+    expect(engine.update(at(0, scene, 1300)).hazards).toHaveLength(1);
+  });
+
   it("stays silent on an empty flat floor", () => {
     const engine = new HazardEngine();
     for (let i = 0; i < 10; i++) {

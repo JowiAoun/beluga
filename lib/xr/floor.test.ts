@@ -69,7 +69,7 @@ describe("FloorTracker", () => {
       if (event) events.push(event);
     }
     expect(events).toEqual(["calibration_started", "calibration_unavailable"]);
-    expect(floor.calibrating).toBe(false);
+    expect(floor.calibrating).toBe(true);
     expect(floor.source).toBe("hit_test");
     expect(floor.y).toBeCloseTo(0.02, 6);
   });
@@ -85,6 +85,26 @@ describe("FloorTracker", () => {
     expect(events).toEqual(["calibration_started", "calibration_unavailable"]);
     expect(floor.source).toBe("guess");
     expect(floor.y).toBe(-0.3);
+  });
+
+  it("finishes automatically when floor samples arrive after the timeout", () => {
+    const floor = new FloorTracker(-0.3);
+    const camera = { x: 0, y: 1.3, z: 0 };
+    floor.update(0, new Float32Array(0), camera, forward, right);
+    expect(floor.update(SENSING.calibrationMaxMs, new Float32Array(0), camera, forward, right)).toBe("calibration_unavailable");
+    expect(floor.calibrated).toBe(false);
+    const events = walk(floor, SENSING.calibrationMaxMs + 100, 1000, 0, 0, noise(19));
+    expect(events).toEqual(["calibrated"]);
+    expect(floor.calibrating).toBe(false);
+    expect(floor.calibrated).toBe(true);
+  });
+
+  it("does not accept a sparse depth sample at the timeout", () => {
+    const floor = new FloorTracker(0);
+    const camera = { x: 0, y: 1.3, z: 0 };
+    floor.update(0, scene(camera, 0, noise(21)), camera, forward, right);
+    expect(floor.update(SENSING.calibrationMaxMs, new Float32Array(0), camera, forward, right)).toBe("calibration_unavailable");
+    expect(floor.calibrated).toBe(false);
   });
 
   it("follows slow drift near the floor and ignores anything outside the band", () => {

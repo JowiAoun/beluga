@@ -77,6 +77,21 @@ export class DetectPipeline {
   private readonly strip = new StripTracker();
   private stripOn = true;
   private stripSince: number | null = null;
+  private enabled = false;
+  private enabledAt = 0;
+
+  // Loading the model is allowed during setup; analysing camera frames is not.
+  setEnabled(on: boolean, t: number): void {
+    if (on === this.enabled) return;
+    this.enabled = on;
+    this.enabledAt = t;
+    this.matcher.reset();
+    this.detections = [];
+    this.strip.reset();
+    this.stripSince = null;
+    this.lastFrameAt = null;
+    this.brightness = null;
+  }
 
   // Loads the model once, ahead of the first walk: in a worker, or on the page if that fails.
   // Safe to call again. `prefer` CPU skips the GPU, which ARCore and the camera also use.
@@ -154,6 +169,7 @@ export class DetectPipeline {
 
   // Starts reading a session's frames. Returns the function that stops it.
   attach(session: SensingSession): () => void {
+    this.enabled = false;
     this.matcher.reset();
     this.turn.reset();
     this.gate = new FrameGate();
@@ -165,7 +181,8 @@ export class DetectPipeline {
     this.lastFrameAt = null;
     this.strip.reset();
     this.stripSince = null;
-    return session.onDetectorFrame((image, t) => this.onFrame(image, t));
+    const detach = session.onDetectorFrame((image, t) => this.onFrame(image, t));
+    return () => { this.setEnabled(false, 0); detach(); };
   }
 
   // For the hazard engine. Labels need the view's width in degrees, so they wait for an update.
@@ -243,6 +260,7 @@ export class DetectPipeline {
   }
 
   private onFrame(image: SmallImage, t: number): void {
+    if (!this.enabled) return;
     this.brightness = meanBrightness(image);
     // Colour only, so it runs here even when the detector is off or still loading.
     if (this.stripOn) {
@@ -267,6 +285,7 @@ export class DetectPipeline {
     this.busy = true;
     // Later, outside the AR frame callback, so the safety loop's update goes first.
     setTimeout(() => {
+      if (!this.enabled || t < this.enabledAt) { this.busy = false; return; }
       const began = performance.now();
       try {
         this.accept(detector.detect(image, hfovDeg), t, performance.now() - began);
@@ -279,6 +298,7 @@ export class DetectPipeline {
   }
 
   private accept(detections: Detection[], t: number, ms: number): void {
+    if (!this.enabled || t < this.enabledAt) return;
     this.detections = detections;
     this.msPerFrame += AVERAGE * (ms - this.msPerFrame);
     this.matcher.update(detections, t);
