@@ -178,8 +178,8 @@ export function AskScene() {
   );
 }
 
-// A made-up grid for the picture only, not real reports.
-const CELLS = ["..1.2..", ".23.31.", "2.4034.", ".13.2..", "..2.3.1", ".1..24.", "...3..."];
+// A made-up grid for the picture only, not real reports. 4 is the busiest, like the map.
+const CELLS = ["..3.2..", ".21.13.", "2.0410.", ".31.2..", "..2.1.3", ".3..20.", "...1..."];
 
 export function CityScene() {
   return (
