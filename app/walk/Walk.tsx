@@ -19,7 +19,10 @@ import {
 } from "@/lib/xr/session";
 import type { SensingUpdate } from "@/lib/xr/types";
 import { askAboutView } from "./ask";
+import FirstRun, { type FirstRunResult } from "./FirstRun";
 import { Reporting } from "./reporting";
+import { DEFAULT_SETTINGS, readSettings, saveSettings, type Settings } from "./settings";
+import SettingsPanel from "./SettingsPanel";
 import AskButton from "./AskButton";
 import DebugOverlay, { type DebugView } from "./DebugOverlay";
 import { askLocation, locationPermission, watchLocation, type Fix } from "./location";
@@ -99,6 +102,9 @@ export default function Walk() {
   const [summary, setSummary] = useState<SessionSummary | null>(null);
   const [asking, setAsking] = useState(false);
   const [reportingOn, setReportingOn] = useState(false);
+  // Null until read from storage, so the first-run steps never flash for a returning user.
+  const [settings, setSettings] = useState<Settings | null>(null);
+  const settingsRef = useRef<Settings>(DEFAULT_SETTINGS);
 
   const runCleanups = useCallback(() => {
     cleanupRef.current.splice(0).forEach((fn) => fn());
@@ -128,6 +134,9 @@ export default function Walk() {
       debugRef.current = on;
       setDebug(on);
       setReportingOn(reportingRef.current?.isOn() ?? false);
+      const saved = readSettings();
+      settingsRef.current = saved;
+      setSettings(saved);
     };
     void check();
     // The recorded sounds download now, so the walk itself needs no network.
@@ -186,7 +195,9 @@ export default function Walk() {
           session,
           latest.fix,
           (on) => detect?.setTriageInFlight(on),
-          () => soundRef.current?.play("reported"),
+          () => {
+            if (settingsRef.current.reportedSound) soundRef.current?.play("reported");
+          },
         );
       }
     }
@@ -237,6 +248,8 @@ export default function Walk() {
     unlockVoice();
     const sound = new AudioEngine(ctx, { speak: speakText });
     sound.start();
+    sound.setVolume(settingsRef.current.volumeDb);
+    sound.setAliveTick(settingsRef.current.aliveTick);
     soundRef.current = sound;
     // Tones play until the library is decoded, a moment later.
     const raw = libraryRef.current;
@@ -260,11 +273,13 @@ export default function Walk() {
     }
 
     latestRef.current = freshLatest(latestRef.current.fix);
-    engineRef.current = new HazardEngine();
+    // The head-height top follows the user's height.
+    engineRef.current = new HazardEngine(settingsRef.current.heightM);
     const detect = detectRef.current;
     if (detect) cleanupRef.current.push(detect.attach(started));
     const reporting = reportingRef.current;
     if (reporting) {
+      reporting.setStation(settingsRef.current.station);
       reporting.start();
       cleanupRef.current.push(() => reporting.stop());
     }
@@ -313,6 +328,18 @@ export default function Walk() {
     } finally {
       setAsking(false);
     }
+  };
+
+  const changeSettings = (next: Settings) => {
+    settingsRef.current = next;
+    setSettings(next);
+    saveSettings(next);
+  };
+
+  const finishFirstRun = (result: FirstRunResult) => {
+    reportingRef.current?.setOn(result.reporting);
+    setReportingOn(result.reporting);
+    changeSettings({ ...settingsRef.current, heightM: result.heightM, firstRunDone: true });
   };
 
   const toggleReporting = () => {
@@ -399,70 +426,89 @@ export default function Walk() {
             </p>
           )}
 
-          {needLocation && (
-            <div className="flex flex-col gap-2">
-              <p>
-                Location marks where hazard reports happen, to about 100 m. Chrome can&apos;t ask during a session, so it
-                asks now.
-              </p>
+          {settings && !settings.firstRunDone ? (
+            <FirstRun
+              heightM={settings.heightM}
+              locationGranted={locationGranted}
+              onAllowLocation={allowLocation}
+              onDone={finishFirstRun}
+            />
+          ) : (
+            <>
+              {needLocation && (
+                <div className="flex flex-col gap-2">
+                  <p>
+                    Location marks where hazard reports happen, to about 100 m. Chrome can&apos;t ask during a session,
+                    so it asks now.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={allowLocation}
+                    className="min-h-16 rounded-lg border-2 border-yellow-300 px-4 text-lg font-semibold"
+                  >
+                    Allow location
+                  </button>
+                </div>
+              )}
+
               <button
                 type="button"
-                onClick={allowLocation}
-                className="min-h-16 rounded-lg border-2 border-yellow-300 px-4 text-lg font-semibold"
+                onClick={start}
+                disabled={support !== "ok"}
+                className="min-h-24 rounded-lg bg-yellow-300 px-4 text-2xl font-bold text-black disabled:opacity-50"
               >
-                Allow location
+                {support === "checking" ? "Checking this phone" : phase === "ended" ? "Start again" : "Start"}
               </button>
-            </div>
+
+              {message && (
+                <p role="alert" className="rounded-lg bg-red-900 p-3">
+                  {message}
+                </p>
+              )}
+
+              {summary && debug && <Summary summary={summary} />}
+
+              <section className="flex flex-col gap-2 rounded-lg border border-neutral-600 p-3">
+                <label className="flex min-h-16 items-center gap-3 text-lg font-semibold">
+                  <input type="checkbox" checked={reportingOn} onChange={toggleReporting} className="h-6 w-6" />
+                  Help the city: share anonymous hazard reports
+                </label>
+                <p>
+                  Sent: the hazard type, its distance, a rough location within about 100 metres, and the time. Never
+                  sent: images, audio, your exact location or who you are.
+                </p>
+              </section>
+
+              {settings && (
+                <SettingsPanel
+                  settings={settings}
+                  onChange={changeSettings}
+                  onRunSetup={() => changeSettings({ ...settings, firstRunDone: false })}
+                />
+              )}
+
+              {debug && (
+                <button
+                  type="button"
+                  onClick={() => reportingRef.current?.newReporter()}
+                  className="min-h-16 rounded-lg border-2 border-neutral-500 px-4 text-lg"
+                >
+                  New demo reporter (a fresh device key, so a second staged report isn&apos;t dropped as a repeat)
+                </button>
+              )}
+
+              <label className="flex min-h-16 items-center gap-3 text-lg">
+                <input type="checkbox" checked={debug} onChange={toggleDebug} className="h-6 w-6" />
+                Show the debug overlay (a three-finger tap also toggles it during a session)
+              </label>
+              <Link href="/walk/check" className="text-lg underline">
+                Device check
+              </Link>
+              <Link href="/walk/sounds" className="text-lg underline">
+                Sound check and blindfold test
+              </Link>
+            </>
           )}
-
-          <button
-            type="button"
-            onClick={start}
-            disabled={support !== "ok"}
-            className="min-h-24 rounded-lg bg-yellow-300 px-4 text-2xl font-bold text-black disabled:opacity-50"
-          >
-            {support === "checking" ? "Checking this phone" : phase === "ended" ? "Start again" : "Start"}
-          </button>
-
-          {message && (
-            <p role="alert" className="rounded-lg bg-red-900 p-3">
-              {message}
-            </p>
-          )}
-
-          {summary && debug && <Summary summary={summary} />}
-
-          <section className="flex flex-col gap-2 rounded-lg border border-neutral-600 p-3">
-            <label className="flex min-h-16 items-center gap-3 text-lg font-semibold">
-              <input type="checkbox" checked={reportingOn} onChange={toggleReporting} className="h-6 w-6" />
-              Help the city: share anonymous hazard reports
-            </label>
-            <p>
-              Sent: the hazard type, its distance, a rough location within about 100 metres, and the time. Never sent:
-              images, audio, your exact location or who you are.
-            </p>
-          </section>
-
-          {debug && (
-            <button
-              type="button"
-              onClick={() => reportingRef.current?.newReporter()}
-              className="min-h-16 rounded-lg border-2 border-neutral-500 px-4 text-lg"
-            >
-              New demo reporter (a fresh device key, so a second staged report isn&apos;t dropped as a repeat)
-            </button>
-          )}
-
-          <label className="flex min-h-16 items-center gap-3 text-lg">
-            <input type="checkbox" checked={debug} onChange={toggleDebug} className="h-6 w-6" />
-            Show the debug overlay (a three-finger tap also toggles it during a session)
-          </label>
-          <Link href="/walk/check" className="text-lg underline">
-            Device check
-          </Link>
-          <Link href="/walk/sounds" className="text-lg underline">
-            Sound check and blindfold test
-          </Link>
         </main>
       )}
     </div>

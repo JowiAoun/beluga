@@ -90,6 +90,9 @@ export class AudioEngine {
   private scene: Scene = QUIET;
   private timer: ReturnType<typeof setInterval> | null = null;
   private keepAlive: AudioBufferSourceNode | null = null;
+  private aliveTick = false;
+  // Audio-clock time the last sound started, for the alive tick.
+  private lastSoundAt = 0;
   // The spoken Ask answer, while it plays.
   private answer: { playing: Playing; placer: Placer; ducked: boolean } | null = null;
 
@@ -199,6 +202,20 @@ export class AudioEngine {
   private tick(): void {
     this.apply(this.scheduler.tick(this.ctx.currentTime, this.scene));
     this.fitAnswer();
+    if (this.aliveTick && this.ctx.currentTime - this.lastSoundAt >= AUDIO.aliveTickMs / 1000) {
+      this.play("centre_tick");
+    }
+  }
+
+  // Master volume in dB; 0 plays the sounds at the level they were made.
+  setVolume(db: number): void {
+    this.master.gain.setTargetAtTime(dbToGain(db), this.ctx.currentTime, LEVEL_SECONDS);
+  }
+
+  // A soft tick after 30 s with no other sound, so the user knows beluga is still running.
+  setAliveTick(on: boolean): void {
+    this.aliveTick = on;
+    this.lastSoundAt = this.ctx.currentTime;
   }
 
   // An Ask answer from the side of the object it describes. It plays under any hazard, 12 dB down,
@@ -323,6 +340,7 @@ export class AudioEngine {
     source.connect(gain).connect(placer.input);
     source.onended = () => gain.disconnect();
     source.start(t);
+    this.lastSoundAt = Math.max(this.lastSoundAt, t);
     return { source, gain, level };
   }
 

@@ -11,6 +11,7 @@ import { TriageResponseSchema, type TriageRequest, type TriageResponse } from "@
 import type { CivicCategory, SceneContext } from "@/lib/shared/enums";
 import { cellOf } from "@/lib/shared/geo";
 import { GATE, NETWORK } from "@/lib/shared/params";
+import { stationById, type StationId } from "@/lib/shared/stations";
 import type { SensingSession } from "@/lib/xr/session";
 import { toBase64 } from "./ask";
 import type { Fix } from "./location";
@@ -42,11 +43,6 @@ function storage(): Storage | null {
   }
 }
 
-// A good enough fix, or nothing: an event without a place is refused by the backend.
-function whereFrom(fix: Fix | null): Where | null {
-  return fix && fix.accuracy <= NETWORK.locationMaxAccuracyM ? { lat: fix.lat, lon: fix.lon } : null;
-}
-
 export class Reporting {
   private readonly queue = new EventQueue(storage());
   private on = reportingOn();
@@ -59,6 +55,28 @@ export class Reporting {
   readonly blocked = new Set<string>();
   // This session's reports, by category and cell, for the 15-minute repeat rule.
   private reported = new Map<string, number>();
+  // The station picked in settings, and the last good fix of this walk, for when the fix goes bad.
+  private station: StationId | "street" = "street";
+  private lastGood: Where | null = null;
+
+  setStation(station: StationId | "street"): void {
+    this.station = station;
+  }
+
+  // A fresh fix within 100 m; else the last good one this walk (underground the fix goes bad);
+  // else the chosen station's position (indoors with no fix at all). An event without a place is
+  // refused by the backend, so with none of these nothing is queued.
+  private where(fix: Fix | null): Where | null {
+    const station = this.station === "street" ? null : stationById(this.station);
+    const fresh =
+      fix && fix.accuracy <= NETWORK.locationMaxAccuracyM && Date.now() - fix.at <= NETWORK.locationFixTimeoutMs;
+    if (fresh) {
+      this.lastGood = { lat: fix.lat, lon: fix.lon };
+      return this.lastGood;
+    }
+    if (this.lastGood) return { ...this.lastGood, stationId: station?.id ?? null };
+    return station ? { lat: station.lat, lon: station.lon, stationId: station.id } : null;
+  }
 
   isOn(): boolean {
     return this.on;
@@ -78,6 +96,7 @@ export class Reporting {
   start(): void {
     this.sceneHint = null;
     this.blocked.clear();
+    this.lastGood = null;
     if (this.on) this.queue.start();
   }
 
@@ -89,15 +108,22 @@ export class Reporting {
 
   // Near-misses and new hazards, queued only with reporting on and a place to put them.
   record(events: HazardEvent[], fix: Fix | null): void {
-    const where = whereFrom(fix);
-    if (!this.on || !where) return;
+    if (!this.on || events.length === 0) return;
+    const where = this.where(fix);
+    if (!where) return;
     for (const event of events) this.queue.add(fromHazardEvent(event, where, this.key, this.sceneHint));
   }
 
   // Sends the gate's pick to triage. `onReported` plays the "reported" sound.
-  async triage(fire: Fire, session: SensingSession, fix: Fix | null, setInFlight: (on: boolean) => void, onReported: () => void) {
-    const where = whereFrom(fix);
+  async triage(
+    fire: Fire,
+    session: SensingSession,
+    fix: Fix | null,
+    setInFlight: (on: boolean) => void,
+    onReported: () => void,
+  ) {
     if (!this.on || this.triaging || !navigator.onLine) return;
+    const where = this.where(fix);
     if (!where) {
       this.lastTriage = { ms: 0, outcome: "no location fix", category: null, report: false };
       return;
@@ -136,12 +162,22 @@ export class Reporting {
       const parsed = TriageResponseSchema.safeParse(await response?.json().catch(() => null));
       const ms = Math.round(performance.now() - began);
       if (!parsed.success) {
-        this.lastTriage = { ms, outcome: response ? `failed (${response.status})` : "offline", category: null, report: false };
+        this.lastTriage = {
+          ms,
+          outcome: response ? `failed (${response.status})` : "offline",
+          category: null,
+          report: false,
+        };
         return;
       }
       this.use(parsed.data, fire, where, cell, onReported);
       const result = parsed.data;
-      this.lastTriage = { ms, outcome: result.report ? "reported" : "not reported", category: result.category, report: result.report };
+      this.lastTriage = {
+        ms,
+        outcome: result.report ? "reported" : "not reported",
+        category: result.category,
+        report: result.report,
+      };
     } finally {
       this.triaging = false;
       setInFlight(false);
