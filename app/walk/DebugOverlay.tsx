@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { HazardEvent } from "@/lib/hazard/engine";
+import type { HazardUpdate } from "@/lib/shared/contracts";
+import { AUDIO } from "@/lib/shared/params";
 import { forwardOf } from "@/lib/xr/geometry";
 import type { Granted, LiveStats, SensingSession } from "@/lib/xr/session";
 import type { SensingUpdate } from "@/lib/xr/types";
@@ -11,7 +14,20 @@ export interface DebugView {
   nearest: number | null;
   fix: Fix | null;
   granted: Granted | null;
+  hazards: HazardUpdate[];
+  events: HazardEvent[];
+  floorSlope: number | null;
   stats: LiveStats | null;
+}
+
+function side(angle: number): string {
+  if (Math.abs(angle) < AUDIO.centreZoneDeg) return "ahead";
+  return `${Math.abs(angle).toFixed(0)}° ${angle < 0 ? "left" : "right"}`;
+}
+
+function describe(h: HazardUpdate): string {
+  const label = h.label === "unknown" ? "" : ` (${h.label.replace("_", " ")})`;
+  return `${h.kind.replace("_", " ")}${label} ${h.distance.toFixed(2)} m, ${side(h.angle)}, covers ${Math.round(h.blocking * 100)}%`;
 }
 
 const FEATURE_NAMES: Record<keyof Granted, string> = {
@@ -78,6 +94,17 @@ export default function DebugOverlay({ view, session }: { view: DebugView | null
     <section aria-live="off" className="flex flex-col gap-1 rounded-lg bg-black/75 p-3 text-sm text-white tabular-nums">
       <p className="text-xs uppercase opacity-70">Nearest in corridor</p>
       <p className="text-5xl font-bold">{nearestText}</p>
+      <ul className="flex flex-col text-base font-semibold">
+        {(view?.hazards ?? []).map((h) => (
+          <li key={h.id}>{describe(h)}</li>
+        ))}
+        {view && view.hazards.length === 0 && <li className="font-normal opacity-70">No hazards</li>}
+      </ul>
+      {view && view.events.length > 0 && (
+        <p className="opacity-80">
+          Last events: {view.events.map((e) => `${e.type.replace("_", " ")} ${e.hazard.kind.replace("_", " ")}`).join(", ")}
+        </p>
+      )}
       {stats && (
         <p>
           {stats.updateRate.toFixed(1)} updates/s, {stats.frameRate.toFixed(0)} frames/s, {stats.processingMs.toFixed(1)} ms per update
@@ -92,6 +119,7 @@ export default function DebugOverlay({ view, session }: { view: DebugView | null
           <p>
             Phone {(update.camera.y - update.floorY).toFixed(2)} m above the floor ({update.floorSource.replace("_", " ")}
             {update.calibrating && ", calibrating"})
+            {view?.floorSlope != null && `, slope ${(view.floorSlope * 100).toFixed(0)}%`}
           </p>
           <p>
             {update.speed.toFixed(2)} m/s, {update.stationary ? "stationary" : "moving"}, corridor {Math.abs(turn).toFixed(0)}°{" "}

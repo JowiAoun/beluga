@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { nearestAhead } from "@/lib/hazard/corridor";
+import { HazardEngine, type HazardEvent } from "@/lib/hazard/engine";
+import type { HazardUpdate } from "@/lib/shared/contracts";
 import { DEBUG_OVERLAY, SENSING } from "@/lib/shared/params";
 import {
   errorText,
@@ -52,6 +54,16 @@ interface Latest {
   nearest: number | null;
   fix: Fix | null;
   granted: Granted | null;
+  hazards: HazardUpdate[];
+  // Newest first. Phase 9 queues these for sending; until then the overlay shows them.
+  events: HazardEvent[];
+  floorSlope: number | null;
+}
+
+const RECENT_EVENTS = 5;
+
+function freshLatest(fix: Fix | null = null): Latest {
+  return { update: null, nearest: null, fix, granted: null, hazards: [], events: [], floorSlope: null };
 }
 
 export default function Walk() {
@@ -61,7 +73,8 @@ export default function Walk() {
   const audioRef = useRef<AudioContext | null>(null);
   const cleanupRef = useRef<Array<() => void>>([]);
   const debugRef = useRef(false);
-  const latestRef = useRef<Latest>({ update: null, nearest: null, fix: null, granted: null });
+  const latestRef = useRef<Latest>(freshLatest());
+  const engineRef = useRef<HazardEngine | null>(null);
 
   const [support, setSupport] = useState<Support>("checking");
   const [needLocation, setNeedLocation] = useState(false);
@@ -120,9 +133,15 @@ export default function Walk() {
   }, [phase]);
 
   const onUpdate = useCallback((update: SensingUpdate) => {
-    latestRef.current.update = update;
+    const latest = latestRef.current;
+    latest.update = update;
     // Out to the full depth range, so the tape-measure check works past the corridor's 3 m.
-    latestRef.current.nearest = update.tracking ? nearestAhead(update, SENSING.depthMaxM) : null;
+    latest.nearest = update.tracking ? nearestAhead(update, SENSING.depthMaxM) : null;
+    const result = engineRef.current?.update(update);
+    if (!result) return;
+    latest.hazards = result.hazards;
+    if (result.floor) latest.floorSlope = result.floor.slope;
+    if (result.events.length > 0) latest.events = [...result.events.reverse(), ...latest.events].slice(0, RECENT_EVENTS);
   }, []);
 
   const onCue = useCallback((cue: Cue) => say(cue), []);
@@ -175,7 +194,8 @@ export default function Walk() {
       );
     }
 
-    latestRef.current = { update: null, nearest: null, fix: latestRef.current.fix, granted: null };
+    latestRef.current = freshLatest(latestRef.current.fix);
+    engineRef.current = new HazardEngine();
     setSession(started);
     setMessage(null);
     setSummary(null);
