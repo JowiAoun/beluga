@@ -89,7 +89,7 @@ export function SeverityChip({ severity }: { severity: Severity }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-2 rounded-full px-2.5 py-0.5 text-sm ring-1",
+        "inline-flex items-center gap-2 rounded-full px-2.5 py-0.5 text-sm whitespace-nowrap ring-1",
         severity === 4 ? "bg-red-500/15 text-red-100 ring-red-300/50" : "bg-white/5 text-foreground ring-line",
       )}
     >
@@ -229,9 +229,9 @@ export function QueueTable({
           tabIndex={0}
           role="region"
           aria-label="Fix-first queue table, scrolls sideways"
-          className="mt-4 max-h-[36rem] overflow-auto overscroll-x-contain rounded-2xl border border-line bg-abyss"
+          className="mt-4 max-h-[36rem] overflow-auto lg:max-h-[44rem] overscroll-x-contain rounded-2xl border border-line bg-abyss"
         >
-          <table className="w-full min-w-[60rem] border-separate border-spacing-0 text-left text-base">
+          <table className="w-full min-w-[66rem] border-separate border-spacing-0 text-left text-base">
             <caption className="sr-only">
               Fix-first queue: spots ranked by score, highest first. The place buttons show a spot on the map.
             </caption>
@@ -240,7 +240,7 @@ export function QueueTable({
                 <th scope="col" className={cn(th, "left-0 z-20 w-14 text-center")}>
                   Rank
                 </th>
-                <th scope="col" className={cn(th, "left-14 z-20 w-44 sm:w-auto")}>
+                <th scope="col" className={cn(th, "left-14 z-20 w-44 sm:w-auto sm:min-w-72")}>
                   Place
                 </th>
                 <th scope="col" className={th}>
@@ -285,32 +285,34 @@ export function QueueTable({
                       scope="row"
                       className={cn(
                         td,
-                        "sticky left-14 z-[5] w-44 text-left font-normal shadow-[10px_0_12px_-10px_rgb(0_0_0/0.9)] sm:w-auto",
+                        "sticky left-14 z-[5] w-44 text-left font-normal shadow-[10px_0_12px_-10px_rgb(0_0_0/0.9)] sm:w-auto sm:min-w-72",
                         !on && STICKY_BG,
                       )}
                     >
-                      <button
-                        type="button"
-                        onClick={() => onSelect(r.cell)}
-                        aria-pressed={on}
-                        className="-mx-1 -my-1 flex min-h-11 items-start gap-1.5 rounded-lg px-1 py-1 text-left font-bold text-foreground decoration-sonar/60 decoration-2 underline-offset-4 hover:underline"
-                      >
-                        <IconMapPin
-                          aria-hidden
-                          size={20}
-                          className={cn("mt-0.5 shrink-0", on ? "text-sonar" : "text-muted")}
-                        />
-                        <span>
-                          <span className="sr-only">Show </span>
-                          {r.placeLabel}
-                          <span className="sr-only"> on the map</span>
-                        </span>
-                      </button>
-                      {r.includesSimulated && (
-                        <span className="mt-1 ml-6 inline-flex rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-background">
-                          Simulated
-                        </span>
-                      )}
+                      <div className="flex flex-wrap items-center gap-x-2">
+                        <button
+                          type="button"
+                          onClick={() => onSelect(r.cell)}
+                          aria-pressed={on}
+                          className="-mx-1 -my-1 flex min-h-11 items-start gap-1.5 rounded-lg px-1 py-1 text-left font-bold text-foreground decoration-sonar/60 decoration-2 underline-offset-4 hover:underline"
+                        >
+                          <IconMapPin
+                            aria-hidden
+                            size={20}
+                            className={cn("mt-0.5 shrink-0", on ? "text-sonar" : "text-muted")}
+                          />
+                          <span>
+                            <span className="sr-only">Show </span>
+                            {r.placeLabel}
+                            <span className="sr-only"> on the map</span>
+                          </span>
+                        </button>
+                        {r.includesSimulated && (
+                          <span className="ml-6 inline-flex rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-background sm:ml-0">
+                            Simulated
+                          </span>
+                        )}
+                      </div>
                       <p className="mt-1 ml-6 hidden text-sm text-muted sm:block">{whyLine(r)}</p>
                     </th>
                     <td className={td}>{CATEGORY_NAMES[r.category]}</td>

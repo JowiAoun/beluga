@@ -137,7 +137,7 @@ export default function StationPanels({
               <span className="font-mono text-foreground">{peak.nearMisses.toLocaleString("en-CA")}</span> near-misses.
             </p>
           )}
-          <div className="mt-3 h-56" aria-hidden>
+          <div className="mt-3 h-56 lg:h-80" aria-hidden>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={profile.hours}

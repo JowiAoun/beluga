@@ -47,7 +47,7 @@ const CHROME = cn(
   "[&_.maplibregl-ctrl-group]:overflow-hidden [&_.maplibregl-ctrl-group]:rounded-2xl! [&_.maplibregl-ctrl-group]:border! [&_.maplibregl-ctrl-group]:border-line! [&_.maplibregl-ctrl-group]:bg-abyss/85! [&_.maplibregl-ctrl-group]:shadow-none!",
   "[&_.maplibregl-ctrl-group_button]:size-11! [&_.maplibregl-ctrl-group_button+button]:border-line! [&_.maplibregl-ctrl-group_button:hover]:bg-white/10! [&_.maplibregl-ctrl-icon]:invert",
   "[&_.maplibregl-ctrl-attrib]:bg-abyss/80! [&_.maplibregl-ctrl-attrib]:text-muted! [&_.maplibregl-ctrl-attrib_a]:text-muted!",
-  "[&_.maplibregl-canvas:focus-visible]:outline-offset-[-4px]!",
+  "[&_.maplibregl-canvas:focus-visible]:outline-none!",
 );
 
 function features(cells: CellRow[]) {
@@ -146,7 +146,7 @@ export default function CellMap({
         // One finger and the plain scroll wheel move the page, so the map never traps anyone.
         cooperativeGestures: true,
         attributionControl: { compact: false },
-        locale: { "Map.Title": "Hazard map" },
+        locale: { "Map.Title": "3D map of hazard cells" },
       });
       mapRef.current = map;
       map.getCanvas().setAttribute("aria-describedby", hintId);
@@ -278,7 +278,8 @@ export default function CellMap({
   };
 
   return (
-    <div className="relative isolate h-[60svh] min-h-80 w-full overflow-hidden rounded-2xl bg-abyss ring-1 ring-line lg:h-[36rem]">
+    // The focus ring goes on this wrapper, since the vignette would dim one drawn on the canvas.
+    <div className="relative isolate h-[60svh] min-h-80 w-full overflow-hidden rounded-2xl bg-abyss ring-1 ring-line has-[.maplibregl-canvas:focus-visible]:outline-3 has-[.maplibregl-canvas:focus-visible]:outline-offset-3 has-[.maplibregl-canvas:focus-visible]:outline-accent lg:h-[36rem]">
       <div ref={containerRef} className={cn("size-full", CHROME)} />
       <div
         aria-hidden
