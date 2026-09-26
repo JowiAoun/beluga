@@ -627,6 +627,7 @@ Voice clips (one calm voice): "edge", "step down", "head", "pole", "bike", "scoo
 - Drop-offs use the table shifted one band outward (start at 3.5 m).
 - Voice clip: when a hazard enters the 1.5 to 2.0 m band for the first time, play its word and then its side ("pole, left") once through the same voice, subject to the 8 s cooldown per word + side. The side is spoken because side cues are weak on bone conduction. Until the clips exist, the phone's own voice says them, from both sides.
 - One hazard sounds at a time: the one in the nearest band, then the most urgent kind by priority. In a tie the one already sounding stays, so the sound doesn't jump between sides. Tuned up to 2, lower-priority voices drop by 12 dB while a drop-off plays.
+- A setting plays one sound (tick, ping or marimba) for every hazard, with no words and no centre marker, for users who find a sound per kind too much.
 - Stationary for more than 5 s: obstacle voices drop 6 dB and stop after 3 more repeats until the user moves; drop-off voices are never reduced.
 - Ask playback uses the same engine at the target angle, ducked 12 dB under any hazard; a priority 1–2 hazard stops it.
 

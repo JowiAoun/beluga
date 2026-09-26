@@ -3,6 +3,7 @@
 // Settings outside the walk (Phase 9): height, starting station, sounds, volume and camera-only mode.
 
 import { IconChevronDown, IconMinus, IconPlus, IconRefresh, IconSettings } from "@tabler/icons-react";
+import type { OneSound } from "@/lib/audio/sounds";
 import { STATIONS, type StationId } from "@/lib/shared/stations";
 import { cn } from "@/lib/utils";
 import { heightText, stepHeight, VOLUME_RANGE_DB, type Settings } from "./settings";
@@ -79,6 +80,25 @@ export default function SettingsPanel({
               </option>
             ))}
           </select>
+        </label>
+
+        <label className="flex flex-col gap-2 text-lg">
+          Warning sounds
+          <select
+            value={settings.oneSound ?? "each"}
+            onChange={(e) => set({ oneSound: e.target.value === "each" ? null : (e.target.value as OneSound) })}
+            className={SELECT}
+          >
+            <option value="each">All sounds and names</option>
+            <option value="tick">One sound: wooden tick</option>
+            <option value="ping">One sound: metal ping</option>
+            <option value="marimba">One sound: soft marimba</option>
+          </select>
+          <span className="text-base text-muted">
+            {settings.oneSound
+              ? "Every warning plays this one sound, from the side of the hazard and faster as you get closer. Drop-offs and head-height hazards sound like everything else, and no names are spoken."
+              : "Each kind of hazard has its own sound, and names like \"pole, left\" are spoken as it comes near."}
+          </span>
         </label>
 
         <label className={TOGGLE}>

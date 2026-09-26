@@ -392,6 +392,7 @@ export default function Walk() {
     sound.start();
     sound.setVolume(settingsRef.current.volumeDb);
     sound.setAliveTick(settingsRef.current.aliveTick);
+    sound.setOneSound(settingsRef.current.oneSound);
     soundRef.current = sound;
     const haptics = new HapticEngine(settingsRef.current);
     hapticsRef.current = haptics;

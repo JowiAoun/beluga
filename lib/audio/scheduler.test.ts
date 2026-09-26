@@ -160,6 +160,22 @@ describe("Scheduler", () => {
     expect(hits.flatMap((a) => (a.type === "hit" && a.centre ? [a.at] : []))).toEqual([0, expect.closeTo(1.1, 6)]);
   });
 
+  it("plays the one sound picked for every hazard, with no words and no centre tick", () => {
+    const s = new Scheduler(INFO);
+    s.setOneSound("ping");
+    const hazards = [
+      hazard("drop", 1.8, 0.02, { kind: "drop_off" }),
+      hazard("pole", 1.8, 0.02, { label: "pole_like" }),
+    ];
+    const actions = run(s, 0, 1, scene(hazards));
+    const hits = actions.filter((a) => a.type === "hit");
+    expect(hits.length).toBeGreaterThan(0);
+    expect(hits.every((a) => a.type === "hit" && a.sound === "ping" && !a.centre)).toBe(true);
+    expect(actions.some((a) => a.type === "say")).toBe(false);
+    s.setOneSound(null);
+    expect(run(s, 1, 1.1, scene(hazards)).find((a) => a.type === "hit")).toMatchObject({ sound: "edge_pulse" });
+  });
+
   it("ends a voice when its hazard goes, and every voice on clear", () => {
     const s = new Scheduler(INFO);
     run(s, 0, 0.2, scene([hazard("a", 0.4, 0, { kind: "head_height" }), hazard("b", 2)]));

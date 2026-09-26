@@ -244,6 +244,11 @@ export class AudioEngine {
     this.master.gain.setTargetAtTime(dbToGain(db), this.ctx.currentTime, LEVEL_SECONDS);
   }
 
+  // Plays this one sound for every warning, with no words, or null for a sound per kind of hazard.
+  setOneSound(sound: SoundId | null): void {
+    this.scheduler.setOneSound(sound);
+  }
+
   // A soft tick after 30 s with no other sound, so the user knows beluga is still running.
   setAliveTick(on: boolean): void {
     this.aliveTick = on;

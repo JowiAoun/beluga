@@ -1,6 +1,7 @@
 // The phone's settings, kept in local storage. Everything has a safe default, so a private window
 // or cleared storage still gives a working walk.
 
+import { ONE_SOUNDS, type OneSound } from "@/lib/audio/sounds";
 import { STATIONS, type StationId } from "@/lib/shared/stations";
 import { USER } from "@/lib/shared/params";
 import type { VibrationSettings } from "@/lib/haptics/engine";
@@ -23,6 +24,8 @@ export interface Settings extends VibrationSettings {
   headsetAsk: boolean;
   // A wide safety-yellow band low in the camera view warns like an edge (Phase 10 stretch).
   yellowStrip: boolean;
+  // Every warning plays this one sound, with no words. Null plays a sound per kind of hazard.
+  oneSound: OneSound | null;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -37,6 +40,7 @@ export const DEFAULT_SETTINGS: Settings = {
   cameraOnly: false,
   headsetAsk: true,
   yellowStrip: true,
+  oneSound: null,
 };
 
 export const HEIGHT_RANGE_M = { min: 1.2, max: 2.1 } as const;
@@ -76,6 +80,7 @@ export function readSettings(): Settings {
     cameraOnly: saved.cameraOnly === true,
     headsetAsk: typeof saved.headsetAsk === "boolean" ? saved.headsetAsk : DEFAULT_SETTINGS.headsetAsk,
     yellowStrip: typeof saved.yellowStrip === "boolean" ? saved.yellowStrip : DEFAULT_SETTINGS.yellowStrip,
+    oneSound: ONE_SOUNDS.find((sound) => sound === saved.oneSound) ?? null,
   };
 }
 

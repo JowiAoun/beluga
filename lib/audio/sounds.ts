@@ -7,6 +7,10 @@ const POLES: ReadonlySet<DetectorClass> = new Set(["pole_like", "fire_hydrant", 
 
 type SoundQuery = Pick<HazardUpdate, "kind" | "label">;
 
+// The sounds a user can pick to play for every warning, when a sound per kind is too much.
+export const ONE_SOUNDS = ["tick", "ping", "marimba"] as const satisfies readonly SoundId[];
+export type OneSound = (typeof ONE_SOUNDS)[number];
+
 // The warning sound for a hazard, from the label table in Phase 4. Pitch stands in for height,
 // since bone conduction can't place a sound up or down: a high chime for head height, a falling
 // tone for a drop-off. `blocked` is set when triage says an obstruction blocks the path.

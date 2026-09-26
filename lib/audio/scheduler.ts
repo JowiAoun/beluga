@@ -62,11 +62,17 @@ export class Scheduler {
   // Hazards that have had their word, and when each word + side was last said.
   private spoken = new Set<string>();
   private lastSaid = new Map<string, number>();
+  // One sound for every warning, with no words and no centre marker, when the user picks it.
+  private oneSound: SoundId | null = null;
 
   constructor(
     private sounds: Readonly<Record<SoundId, SoundInfo>>,
     private readonly maxVoices: number = AUDIO.maxHazardVoices,
   ) {}
+
+  setOneSound(sound: SoundId | null): void {
+    this.oneSound = sound;
+  }
 
   // When the recorded library replaces the tones, lengths and loops change.
   setSounds(sounds: Readonly<Record<SoundId, SoundInfo>>): void {
@@ -134,7 +140,7 @@ export class Scheduler {
       const pan = panForLateral(lateral);
       const side = sideOf(lateral);
       const blocked = scene.blocked?.has(hazard.id) ?? false;
-      const sound = soundFor(hazard, blocked);
+      const sound = this.oneSound ?? soundFor(hazard, blocked);
       const info = this.sounds[sound];
 
       let voice = this.voices.get(hazard.id);
@@ -192,11 +198,12 @@ export class Scheduler {
         if (voice.nextAt === null) voice.nextAt = now;
         // Closer means a shorter repeat, and the next one comes sooner.
         else if (voice.lastHitAt !== null) voice.nextAt = Math.min(voice.nextAt, voice.lastHitAt + interval);
-        if (side !== "ahead") voice.lastCentreAt = null;
+        if (side !== "ahead" || this.oneSound) voice.lastCentreAt = null;
         while (voice.nextAt <= now + aheadS) {
           const at = Math.max(voice.nextAt, now);
           const centre =
             side === "ahead" &&
+            !this.oneSound &&
             (voice.lastCentreAt === null || at - voice.lastCentreAt >= AUDIO.centreMarkerEveryMs / 1000 - 1e-9);
           if (centre) voice.lastCentreAt = at;
           actions.push({ type: "hit", id: voice.id, sound, at, centre });
@@ -213,7 +220,7 @@ export class Scheduler {
       }
 
       // Its word, once, as it comes into the 1.5 to 2.0 m band.
-      const word = wordFor(hazard, blocked);
+      const word = this.oneSound ? null : wordFor(hazard, blocked);
       const inClipBand = distance >= AUDIO.voiceClipBandM.from && distance <= AUDIO.voiceClipBandM.to;
       if (word && inClipBand && !this.spoken.has(hazard.id)) {
         this.spoken.add(hazard.id);

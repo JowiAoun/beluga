@@ -82,6 +82,7 @@ export default function ReplayPlayer({ src }: { src: string }) {
     const settings = readSettings();
     sound.start();
     sound.setVolume(settings.volumeDb);
+    sound.setOneSound(settings.oneSound);
     const raw = libraryRef.current;
     if (raw) void decodeLibrary(ctx, raw).then((library) => sound.useLibrary(library));
     const engine = new HazardEngine(settings.heightM);
