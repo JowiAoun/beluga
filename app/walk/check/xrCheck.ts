@@ -12,21 +12,6 @@ export interface LiveStats {
   trackingLost: boolean;
 }
 
-const OPTIONAL_FEATURES = ["depth-sensing", "camera-access", "hit-test", "dom-overlay", "local-floor"];
-
-// Chrome on ARCore has no float32 depth, so asking for it alone would return none.
-export function sessionInit(overlayRoot: Element): XRSessionInit {
-  return {
-    requiredFeatures: [],
-    optionalFeatures: OPTIONAL_FEATURES,
-    depthSensing: {
-      usagePreference: ["cpu-optimized"],
-      dataFormatPreference: ["luminance-alpha", "unsigned-short"],
-    },
-    domOverlay: { root: overlayRoot },
-  };
-}
-
 interface XrCheckOptions {
   session: XRSession;
   gl: WebGL2RenderingContext;

@@ -11,7 +11,8 @@ import {
   watchCompass,
   watchLocation,
 } from "./sensors";
-import { runXrCheck, sessionInit, type LiveStats } from "./xrCheck";
+import { ArUnavailableError, requestArSession, SESSION_LEVELS, type Requested } from "@/lib/xr/request";
+import { runXrCheck, type LiveStats } from "./xrCheck";
 
 type Phase = "ready" | "running" | "done";
 
@@ -35,6 +36,7 @@ const STATUS_CLASS: Record<CheckStatus, string> = {
 
 const SESSION_CHECKS = [
   "session",
+  "setup",
   "domOverlay",
   "floor",
   "hitTest",
@@ -135,6 +137,15 @@ export default function DeviceCheck() {
       }
     };
     void checkEnvironment();
+    const cameraMode = typeof navigator.mediaDevices?.getUserMedia === "function";
+    const motion = typeof DeviceOrientationEvent !== "undefined";
+    report(
+      "cameraMode",
+      cameraMode ? "pass" : "fail",
+      cameraMode
+        ? `camera ready to ask for, ${motion ? "motion sensors present" : "no motion sensors, so the phone is taken as upright"}`
+        : "no getUserMedia in this browser",
+    );
     const stopCompass = watchCompass(report, "compass");
 
     const cleanups = cleanupRef.current;
@@ -206,9 +217,11 @@ export default function DeviceCheck() {
     // can lose the user gesture.
     const overlay = overlayRef.current;
     const gl = glRef.current;
-    let sessionRequest: Promise<XRSession> | null = null;
+    let sessionRequest: Promise<Requested> | null = null;
     if (xrReady && navigator.xr && overlay && gl) {
-      sessionRequest = navigator.xr.requestSession("immersive-ar", sessionInit(overlay));
+      // From the top every time, so the check names each setup this phone refuses. The walk then
+      // starts from the one that worked.
+      sessionRequest = requestArSession(navigator.xr, overlay, 0);
     } else {
       report("session", "fail", "skipped: this browser has no immersive-ar");
     }
@@ -223,7 +236,14 @@ export default function DeviceCheck() {
 
     if (!sessionRequest || !gl) return;
     sessionRequest.then(
-      (session) => {
+      ({ session, level, refused }) => {
+        report(
+          "setup",
+          level === 0 ? "pass" : "warn",
+          level === 0
+            ? "every feature: depth, camera, hit test, DOM overlay, local-floor"
+            : `${SESSION_LEVELS[level].name}, after the phone refused ${refused.join("; ")}`,
+        );
         sessionRef.current = session;
         setInAr(true);
         cleanupRef.current.push(watchCompass(report, "compassInAr"));
@@ -235,7 +255,12 @@ export default function DeviceCheck() {
             finish();
           });
       },
-      (err) => report("session", "fail", errorText(err)),
+      (err) => {
+        report("session", "fail", errorText(err));
+        if (err instanceof ArUnavailableError) {
+          report("setup", "fail", `every AR setup refused, so the walk uses camera mode. ${err.refused.join("; ")}`);
+        }
+      },
     );
   };
 

@@ -8,6 +8,7 @@ import { FloorTracker, type FloorEvent } from "./floor";
 import { forwardOf, upOf } from "./geometry";
 import { MotionTracker } from "./motion";
 import { fieldOfView, type FieldOfView } from "./projection";
+import { requestArSession, SESSION_LEVELS } from "./request";
 import { TrackingMonitor } from "./tracking";
 import type { FloorSource, SensingUpdate, Vec3 } from "./types";
 
@@ -34,9 +35,17 @@ export interface LiveStats {
   cameraError: string | null;
 }
 
+// Which setup the phone took: an AR level from lib/xr/request.ts, or "camera mode".
+export interface SessionSetup {
+  name: string;
+  // Setups the phone refused first, with Chrome's reason.
+  refused: string[];
+}
+
 export interface SessionSummary {
   reason: EndReason;
   error: string | null;
+  setup: string | null;
   durationS: number;
   granted: Granted | null;
   frameRate: number;
@@ -82,21 +91,8 @@ export interface SensingSession {
   // Small frames for the detector, DETECTOR.ratePerSecond at most. Returns a function that stops them.
   onDetectorFrame(sink: DetectorSink): () => void;
   stats(): LiveStats;
-}
-
-const OPTIONAL_FEATURES = ["depth-sensing", "camera-access", "hit-test", "dom-overlay", "local-floor"];
-
-// Chrome on ARCore has no float32 depth, so asking for it alone would return none.
-export function sessionInit(overlayRoot: Element): XRSessionInit {
-  return {
-    requiredFeatures: [],
-    optionalFeatures: OPTIONAL_FEATURES,
-    depthSensing: {
-      usagePreference: ["cpu-optimized"],
-      dataFormatPreference: ["luminance-alpha", "unsigned-short"],
-    },
-    domOverlay: { root: overlayRoot },
-  };
+  // Null until the session has started.
+  setup(): SessionSetup | null;
 }
 
 // The spec makes these getters throw when depth sensing wasn't granted.
@@ -121,10 +117,10 @@ interface PendingCapture {
 }
 
 // Call straight from the start tap. requestSession runs first, with nothing awaited before it,
-// or Chrome drops the user gesture.
+// or Chrome drops the user gesture. A phone that refuses a setup gets the next one down.
 export function startSensing(options: SensingOptions): SensingSession {
   const request = navigator.xr
-    ? navigator.xr.requestSession("immersive-ar", sessionInit(options.overlayRoot))
+    ? requestArSession(navigator.xr, options.overlayRoot)
     : Promise.reject(new Error("WebXR is missing: use Chrome on an ARCore phone"));
 
   const { gl, onUpdate, onCue, onEnd } = options;
@@ -136,6 +132,7 @@ export function startSensing(options: SensingOptions): SensingSession {
 
   let session: XRSession | null = null;
   let granted: Granted | null = null;
+  let setup: SessionSetup | null = null;
   let endReason: EndReason | null = null;
   let endError: string | null = null;
   let over = false;
@@ -354,6 +351,7 @@ export function startSensing(options: SensingOptions): SensingSession {
     return {
       reason: endReason ?? "ended",
       error: endError,
+      setup: setup?.name ?? null,
       durationS,
       granted,
       frameRate: durationS > 0 ? frames / durationS : 0,
@@ -470,10 +468,16 @@ export function startSensing(options: SensingOptions): SensingSession {
     }
   }
 
-  const ready = request.then(attach, (err: unknown) => {
-    resolveCaptures(performance.now(), true);
-    throw err;
-  });
+  const ready = request.then(
+    ({ session: s, level, refused }) => {
+      setup = { name: SESSION_LEVELS[level].name, refused };
+      return attach(s);
+    },
+    (err: unknown) => {
+      resolveCaptures(performance.now(), true);
+      throw err;
+    },
+  );
 
   return {
     ready,
@@ -487,5 +491,6 @@ export function startSensing(options: SensingOptions): SensingSession {
       return () => detectorSinks.delete(sink);
     },
     stats: () => ({ ...live }),
+    setup: () => setup,
   };
 }
