@@ -1,20 +1,133 @@
 @import "tailwindcss";
 
+/* Pause motion in the navbar sets data-motion="paused" on <html>. */
+@custom-variant paused (&:where([data-motion="paused"], [data-motion="paused"] *));
+
 :root {
   --background: #0b1320;
   --foreground: #f2f5f7;
   --accent: #fde047;
+  --abyss: #060b14;
+  --muted: #94a3b8;
+  --sonar: #38bdf8;
+  --surface: rgb(255 255 255 / 0.05);
+  --line: rgb(255 255 255 / 0.1);
+  --danger: #991b1b;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-accent: var(--accent);
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --color-abyss: var(--abyss);
+  --color-muted: var(--muted);
+  --color-sonar: var(--sonar);
+  --color-surface: var(--surface);
+  --color-line: var(--line);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-atkinson), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-atkinson-mono), ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --text-hero: clamp(2.75rem, 8vw, 6rem);
+  --text-hero--line-height: 1;
+  --text-hero--letter-spacing: -0.02em;
+  --text-hero--font-weight: 800;
+  --text-section: clamp(2rem, 5vw, 3.5rem);
+  --text-section--line-height: 1.1;
+  --text-section--letter-spacing: -0.01em;
+  --text-section--font-weight: 700;
+
+  --ease-water: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --animate-ring: ring 3.6s var(--ease-water) infinite;
+  --animate-float: float 7s ease-in-out infinite;
+  --animate-rise: rise 0.9s var(--ease-water) both;
+  --animate-shimmer: shimmer 6s linear infinite;
+
+  /* A sonar ring: grows out of its centre and fades. */
+  @keyframes ring {
+    0% {
+      transform: translate(-50%, -50%) scale(0.2);
+      opacity: 0;
+    }
+    15% {
+      opacity: 0.7;
+    }
+    100% {
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 0;
+    }
+  }
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0) rotate(-1deg);
+    }
+    50% {
+      transform: translateY(-14px) rotate(1deg);
+    }
+  }
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes shimmer {
+    from {
+      background-position: 0% 50%;
+    }
+    to {
+      background-position: 200% 50%;
+    }
+  }
+}
+
+@utility bg-dots {
+  background-image: radial-gradient(rgb(255 255 255 / 0.09) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+@utility bg-grid {
+  background-image:
+    linear-gradient(to right, rgb(255 255 255 / 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.05) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+
+@utility mask-fade {
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 6rem;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+}
+
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* Pause motion stops every CSS animation where it is (WCAG 2.2.2). */
+:root[data-motion="paused"] *,
+:root[data-motion="paused"] *::before,
+:root[data-motion="paused"] *::after {
+  animation-play-state: paused !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }
