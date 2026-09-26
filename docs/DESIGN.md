@@ -16,6 +16,23 @@ Belugas find their way by echolocation, and every page shows it with one motif: 
 
 Motion is slow and calm, like water. Nothing bounces or shakes.
 
+## Logo & icons
+
+The logo is `images/image.png`: the beluga in sunglasses, holding a white cane, riding a wave. The 3D beluga in the hero is the same pose.
+
+| File | Size | Use |
+| --- | --- | --- |
+| `app/favicon.ico` | 16, 32 and 48 px | Browser tabs |
+| `app/icon.png` | 192 px | Tab icon for browsers that take a PNG |
+| `app/apple-icon.png` | 180 px | iPhone home screen |
+| `public/icons/beluga-192.png`, `beluga-512.png` | 192 and 512 px | Installed app, rounded navy tile |
+| `public/icons/beluga-maskable-192.png`, `beluga-maskable-512.png` | 192 and 512 px | Installed app on Android, logo inside the safe zone |
+| `public/icons/logo-128.png`, `logo-256.webp`, `logo-512.webp` | 128 to 512 px | `BelugaMark` on the pages |
+| `app/opengraph-image.jpg` | 1200 × 630 | Link previews on Devpost and in chats |
+
+- The small icons sit on a navy tile (`#0b1320`), so the white whale still shows on light tab bars.
+- The service worker serves `/icons` from its cache first, so a changed icon gets a new file name.
+
 ## Colours
 
 Defined once in `app/globals.css` as CSS variables with matching `@theme` tokens. Contrast is measured against `background`.
