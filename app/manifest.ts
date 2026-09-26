@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
 
-// No orientation lock yet: the Phase 0 field-of-view test picks portrait or landscape.
+// Portrait, as the Phase 0 field-of-view test measured the Galaxy S22 (38° × 74°) and the phone
+// is worn upright on the chest strap. Turning the phone would change the view the sounds are
+// tuned for.
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "beluga",
@@ -9,6 +11,7 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/walk",
     scope: "/",
     display: "fullscreen",
+    orientation: "portrait",
     background_color: "#0b1320",
     theme_color: "#0b1320",
     icons: [
