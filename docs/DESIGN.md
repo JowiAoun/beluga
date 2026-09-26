@@ -159,8 +159,8 @@ These belong to track D. Restyling `app/map` (track C) or `app/walk` (track A) g
 
 | File | Status | Where | Parts |
 | --- | --- | --- | --- |
-| `public/3d/trekz-air.glb` | Done (390 KB before meshopt) | Hear a warning, then the exploded view | Shells, contact pads, rear pods, neckband. Hide `TrekzAir_wordmark_00`, `TrekzAir_wordmark_01` and `TrekzAir_emblem`: they carry the AfterShokz marks |
-| `public/3d/beluga.glb` | Being made: the beluga on the water | Hero | Body, tail, flippers, sunglasses, cane, water |
+| `public/3d/trekz-air.glb` | Done (390 KB, 120 KB after meshopt) | Hear a warning, then the exploded view | Shells, contact pads, rear pods, neckband. Hide `TrekzAir_wordmark_00`, `TrekzAir_wordmark_01` and `TrekzAir_emblem`: they carry the AfterShokz marks |
+| `public/3d/beluga.glb` | Done (560 KB, 146 KB after `dedup` and meshopt): the beluga riding a wave | Hero | Body, tail flukes, flippers, face, sunglasses, cane, wave, foam and droplets, 50 named parts. The parts are baked in place, so `BelugaScene.tsx` finds the tail and flipper pivots from their bounds |
 | `public/3d/phone-mount.glb` | Maybe later | How it works | Screen, lens, clamp, strap. Until then, a drei `RoundedBox` |
 | `public/3d/scooter.glb` | Maybe later | How it works | Until then, boxes and cylinders |
 
@@ -180,7 +180,7 @@ Meshy's free output is CC BY 4.0, so credit it in the README. Tripo's free outpu
 ### Shrinking & typing a model
 
 1. Run `npx @gltf-transform/cli@4.5.0 meshopt <in>.glb public/3d/<name>.glb`. The earbuds drop from 390 KB to 120 KB (60 KB gzip) and keep all 14 parts. drei's JS carries the decoder, so it works offline.
-2. For a big generated model, run the same CLI's `simplify`, `resize --width 1024` and `webp` first, then `meshopt`. Aim for under 1 MB.
+2. For a big generated model, run the same CLI's `simplify`, `resize --width 1024` and `webp` first, then `meshopt`. Aim for under 1 MB. Run `dedup` first when many parts share a colour: it took the beluga from 50 materials to 11.
 3. Skip `optimize`: it joins the parts into 2 meshes and merges `trekz_blue` into `ink_black`. Skip `draco`: its decoder loads from `gstatic.com`.
 4. Run `npx gltfjsx@6.5.3 public/3d/<name>.glb --types --keepnames -o components/three/<Name>.tsx`, then fix three things so `tsc` passes:
    - Change `JSX.IntrinsicElements['group']` to `ThreeElements['group']`.
@@ -216,7 +216,7 @@ app/page.tsx (server)
 | # | Section | What's in it |
 | --- | --- | --- |
 | 1 | Navbar | Skip link first, then the logo, How it works, Hear it, City dashboard, Try beluga and Pause motion |
-| 2 | Hero | The beluga on the water in 3D, rings from its forehead, Waves below and Spotlight from above. The heading in Encrypted Text. Buttons: "Try beluga (Android Chrome)" and "City dashboard". Right under them, the disclaimer: research prototype, not a medical device, use it with a cane or guide dog. Until `beluga.glb` exists, the 2D logo floats with a small parallax |
+| 2 | Hero | The beluga on the water in 3D, rings from its forehead, Waves below and Spotlight from above. The heading in Encrypted Text. Buttons: "Try beluga (Android Chrome)" and "City dashboard". Right under them, the disclaimer: research prototype, not a medical device, use it with a cane or guide dog. A still of the beluga (`public/3d/beluga.webp`) shows first |
 | 3 | Hear a warning | A "Hear a warning (headphones on)" button plays 3 real sounds once each: left, ahead, right. It uses `lib/audio/placement.ts` and `lib/audio/library.ts`, so it pans like the earbuds do. The 3D earbuds light the contact pad on the side that plays. Caption in `aria-live="polite"`, like "Left: pole, 2 m". A Stop button, low starting volume, no loop, and the AudioContext made inside the click. Scrolling on spreads the earbuds into their parts, each with a label |
 | 4 | How it works | Sticky Scroll Reveal with 4 steps (depth, sound, Ask, the city) beside the corridor scene. A 0.9 m × 3 m corridor comes out of the phone's lens. A pole, a head-height sign, a step-down edge and a scooter slide in, and each lights up and rings from its side |
 | 5 | Two speeds | Animated Beam: camera → depth → hazard → sound → earbuds, labelled "on the phone, no network". Below it the slower paths: Ask → ElevenLabs agent with Gemini → voice, and report → Tiger Data → dashboard |
