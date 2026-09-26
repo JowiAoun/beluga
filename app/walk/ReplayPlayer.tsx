@@ -7,6 +7,7 @@
 import { IconArrowLeft, IconPlayerPlayFilled, IconPlayerStopFilled } from "@tabler/icons-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { DISPLAY, Name } from "@/components/brand/Display";
 import { BelugaMark } from "@/components/brand/Logo";
 import { cn } from "@/lib/utils";
 import { AudioEngine } from "@/lib/audio/engine";
@@ -154,11 +155,13 @@ export default function ReplayPlayer({ src }: { src: string }) {
       <header className="flex flex-col gap-4">
         <div className="flex items-center gap-3">
           <BelugaMark size={64} className="size-14" />
-          <h1 className="text-3xl font-extrabold tracking-tight">beluga replay</h1>
+          <h1 className={cn(DISPLAY, "text-4xl sm:text-5xl")}>
+            <Name /> replay
+          </h1>
         </div>
         <p className="text-xl text-muted">
           A recorded walk played through the real warning sounds, with no camera or AR session.{" "}
-          <span className="inline-block rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-base font-semibold text-accent">
+          <span className="inline-block rounded-md bg-accent px-3 py-1 text-base font-bold text-on-accent">
             Recorded, not live.
           </span>
         </p>
@@ -173,7 +176,7 @@ export default function ReplayPlayer({ src }: { src: string }) {
             type="file"
             accept=".gz,.json,application/gzip,application/json"
             onChange={(e) => void pick(e.target.files?.[0])}
-            className="text-base text-muted file:mr-3 file:min-h-12 file:rounded-xl file:border file:border-line file:bg-white/10 file:px-4 file:font-semibold file:text-foreground"
+            className="text-base text-muted file:mr-3 file:min-h-12 file:rounded-md file:border file:border-line-strong file:bg-surface file:px-4 file:font-semibold file:text-foreground"
           />
         </label>
         <label className="flex min-h-12 items-center gap-4 text-lg">

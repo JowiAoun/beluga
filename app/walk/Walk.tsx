@@ -50,6 +50,7 @@ import StopButton from "./StopButton";
 import MicrophoneSetup from "./MicrophoneSetup";
 import VoiceAsk from "./VoiceAsk";
 import { LINES, say, speakLocalText, speakText, unlockVoice } from "./voice";
+import { Contours } from "@/components/brand/Contours";
 import { cn } from "@/lib/utils";
 import { CHECKBOX, LINK_ROW, PANEL, PRIMARY, SECONDARY } from "./styles";
 
@@ -602,15 +603,15 @@ export default function Walk() {
               <p
                 role="status"
                 aria-atomic="true"
-                className={`self-start rounded-2xl border-2 bg-abyss px-4 py-3 text-2xl font-bold ${
-                  status === "Calibrated" ? "border-sonar text-sonar" : "border-foreground text-foreground"
+                className={`self-start rounded-md border-2 bg-abyss px-4 py-3 text-2xl font-bold ${
+                  status === "Calibrated" ? "border-accent text-accent" : "border-foreground text-foreground"
                 }`}
               >
                 {status}
               </p>
             )}
             {message && (
-              <p role="alert" className="rounded-2xl bg-danger px-4 py-3 text-xl text-white">
+              <p role="alert" className="rounded-md bg-danger px-4 py-3 text-xl text-white">
                 {message}
               </p>
             )}
@@ -619,7 +620,7 @@ export default function Walk() {
                 type="button"
                 onClick={record}
                 disabled={recording !== null}
-                className="min-h-12 self-start rounded-2xl border border-white/30 bg-abyss px-4 font-semibold text-foreground"
+                className="min-h-12 self-start rounded-md border border-line-strong bg-abyss px-4 font-semibold text-foreground"
               >
                 {recording === null
                   ? `Record a ${CLIP_SECONDS} s replay`
@@ -653,9 +654,9 @@ export default function Walk() {
       ) : (
         <main className="mx-auto flex w-full max-w-xl flex-col gap-5 px-4 pt-10 pb-16">
           <header className="relative isolate flex flex-col items-center gap-2 text-center">
-            <div aria-hidden className="absolute -inset-x-4 -top-10 -z-10 h-96 bg-dots mask-fade opacity-70" />
+            <Contours variant="a" className="-inset-x-4 -top-10 -z-10 h-96" />
             <WalkBeluga className="w-64 max-w-full" />
-            <h1 className="text-5xl font-extrabold tracking-tight">beluga</h1>
+            <h1 className="font-display text-6xl font-extrabold tracking-[-0.04em]">beluga</h1>
             <p className="max-w-[34ch] text-xl text-balance text-muted">
               Plays a sound from the side of obstacles in your path. It works alongside your cane or guide dog, and it
               can miss things.
@@ -663,7 +664,7 @@ export default function Walk() {
           </header>
 
           {support === "camera" && (
-            <p className="flex gap-3 rounded-2xl border border-accent/30 bg-accent/5 p-4 text-lg">
+            <p className="flex gap-3 rounded-md border border-accent bg-accent/5 p-4 text-lg">
               <IconInfoCircle aria-hidden size={24} className="mt-0.5 shrink-0 text-accent" />
               <span>
                 This browser can&apos;t run AR, so beluga uses camera mode. It warns about things it can name, like
@@ -673,7 +674,7 @@ export default function Walk() {
           )}
 
           {support === "none" && (
-            <p role="alert" className="flex gap-3 rounded-2xl border border-red-400/40 bg-danger/40 p-4 text-lg">
+            <p role="alert" className="flex gap-3 rounded-md border border-red-400/40 bg-danger/40 p-4 text-lg">
               <IconAlertTriangle aria-hidden size={24} className="mt-0.5 shrink-0 text-red-300" />
               <span>
                 This browser can&apos;t start an AR session. Use Chrome on an Android phone with ARCore, and run the
@@ -732,7 +733,7 @@ export default function Walk() {
               <MicrophoneSetup value={microphone} onChange={setMicrophone} />
 
               {message && (
-                <p role="alert" className="flex gap-3 rounded-2xl border border-red-400/40 bg-danger/40 p-4 text-xl">
+                <p role="alert" className="flex gap-3 rounded-md border border-red-400/40 bg-danger/40 p-4 text-xl">
                   <IconAlertTriangle aria-hidden size={24} className="mt-1 shrink-0 text-red-300" />
                   <span>{message}</span>
                 </p>

@@ -28,7 +28,7 @@ export default function SettingsPanel({
   const set = (patch: Partial<Settings>) => onChange({ ...settings, ...patch });
   return (
     <details className={cn(PANEL, "group p-0")}>
-      <summary className="flex min-h-16 cursor-pointer items-center gap-3 rounded-3xl px-5 text-xl font-semibold [&::-webkit-details-marker]:hidden">
+      <summary className="flex min-h-16 cursor-pointer items-center gap-3 rounded-md px-5 text-xl font-semibold [&::-webkit-details-marker]:hidden">
         <IconSettings aria-hidden size={24} className="shrink-0 text-sonar" />
         Settings
         <IconChevronDown
