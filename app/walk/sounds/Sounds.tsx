@@ -1,13 +1,25 @@
 "use client";
 
+import {
+  IconArrowLeft,
+  IconArrowRight,
+  IconArrowUp,
+  IconPlayerStopFilled,
+  IconRefresh,
+  IconVolume,
+} from "@tabler/icons-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { BelugaMark } from "@/components/brand/Logo";
+import { SonarRings } from "@/components/brand/SonarRings";
 import { AudioEngine } from "@/lib/audio/engine";
 import { decodeFile, decodeLibrary, fetchLibrary, SOUNDS_PATH, type RawLibrary } from "@/lib/audio/library";
 import { panForLateral, type EarSettings, type Side } from "@/lib/audio/placement";
 import type { HazardUpdate } from "@/lib/shared/contracts";
 import type { HazardKind, SoundId } from "@/lib/shared/enums";
 import { AUDIO } from "@/lib/shared/params";
+import { cn } from "@/lib/utils";
+import { LINK_ROW, PANEL, PRIMARY, SECONDARY, CHECKBOX, SELECT } from "../styles";
 import { speakText } from "../voice";
 
 const SOUNDS: Array<{ id: SoundId; use: string }> = [
@@ -34,6 +46,13 @@ const CUE_GAP_MS = 350;
 
 const SIDES: Side[] = ["left", "ahead", "right"];
 const SIDE_NAMES: Record<Side, string> = { left: "Left", ahead: "Centre", right: "Right" };
+const SIDE_ICONS: Record<Side, typeof IconArrowUp> = { left: IconArrowLeft, ahead: IconArrowUp, right: IconArrowRight };
+
+const PLAY_BUTTON = "min-h-12 rounded-xl border border-line bg-white/5 font-semibold hover:border-white/30";
+
+function sideOfPan(pan: number): Side {
+  return pan < 0 ? "left" : pan > 0 ? "right" : "ahead";
+}
 
 const CUT_CHOICES = [
   { label: "12 dB", db: 12 },
@@ -206,27 +225,34 @@ export default function Sounds() {
 
   if (testing) {
     return (
-      <main className="flex min-h-dvh flex-col bg-background text-foreground">
-        <p role="status" className="p-3 text-center text-lg">
+      <main className="flex min-h-dvh flex-col gap-3 bg-background p-3 text-foreground">
+        <p role="status" className="px-2 pt-3 text-center text-xl font-semibold">
           Cue {test.answers.length + 1} of {test.cues.length}. Tap the side you heard.
         </p>
-        <div className="grid flex-1 grid-cols-3 gap-2 p-2">
-          {SIDES.map((side) => (
-            <button
-              key={side}
-              type="button"
-              onClick={() => answer(side)}
-              className="rounded-lg bg-neutral-800 text-2xl font-bold active:bg-yellow-300 active:text-black"
-            >
-              {SIDE_NAMES[side]}
-            </button>
-          ))}
+        <div aria-hidden className="mx-2 h-2 overflow-hidden rounded-full bg-white/10">
+          <div
+            className="h-full rounded-full bg-sonar"
+            style={{ width: `${(test.answers.length / test.cues.length) * 100}%` }}
+          />
         </div>
-        <button
-          type="button"
-          onClick={() => playCue(test.cues[test.answers.length])}
-          className="m-2 min-h-16 rounded-lg border-2 border-neutral-500 text-lg"
-        >
+        <div className="grid flex-1 grid-cols-3 gap-2">
+          {SIDES.map((side) => {
+            const Icon = SIDE_ICONS[side];
+            return (
+              <button
+                key={side}
+                type="button"
+                onClick={() => answer(side)}
+                className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-line bg-surface text-2xl font-bold active:bg-accent active:text-background"
+              >
+                <Icon aria-hidden size={40} stroke={1.75} />
+                {SIDE_NAMES[side]}
+              </button>
+            );
+          })}
+        </div>
+        <button type="button" onClick={() => playCue(test.cues[test.answers.length])} className={SECONDARY}>
+          <IconRefresh aria-hidden size={24} />
           Play it again
         </button>
       </main>
@@ -234,10 +260,13 @@ export default function Sounds() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-xl flex-col gap-5 bg-background p-4 text-foreground">
-      <header className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold">beluga sounds</h1>
-        <p>
+    <main className="group/sounds mx-auto flex w-full max-w-xl flex-col gap-5 bg-background px-4 pt-8 pb-12 text-foreground">
+      <header className="flex flex-col gap-4">
+        <div className="flex items-center gap-3">
+          <BelugaMark size={64} className="size-14" />
+          <h1 className="text-3xl font-extrabold tracking-tight">beluga sounds</h1>
+        </div>
+        <p className="text-lg text-muted">
           Plays every warning sound through the earbuds, left, centre and right, and runs the blindfold test.{" "}
           {library
             ? `Sounds from the ElevenLabs library, made ${new Date(library.manifest.generatedAt).toLocaleString("en-CA")}.`
@@ -245,24 +274,25 @@ export default function Sounds() {
         </p>
       </header>
 
+      <div className="sticky top-0 z-10 -mx-4 border-b border-line bg-background px-4 pt-8 pb-3">
+        <HeadFromAbove />
+      </div>
+
       {!started ? (
-        <button
-          type="button"
-          onClick={start}
-          className="min-h-24 rounded-lg bg-yellow-300 text-2xl font-bold text-black"
-        >
+        <button type="button" onClick={start} className={cn(PRIMARY, "min-h-24 text-2xl")}>
+          <IconVolume aria-hidden size={28} />
           Start sound
         </button>
       ) : (
         <>
-          <section className="flex flex-col gap-2">
-            <h2 className="text-xl font-semibold">Ears</h2>
-            <label className="flex flex-col gap-1">
+          <section className={cn(PANEL, "flex flex-col gap-3")}>
+            <h2 className="text-2xl font-bold">Ears</h2>
+            <label className="flex flex-col gap-2 text-lg">
               Far ear at full pan: how much quieter
               <select
                 value={ears.farEarCutDb}
                 onChange={(e) => changeEars({ ...ears, farEarCutDb: Number(e.target.value) })}
-                className="min-h-12 rounded bg-neutral-800 px-2"
+                className={SELECT}
               >
                 {CUT_CHOICES.map((c) => (
                   <option key={c.db} value={c.db}>
@@ -271,57 +301,63 @@ export default function Sounds() {
                 ))}
               </select>
             </label>
-            <label className="flex min-h-12 items-center gap-3">
+            <label className="flex min-h-12 items-center gap-4 text-lg">
               <input
                 type="checkbox"
                 checked={ears.maxEarDelayMs > 0}
                 onChange={(e) => changeEars({ ...ears, maxEarDelayMs: e.target.checked ? AUDIO.maxEarDelayMs : 0 })}
-                className="h-6 w-6"
+                className={CHECKBOX}
               />
               Far ear hears it up to {AUDIO.maxEarDelayMs} ms later
             </label>
           </section>
 
-          <section className="flex flex-col gap-2">
-            <h2 className="text-xl font-semibold">Blindfold test</h2>
-            <p>
+          <section className={cn(PANEL, "flex flex-col gap-3")}>
+            <h2 className="text-2xl font-bold">Blindfold test</h2>
+            <p className="text-lg text-muted">
               {TEST_CUES} random cues from a pole {TEST_LATERAL_M} m left, ahead or {TEST_LATERAL_M} m right. The wearer
               taps the side. The plan asks for {PASS_MARK} of {TEST_CUES}.
             </p>
             {test && (
-              <p role="status" className="text-lg font-semibold">
+              <p role="status" className="font-mono text-lg font-medium">
                 Last test: {correct} of {test.cues.length} correct, {correct >= PASS_MARK ? "pass" : "not yet"}
               </p>
             )}
-            <button
-              type="button"
-              onClick={startTest}
-              className="min-h-16 rounded-lg bg-yellow-300 text-lg font-bold text-black"
-            >
+            <button type="button" onClick={startTest} className={PRIMARY}>
               Start the blindfold test
             </button>
           </section>
 
-          <section className="flex flex-col gap-2">
-            <h2 className="text-xl font-semibold">Walk up to it (simulated)</h2>
-            <p>A simulated hazard from 3.5 m to 0.3 m at walking pace, through the real warning rules.</p>
+          <section className={cn(PANEL, "flex flex-col gap-3")}>
+            <h2 className="text-2xl font-bold">Walk up to it (simulated)</h2>
+            <p className="text-lg text-muted">
+              A simulated hazard from 3.5 m to 0.3 m at walking pace, through the real warning rules.
+            </p>
             {walking && (
-              <div className="flex items-center justify-between gap-2">
-                <p role="status">Playing: {walking}</p>
-                <button type="button" onClick={stopWalk} className="min-h-12 rounded bg-red-800 px-4 font-semibold">
+              <div className="flex items-center justify-between gap-2 rounded-2xl border border-sonar/30 bg-sonar/10 p-2 pl-4">
+                <p role="status" className="text-lg">
+                  Playing: {walking}
+                </p>
+                <button
+                  type="button"
+                  onClick={stopWalk}
+                  className="flex min-h-12 items-center gap-2 rounded-xl bg-danger px-4 font-semibold text-white"
+                >
+                  <IconPlayerStopFilled aria-hidden size={18} />
                   Stop
                 </button>
               </div>
             )}
             {APPROACHES.map((approach) => (
-              <div key={approach.name} className="grid grid-cols-[1fr_repeat(3,4.5rem)] items-center gap-2">
-                <span>{approach.name}</span>
+              <div key={approach.name} className="grid grid-cols-[minmax(0,1fr)_repeat(3,4.5rem)] items-center gap-2">
+                <span className="text-lg">{approach.name}</span>
                 {SIDES.map((side) => (
                   <button
                     key={side}
                     type="button"
+                    data-side={side}
                     onClick={() => walkUp(approach, side)}
-                    className="min-h-12 rounded bg-neutral-800 font-semibold"
+                    className={PLAY_BUTTON}
                   >
                     {SIDE_NAMES[side]}
                   </button>
@@ -330,28 +366,29 @@ export default function Sounds() {
             ))}
           </section>
 
-          <section className="flex flex-col gap-2">
-            <h2 className="text-xl font-semibold">Each sound</h2>
+          <section className={cn(PANEL, "flex flex-col gap-3")}>
+            <h2 className="text-2xl font-bold">Each sound</h2>
             {library && (
-              <p>
+              <p className="text-lg text-muted">
                 Numbered buttons play each ElevenLabs variant from the centre. To pick one, set its file in{" "}
                 <code>public/sounds/manifest.json</code>.
               </p>
             )}
             {SOUNDS.map(({ id, use }) => (
               <div key={id} className="flex flex-col gap-1">
-                <div className="grid grid-cols-[1fr_repeat(3,4.5rem)] items-center gap-2">
+                <div className="grid grid-cols-[minmax(0,1fr)_repeat(3,4.5rem)] items-center gap-2">
                   <span>
                     <span className="font-mono">{id}</span>
                     <br />
-                    <span className="text-sm opacity-80">{use}</span>
+                    <span className="text-muted">{use}</span>
                   </span>
                   {([-1, 0, 1] as const).map((pan) => (
                     <button
                       key={pan}
                       type="button"
+                      data-side={sideOfPan(pan)}
                       onClick={() => engineRef.current?.play(id, pan)}
-                      className="min-h-12 rounded bg-neutral-800 font-semibold"
+                      className={PLAY_BUTTON}
                     >
                       {pan < 0 ? "Left" : pan > 0 ? "Right" : "Centre"}
                     </button>
@@ -364,7 +401,8 @@ export default function Sounds() {
         </>
       )}
 
-      <Link href="/walk" className="text-lg underline">
+      <Link href="/walk" className={cn(LINK_ROW, "justify-start")}>
+        <IconArrowLeft aria-hidden size={24} className="shrink-0" />
         Back to beluga
       </Link>
     </main>
@@ -390,13 +428,76 @@ function Variants({
         <button
           key={file}
           type="button"
+          data-side="ahead"
           onClick={() => onPlay(file)}
-          className={`min-h-12 min-w-12 rounded px-3 ${chosen ? "bg-yellow-300 font-bold text-black" : "bg-neutral-700"}`}
+          className={cn(
+            "min-h-12 min-w-12 rounded-xl px-3",
+            chosen ? "bg-accent font-bold text-background" : "border border-line bg-white/5",
+          )}
         >
           {name}
           {chosen && " (in use)"}
         </button>
       ))}
+    </div>
+  );
+}
+
+// Where the dot in the head goes for each side, as custom properties the figure reads. Every play
+// button carries `data-side`, and the dot follows the one last tapped or focused, so the sound
+// code stays as it is.
+const DOT_AT = [
+  "[--dot-x:50%] [--dot-y:70%] [--dot-on:0] [--ear-l:0] [--ear-r:0]",
+  "group-has-[[data-side=left]:is(:focus,:hover)]/sounds:[--dot-x:17.6%]",
+  "group-has-[[data-side=left]:is(:focus,:hover)]/sounds:[--dot-y:40%]",
+  "group-has-[[data-side=left]:is(:focus,:hover)]/sounds:[--dot-on:1]",
+  "group-has-[[data-side=left]:is(:focus,:hover)]/sounds:[--ear-l:1]",
+  "group-has-[[data-side=ahead]:is(:focus,:hover)]/sounds:[--dot-x:50%]",
+  "group-has-[[data-side=ahead]:is(:focus,:hover)]/sounds:[--dot-y:10%]",
+  "group-has-[[data-side=ahead]:is(:focus,:hover)]/sounds:[--dot-on:1]",
+  "group-has-[[data-side=ahead]:is(:focus,:hover)]/sounds:[--ear-l:1]",
+  "group-has-[[data-side=ahead]:is(:focus,:hover)]/sounds:[--ear-r:1]",
+  "group-has-[[data-side=right]:is(:focus,:hover)]/sounds:[--dot-x:82.4%]",
+  "group-has-[[data-side=right]:is(:focus,:hover)]/sounds:[--dot-y:40%]",
+  "group-has-[[data-side=right]:is(:focus,:hover)]/sounds:[--dot-on:1]",
+  "group-has-[[data-side=right]:is(:focus,:hover)]/sounds:[--ear-r:1]",
+].join(" ");
+
+const SPOTS = [
+  { name: "Left", x: "17.6%", y: "40%", label: "top-[40%] right-[calc(82.4%+1.25rem)] -translate-y-1/2" },
+  { name: "Centre", x: "50%", y: "10%", label: "top-[10%] left-[calc(50%+1.25rem)] -translate-y-1/2" },
+  { name: "Right", x: "82.4%", y: "40%", label: "top-[40%] left-[calc(82.4%+1.25rem)] -translate-y-1/2" },
+];
+
+const FADE = "transition-opacity duration-300 ease-water motion-reduce:transition-none";
+
+// A head seen from above, nose up, with the earbuds on each side. Decoration: each button already
+// says its side in words.
+function HeadFromAbove() {
+  return (
+    <div aria-hidden className={cn("relative mx-auto h-40 w-64", DOT_AT)}>
+      <span className="absolute top-[70%] left-1/2 size-48 -translate-1/2 rounded-full border-2 border-dashed border-white/15 [clip-path:inset(0_0_50%_0)]" />
+      {SPOTS.map((spot) => (
+        <span key={spot.name}>
+          <span
+            className="absolute size-6 -translate-1/2 rounded-full border-2 border-white/25"
+            style={{ left: spot.x, top: spot.y }}
+          />
+          <span className={cn("absolute text-sm text-muted", spot.label)}>{spot.name}</span>
+        </span>
+      ))}
+      <span className="absolute top-[70%] left-[37.5%] h-7 w-3 -translate-1/2 rounded-full bg-white/25">
+        <span className={cn("absolute inset-0 rounded-full bg-sonar opacity-(--ear-l)", FADE)} />
+      </span>
+      <span className="absolute top-[70%] left-[62.5%] h-7 w-3 -translate-1/2 rounded-full bg-white/25">
+        <span className={cn("absolute inset-0 rounded-full bg-sonar opacity-(--ear-r)", FADE)} />
+      </span>
+      <span className="absolute top-[46%] left-1/2 size-4 -translate-1/2 rotate-45 border-t-2 border-l-2 border-foreground/80 bg-background" />
+      <span className="absolute top-[70%] left-1/2 h-[76px] w-16 -translate-1/2 rounded-[50%] border-2 border-foreground/80 bg-background" />
+      <span className="absolute top-(--dot-y) left-(--dot-x) size-6 -translate-1/2 opacity-(--dot-on) transition-[left,top,opacity] duration-300 ease-water motion-reduce:transition-none">
+        <SonarRings className="top-1/2 left-1/2 size-16 -translate-1/2" count={2} duration={1.6} />
+        <span className="absolute inset-0 rounded-full bg-sonar" />
+      </span>
     </div>
   );
 }
