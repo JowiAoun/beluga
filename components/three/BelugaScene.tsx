@@ -101,6 +101,7 @@ function Beluga({ still, progress, onReady }: { still: boolean; progress?: Progr
     };
   }, [parts]);
 
+  const root = useRef<THREE.Group | null>(null);
   const body = useRef<THREE.Group | null>(null);
   const tail = useRef<THREE.Group | null>(null);
   const near = useRef<THREE.Group | null>(null);
@@ -113,6 +114,12 @@ function Beluga({ still, progress, onReady }: { still: boolean; progress?: Progr
   useFrame((state) => {
     const t = still ? 0 : state.clock.elapsedTime;
     const dive = progress?.get() ?? 0;
+    // Turns a little toward the pointer while it is over the scene, and eases back.
+    if (root.current) {
+      const aim = still ? 0 : state.pointer.x;
+      root.current.rotation.y = THREE.MathUtils.lerp(root.current.rotation.y, TURN + aim * 0.3, 0.05);
+      root.current.rotation.x = THREE.MathUtils.lerp(root.current.rotation.x, still ? 0 : -state.pointer.y * 0.06, 0.05);
+    }
     if (body.current) {
       body.current.position.y = Math.sin(t * 1.1) * 0.12 - dive * 0.6;
       body.current.rotation.z = Math.sin(t * 1.1 + 0.8) * 0.035 - dive * 0.15;
@@ -136,7 +143,7 @@ function Beluga({ still, progress, onReady }: { still: boolean; progress?: Progr
   const of = (role: Role) => parts.filter((p) => p.role === role);
 
   return (
-    <group rotation={[0, TURN, 0]} position={[-0.2, -3.1, 0]}>
+    <group ref={root} rotation={[0, TURN, 0]} position={[-0.2, -3.1, 0]}>
       {of("sea").map((p) => (
         <Piece key={p.name} part={p} />
       ))}
