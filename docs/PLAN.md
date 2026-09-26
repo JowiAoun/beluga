@@ -1000,7 +1000,7 @@ Store consent (on/off + consent version number) on the phone; changeable any tim
 ### Installable app and offline
 
 - Manifest: name and short name "beluga", full-screen display, orientation picked by the Phase 0 field-of-view test (portrait unless landscape wins), dark theme colours, maskable icons (a simple beluga silhouette, 192 and 512 px), start URL `/walk`.
-- Service worker: a hand-written `public/sw.js` (the Next.js PWA plugins add more trouble than they save). Pre-cache the app shell, all sound files, the sound manifest, the detector model and the MediaPipe WASM files; network-only for `/api/*`; the landing page and dashboard use normal network-first caching.
+- Service worker: a hand-written `public/sw.js` (the Next.js PWA plugins add more trouble than they save). Pre-cache the app shell, all sound files, the sound manifest, the detector model and the MediaPipe WASM files; network-only for `/api/*`; the landing page and dashboard use normal network-first caching. Only hashed build chunks and icons come from the cache first: a package update keeps names like `vision_wasm_internal.wasm`, and a stale copy would break the detector, so everything else is network-first with the cache as the fallback. It registers in production builds only.
 - Offline behaviour: Walk works fully; Ask speaks "Ask is offline. Obstacle alerts still on."; triage is skipped; events wait in the queue.
 
 ### Controls during a session
@@ -1032,7 +1032,7 @@ Store consent (on/off + consent version number) on the phone; changeable any tim
 
 ### Replay mode (backup for tests and the demo)
 
-- Recorder: in a session, a debug toggle records 30 s of processed inputs: the world points (already sampled), camera pose, floor height, walking direction and detector results per update, plus a few small frames. Save as a compressed JSON file downloadable from the phone. Clips committed to the public repo hold no frames with bystanders in them.
+- Recorder: in a session, a debug toggle records 30 s of processed inputs: the world points (already sampled), camera pose, floor height, walking direction and detector results per update. No camera frames, so a clip can never hold a bystander. Save as a compressed JSON file downloadable from the phone; clips go in `public/replays`.
 - Player: `/walk?replay=<file>` feeds a recording into the hazard engine and audio engine without an AR session, at real time. Use it for Phase 2 regression tests and as a live demo fallback on any phone.
 - Record at least three clips before the freeze: chair approach, head-height sign, step-down edge.
 
