@@ -22,6 +22,8 @@ export interface Scene {
   stationary: boolean;
   // Seconds from scheduling a sound to hearing it (mostly Bluetooth).
   leadS: number;
+  // Hazards triage said block the path (Phase 5): they play the "blocked" taps.
+  blocked?: ReadonlySet<string>;
 }
 
 export const QUIET: Scene = { hazards: [], speed: 0, stationary: false, leadS: 0 };
@@ -118,7 +120,8 @@ export class Scheduler {
       const lateral = lateralOf(hazard);
       const pan = panForLateral(lateral);
       const side = sideOf(lateral);
-      const sound = soundFor(hazard);
+      const blocked = scene.blocked?.has(hazard.id) ?? false;
+      const sound = soundFor(hazard, blocked);
       const info = this.sounds[sound];
 
       let voice = this.voices.get(hazard.id);
@@ -191,7 +194,7 @@ export class Scheduler {
       }
 
       // Its word, once, as it comes into the 1.5 to 2.0 m band.
-      const word = wordFor(hazard);
+      const word = wordFor(hazard, blocked);
       const inClipBand = distance >= AUDIO.voiceClipBandM.from && distance <= AUDIO.voiceClipBandM.to;
       if (word && inClipBand && !this.spoken.has(hazard.id)) {
         this.spoken.add(hazard.id);

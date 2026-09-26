@@ -154,19 +154,24 @@ describe("Scheduler", () => {
 });
 
 describe("sounds and words", () => {
-  it("picks the sound by kind, then detector label, then blocking", () => {
-    expect(soundFor({ kind: "drop_off", label: "unknown", blocking: 1 })).toBe("edge_pulse");
-    expect(soundFor({ kind: "head_height", label: "unknown", blocking: 0.2 })).toBe("head_chime");
-    expect(soundFor({ kind: "obstacle", label: "bicycle", blocking: 0.9 })).toBe("bell");
-    expect(soundFor({ kind: "obstacle", label: "bus", blocking: 0.2 })).toBe("buzz");
-    expect(soundFor({ kind: "obstacle", label: "person", blocking: 0.2 })).toBe("marimba");
-    expect(soundFor({ kind: "obstacle", label: "unknown", blocking: 0.8 })).toBe("taps");
-    expect(soundFor({ kind: "obstacle", label: "pole_like", blocking: 0.2 })).toBe("ping");
-    expect(soundFor({ kind: "obstacle", label: "chair", blocking: 0.2 })).toBe("tick");
+  it("picks the sound by kind, then triage's blocked flag, then the detector label", () => {
+    expect(soundFor({ kind: "drop_off", label: "unknown" }, true)).toBe("edge_pulse");
+    expect(soundFor({ kind: "head_height", label: "unknown" })).toBe("head_chime");
+    expect(soundFor({ kind: "obstacle", label: "bicycle" }, true)).toBe("taps");
+    expect(soundFor({ kind: "obstacle", label: "bicycle" })).toBe("bell");
+    expect(soundFor({ kind: "obstacle", label: "bus" })).toBe("buzz");
+    expect(soundFor({ kind: "obstacle", label: "person" })).toBe("marimba");
+    expect(soundFor({ kind: "obstacle", label: "pole_like" })).toBe("ping");
+    expect(soundFor({ kind: "obstacle", label: "fire_hydrant" })).toBe("ping");
+    expect(soundFor({ kind: "obstacle", label: "chair" })).toBe("tick");
+    expect(soundFor({ kind: "obstacle", label: "unknown" })).toBe("tick");
   });
 
   it("names only what it can name", () => {
-    expect(wordFor({ kind: "drop_off", label: "unknown", blocking: 1 })).toBe("edge");
-    expect(wordFor({ kind: "obstacle", label: "unknown", blocking: 0.2 })).toBeNull();
+    expect(wordFor({ kind: "drop_off", label: "unknown" })).toBe("edge");
+    expect(wordFor({ kind: "obstacle", label: "stop_sign" })).toBe("pole");
+    expect(wordFor({ kind: "obstacle", label: "unknown" }, true)).toBe("blocked");
+    expect(wordFor({ kind: "obstacle", label: "unknown" })).toBeNull();
+    expect(wordFor({ kind: "obstacle", label: "person" })).toBeNull();
   });
 });
