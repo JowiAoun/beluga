@@ -6,11 +6,15 @@ import { cn } from "@/lib/utils";
 
 let webgl2: boolean | undefined;
 
-// Asked once per page: some phones and locked-down browsers have no WebGL2.
+// Asked once per page: some phones and locked-down browsers have no WebGL2. The test context is
+// let go at once, since Chrome drops a page's oldest context when it has too many, and on /walk
+// that is the one the AR session draws with.
 function hasWebGL2() {
   if (webgl2 === undefined) {
     try {
-      webgl2 = Boolean(document.createElement("canvas").getContext("webgl2"));
+      const gl = document.createElement("canvas").getContext("webgl2");
+      webgl2 = Boolean(gl);
+      gl?.getExtension("WEBGL_lose_context")?.loseContext();
     } catch {
       webgl2 = false;
     }
