@@ -112,12 +112,14 @@ Devpost submission closes **10:00 EDT, Sunday Sept 27, 2026**, with a public Git
 
 **Four tracks start together in Phase 0 and meet in a thin end-to-end slice at 18:00.** Times are EDT, Saturday Sept 26 into Sunday Sept 27.
 
-| Track | Phases | Owns |
-| --- | --- | --- |
-| A. Phone sensing | 0, 1, 2, 4 (detector) | `app/walk`, `lib/xr`, `lib/hazard`, `lib/detect` |
-| B. Sound & AI | 3, 4 (frame gate), 5 | `lib/audio`, `lib/server/gemini`, `lib/server/elevenlabs`, `app/api/triage`, `app/api/ask`, `scripts/sounds`, `public/sounds` |
-| C. Data & dashboard | 6, 7, 8 | `db`, `lib/server/db`, `app/api/events`, `app/api/dashboard`, `app/map`, `scripts/seed` |
-| D. Shell & ship | domain, 9, 10, 11 | `app/page`, `lib/events`, manifest, service worker, `docs`, README |
+Coding agents write most of the code. Each of the four people takes one track and does the parts an agent can't: anything on the phone, anything heard, anything clicked in a vendor console.
+
+| Track | Phases | Owns | Hands-on work for the person |
+| --- | --- | --- | --- |
+| A. Phone sensing | 0, 1, 2, 4 (detector) | `app/walk`, `lib/xr`, `lib/hazard`, `lib/detect` | Every phone test, tape-measure checks, walking tests, replay clips |
+| B. Sound & AI | 3, 4 (frame gate), 5 | `lib/audio`, `lib/server/gemini`, `lib/server/elevenlabs`, `app/api/triage`, `app/api/ask`, `scripts/sounds`, `public/sounds` | Picking sounds by ear, left/right blindfold test, test photos |
+| C. Data & dashboard | 6, 7, 8 | `db`, `lib/server/db`, `app/api/events`, `app/api/dashboard`, `app/map`, `scripts/seed` | Tiger console, checking the dashboard numbers make sense |
+| D. Shell & ship | domain, 9, 10, 11 | `app/page`, `lib/events`, manifest, service worker, `docs`, README | DNS at the registrar, Vercel settings, chest mount, props, TalkBack test, demo video |
 
 | Time | Checkpoint |
 | --- | --- |
@@ -133,18 +135,23 @@ Devpost submission closes **10:00 EDT, Sunday Sept 27, 2026**, with a public Git
 
 ## Open questions
 
-Each one has a default, so no track waits for the answer.
+Settled on Sept 26:
+
+- Team: 4 people, one per track, with coding agents doing most of the code.
+- Hardware: an ARCore depth phone, a second Android phone, and bone-conduction earbuds. No chest mount yet.
+- Accounts: domain registered, Gemini key with billing, ElevenLabs credits applied, Tiger Cloud service created. The Phase 0 database smoke test still runs.
+- Judging: judges visit our table.
+
+Still open. Each one has a default, so no track waits for the answer.
 
 | Question | Default until answered |
 | --- | --- |
-| How many people, and who takes which track (with their agents)? | One owner per track |
-| Which phone runs the demo, is it on Google's ARCore depth list, and is there a second one? | A Pixel 6 or newer |
-| Are the bone-conduction earbuds Bluetooth, and is there a second pair for judges? | Bluetooth, one pair |
-| How is the phone worn: lanyard, harness, or a clip on a backpack strap? | Clip on a backpack shoulder strap, portrait |
-| Is the domain registered, and what is it? | Not yet; register it in Phase 0 |
-| Is there a Gemini key with billing on, and how many ElevenLabs credits did the event code give? | Billing key exists; credits cover the library and the demo |
+| What is the domain name? | Vercel address until it is known |
+| Which phone model is the main one? | Whatever passes Phase 0 |
+| Are the earbuds Bluetooth, and is there a second pair for judges? | Bluetooth, one pair; judges hear through the `scrcpy` mirror |
+| How will the phone be worn? There is no mount yet. | A bike phone clamp on a backpack shoulder strap, portrait. Buy or borrow one today |
 | What can be staged for the civic demo: an e-scooter, a bike, a construction barrier? | A bike laid across the hallway |
-| How is judging run: judges at our table, a stage demo, or both, and for how long? | Table visits, 5 minutes each |
+| How long is each judge visit? | 5 minutes |
 | Is the staged queue moment in "Demo setup" (2 simulated reporters plus the judge's live one) acceptable? | Yes, labelled |
 
 ## Stack and repository layout
@@ -360,7 +367,7 @@ None of these need the phone, and each one is slow to fix late.
 - **Database smoke test:** on the free Tiger service, turn on PostGIS, then create a tiny hypertable, a real-time continuous aggregate with a second one stacked on it, a columnstore policy and a retention policy. If any step fails, move to the trial service now.
 - **Sound library:** Phase 3a needs nothing else; generate it now.
 - **Gemini:** read the project's real limits in AI Studio and set up the billing key.
-- **Hardware:** chest mount, earbuds, battery pack, USB cable, and a bike or scooter to stage.
+- **Hardware:** a chest mount (there is none yet; a bike phone clamp on a backpack shoulder strap is a quick option), battery pack, USB cable, and a bike or scooter to stage.
 
 ### Done when
 
