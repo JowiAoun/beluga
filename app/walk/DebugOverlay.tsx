@@ -51,9 +51,10 @@ function describeSound(audio: AudioStats): string {
 
 function describeWarning(warning: WarningSoundLog): string {
   const label = warning.label === "unknown" ? "unknown label" : warning.label.replace(/_/g, " ");
-  const position = Math.abs(warning.lateral) < 0.08
-    ? `centre (${warning.angle.toFixed(0)}°)`
-    : `${Math.abs(warning.lateral).toFixed(2)} m ${warning.lateral < 0 ? "left" : "right"} (${Math.abs(warning.angle).toFixed(0)}° ${warning.angle < 0 ? "left" : "right"})`;
+  const position =
+    Math.abs(warning.lateral) < 0.08
+      ? `centre (${warning.angle.toFixed(0)}°)`
+      : `${Math.abs(warning.lateral).toFixed(2)} m ${warning.lateral < 0 ? "left" : "right"} (${Math.abs(warning.angle).toFixed(0)}° ${warning.angle < 0 ? "left" : "right"})`;
   const cadence = warning.rhythm === "continuous" ? "continuous" : `every ${warning.repeatMs} ms`;
   const repeated = warning.count > 1 ? `, ${warning.count} repeats` : "";
   return `${warning.time}: ${warning.sound.replace(/_/g, " ")} because ${warning.reason}: ${warning.kind.replace(/_/g, " ")} / ${label}, ${warning.distance.toFixed(2)} m, ${position}, covers ${Math.round(warning.blocking * 100)}%, ${cadence}${repeated}`;
@@ -80,7 +81,10 @@ function describeGate(detect: DetectStats, now: number, reportingOn: boolean): s
   const ago = (t: number) => `${Math.round((now - t) / 1000)} s ago`;
   const parts = [`Frame gate: ${sent} ${reportingOn ? "sent to triage" : "would send (reporting off)"}`];
   if (last) parts.push(`last ${last.reason.replace("_", " ")} (${last.label.replace("_", " ")}) ${ago(last.t)}`);
-  if (lastSkip) parts.push(`held back ${lastSkip.trigger.replace("_", " ")} for ${lastSkip.reason.replace("_", " ")} ${ago(lastSkip.t)}`);
+  if (lastSkip)
+    parts.push(
+      `held back ${lastSkip.trigger.replace("_", " ")} for ${lastSkip.reason.replace("_", " ")} ${ago(lastSkip.t)}`,
+    );
   return parts.join(", ");
 }
 
@@ -109,7 +113,10 @@ const FEATURE_NAMES: Record<keyof Granted, string> = {
 function corridorTurn(update: SensingUpdate): number {
   const camera = forwardOf(update.worldFromView);
   const { forward } = update;
-  return (Math.atan2(camera.x * forward.z - camera.z * forward.x, camera.x * forward.x + camera.z * forward.z) * 180) / Math.PI;
+  return (
+    (Math.atan2(camera.x * forward.z - camera.z * forward.x, camera.x * forward.x + camera.z * forward.z) * 180) /
+    Math.PI
+  );
 }
 
 // For sighted testers: the numbers behind the Phase 1 checks, readable at arm's length.
@@ -146,7 +153,9 @@ export default function DebugOverlay({ view, session }: { view: DebugView | null
   const update = view?.update ?? null;
   const stats = view?.stats ?? null;
   const missing = view?.granted
-    ? (Object.keys(FEATURE_NAMES) as Array<keyof Granted>).filter((k) => !view.granted?.[k]).map((k) => FEATURE_NAMES[k])
+    ? (Object.keys(FEATURE_NAMES) as Array<keyof Granted>)
+        .filter((k) => !view.granted?.[k])
+        .map((k) => FEATURE_NAMES[k])
     : [];
 
   let nearestText = "waiting";
@@ -157,31 +166,37 @@ export default function DebugOverlay({ view, session }: { view: DebugView | null
   const turn = update ? corridorTurn(update) : 0;
 
   return (
-    <section aria-live="off" className="flex flex-col gap-1 rounded-lg bg-black/75 p-3 text-sm text-white tabular-nums">
-      <p className="text-xs uppercase opacity-70">Nearest in corridor</p>
-      <p className="text-5xl font-bold">{nearestText}</p>
+    <section
+      aria-live="off"
+      className="flex flex-col gap-1 rounded-2xl border border-white/15 bg-abyss/85 p-3 text-sm text-foreground tabular-nums"
+    >
+      <p className="font-mono text-xs tracking-[0.18em] text-sonar uppercase">Nearest in corridor</p>
+      <p className="font-mono text-4xl font-medium">{nearestText}</p>
       <ul className="flex flex-col text-base font-semibold">
         {(view?.hazards ?? []).map((h) => (
           <li key={h.id}>{describe(h)}</li>
         ))}
-        {view && view.hazards.length === 0 && <li className="font-normal opacity-70">No hazards</li>}
+        {view && view.hazards.length === 0 && <li className="font-normal text-muted">No hazards</li>}
       </ul>
       {view && view.events.length > 0 && (
-        <p className="opacity-80">
-          Last events: {view.events.map((e) => `${e.type.replace("_", " ")} ${e.hazard.kind.replace("_", " ")}`).join(", ")}
+        <p className="text-muted">
+          Last events:{" "}
+          {view.events.map((e) => `${e.type.replace("_", " ")} ${e.hazard.kind.replace("_", " ")}`).join(", ")}
         </p>
       )}
       {view?.audio && <p>{describeSound(view.audio)}</p>}
       {view?.audio && (
-        <section aria-label="Recent warning sounds" className="flex flex-col gap-1 border-t border-white/30 pt-1">
-          <p className="text-xs uppercase opacity-70">Why it beeped</p>
+        <section aria-label="Recent warning sounds" className="mt-1 flex flex-col gap-1 border-t border-white/15 pt-2">
+          <p className="font-mono text-xs tracking-[0.18em] text-sonar uppercase">Why it beeped</p>
           {view.audio.recentWarnings.length > 0 ? (
             <ul className="flex flex-col gap-1">
               {view.audio.recentWarnings.map((warning) => (
                 <li key={`${warning.id}:${warning.sound}`}>{describeWarning(warning)}</li>
               ))}
             </ul>
-          ) : <p className="opacity-70">No warning sounds yet.</p>}
+          ) : (
+            <p className="text-muted">No warning sounds yet.</p>
+          )}
         </section>
       )}
       {view?.detect && <p>{describeDetector(view.detect)}</p>}
@@ -189,12 +204,14 @@ export default function DebugOverlay({ view, session }: { view: DebugView | null
       {view?.reporting?.on && <p>{describeReporting(view.reporting)}</p>}
       {view?.lastAsk && (
         <p>
-          Last Ask: {view.lastAsk.outcome.replace("_", " ")} in {(view.lastAsk.ms / 1000).toFixed(1)} s (target under 3 s)
+          Last Ask: {view.lastAsk.outcome.replace("_", " ")} in {(view.lastAsk.ms / 1000).toFixed(1)} s (target under 3
+          s)
         </p>
       )}
       {stats && (
         <p>
-          {stats.updateRate.toFixed(1)} updates/s, {stats.frameRate.toFixed(0)} frames/s, {stats.processingMs.toFixed(1)} ms per update
+          {stats.updateRate.toFixed(1)} updates/s, {stats.frameRate.toFixed(0)} frames/s,{" "}
+          {stats.processingMs.toFixed(1)} ms per update
         </p>
       )}
       {update && (
@@ -204,13 +221,14 @@ export default function DebugOverlay({ view, session }: { view: DebugView | null
             {stats?.depthError && `, error: ${stats.depthError}`}
           </p>
           <p>
-            Phone {(update.camera.y - update.floorY).toFixed(2)} m above the floor ({update.floorSource.replace("_", " ")}
+            Phone {(update.camera.y - update.floorY).toFixed(2)} m above the floor (
+            {update.floorSource.replace("_", " ")}
             {update.calibrating && ", calibrating"})
             {view?.floorSlope != null && `, slope ${(view.floorSlope * 100).toFixed(0)}%`}
           </p>
           <p>
-            {update.speed.toFixed(2)} m/s, {update.stationary ? "stationary" : "moving"}, corridor {Math.abs(turn).toFixed(0)}°{" "}
-            {turn >= 0 ? "right" : "left"} of the camera
+            {update.speed.toFixed(2)} m/s, {update.stationary ? "stationary" : "moving"}, corridor{" "}
+            {Math.abs(turn).toFixed(0)}° {turn >= 0 ? "right" : "left"} of the camera
           </p>
           <p>
             View {update.fov.horizontal.toFixed(0)}° wide × {update.fov.vertical.toFixed(0)}° tall
@@ -230,12 +248,16 @@ export default function DebugOverlay({ view, session }: { view: DebugView | null
       </p>
       <div className="mt-1 flex items-start gap-3">
         <div className="relative w-24 shrink-0">
-          <canvas ref={previewRef} aria-label="Detector frame" className="block w-full rounded border border-white/40" />
+          <canvas
+            ref={previewRef}
+            aria-label="Detector frame"
+            className="block w-full rounded-lg border border-white/30"
+          />
           {/* Boxes are fractions of the frame, so they line up at any size. */}
           {(view?.detect?.detections ?? []).map((d, i) => (
             <div
               key={i}
-              className="absolute border-2 border-yellow-300"
+              className="absolute border-2 border-accent"
               style={{
                 left: `${d.box.left * 100}%`,
                 top: `${d.box.top * 100}%`,
@@ -243,14 +265,18 @@ export default function DebugOverlay({ view, session }: { view: DebugView | null
                 height: `${(d.box.bottom - d.box.top) * 100}%`,
               }}
             >
-              <span className="absolute -top-4 left-0 bg-yellow-300 px-0.5 text-[10px] leading-4 text-black">
+              <span className="absolute -top-4 left-0 bg-accent px-0.5 text-[10px] leading-4 text-background">
                 {d.label.replace("_", " ")} {Math.round(d.score * 100)}
               </span>
             </div>
           ))}
         </div>
         <div className="flex flex-col gap-1">
-          <button type="button" onClick={testFrame} className="min-h-12 rounded bg-neutral-700 px-3 font-semibold">
+          <button
+            type="button"
+            onClick={testFrame}
+            className="min-h-12 rounded-xl border border-white/20 bg-white/10 px-3 font-semibold"
+          >
             Test Ask frame
           </button>
           {frameInfo && <p>{frameInfo}</p>}
