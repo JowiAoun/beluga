@@ -397,16 +397,20 @@ export default function Walk() {
     setPhase("starting");
 
     started.ready.then(
-      (granted) => {
+      async (granted) => {
         latestRef.current.granted = granted;
         setPhase((p) => (p === "starting" ? "running" : p));
+        if (!granted.depth && granted.camera) await detectRef.current?.load();
         // Without depth, the detector's boxes are all that is left to warn with.
         const detectorOk = detectRef.current?.stats().state !== "failed";
         if (!granted.depth && (!granted.camera || !detectorOk)) {
-          cameraOnlyRef.current = false;
-          setCameraOnly(false);
+          cameraOnlyRef.current = how === "camera";
+          setCameraOnly(cameraOnlyRef.current);
           say("no_depth");
-          setMessage(LINES.no_depth);
+          const detectorError = detectRef.current?.stats().error;
+          setMessage(detectorError
+            ? `No depth is available, and the object detector failed: ${detectorError}`
+            : LINES.no_depth);
         } else if (!granted.depth || cameraOnlyRef.current) {
           cameraOnlyRef.current = true;
           setCameraOnly(true);

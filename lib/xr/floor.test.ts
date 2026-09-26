@@ -68,10 +68,23 @@ describe("FloorTracker", () => {
       const event = floor.update(t, new Float32Array(0), camera, forward, right);
       if (event) events.push(event);
     }
-    expect(events).toEqual(["calibration_started", "calibrated"]);
+    expect(events).toEqual(["calibration_started", "calibration_unavailable"]);
     expect(floor.calibrating).toBe(false);
     expect(floor.source).toBe("hit_test");
     expect(floor.y).toBeCloseTo(0.02, 6);
+  });
+
+  it("does not report calibration when neither depth nor a hit test found floor", () => {
+    const floor = new FloorTracker(-0.3);
+    const camera = { x: 0, y: 1.3, z: 0 };
+    const events: string[] = [];
+    for (let t = 0; t <= SENSING.calibrationMaxMs + 100; t += 100) {
+      const event = floor.update(t, new Float32Array(0), camera, forward, right);
+      if (event) events.push(event);
+    }
+    expect(events).toEqual(["calibration_started", "calibration_unavailable"]);
+    expect(floor.source).toBe("guess");
+    expect(floor.y).toBe(-0.3);
   });
 
   it("follows slow drift near the floor and ignores anything outside the band", () => {

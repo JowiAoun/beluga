@@ -1,7 +1,7 @@
 import { SENSING } from "@/lib/shared/params";
 import type { Flat, FloorSource, Vec3 } from "./types";
 
-export type FloorEvent = "calibration_started" | "calibrated";
+export type FloorEvent = "calibration_started" | "calibrated" | "calibration_unavailable";
 
 function median(values: number[]): number {
   const sorted = [...values].sort((a, b) => a - b);
@@ -89,7 +89,8 @@ export class FloorTracker {
 
       // Out of time with too few points means the floor barely shows 0.5 to 2 m ahead (a phone
       // held level). Then use what there is, or keep the hit test's value, and follow drift from there.
-      if (enough || this.pool.length >= SENSING.floorReestimateMinPoints) {
+      const hasFloorSamples = enough || this.pool.length >= SENSING.floorReestimateMinPoints;
+      if (hasFloorSamples) {
         // Median of the lowest 20%: objects standing on the floor only add points above it.
         const sorted = this.pool.sort((a, b) => a - b);
         const lowest = sorted.slice(0, Math.max(1, Math.floor(sorted.length * SENSING.floorCalibrationLowestShare)));
@@ -100,7 +101,7 @@ export class FloorTracker {
       this.calibrationDone = true;
       this.pool = [];
       this.lastReestimate = t;
-      return "calibrated";
+      return hasFloorSamples ? "calibrated" : "calibration_unavailable";
     }
 
     for (const y of candidates) {
