@@ -74,7 +74,8 @@ Drop-offs: same table shifted one band outward (start 3.5 m, continuous under 1.
 | Detector input / rate | 320 × 240 / 4 Hz |
 | Detector score threshold | 0.35 |
 | Label match window | ±10°, label held 1 s |
-| Gemini frame size | ≤ 768 px long edge, JPEG 0.7, ≤ 400 KB |
+| Label match box | obstacles: box reaches the lower two-thirds; head height: box starts in the upper half |
+| Agent frame size | ≤ 768 px long edge, JPEG 0.7, ≤ 400 KB |
 | Gate: new thing | active ≥ 1 s, 20 s cooldown per label + side |
 | Gate: lasting obstacle / drop-off / head-height | 30 s cooldown each |
 | Gate: skip if turning faster than | 60°/s |

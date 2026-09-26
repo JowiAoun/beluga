@@ -642,9 +642,10 @@ Voice clips (one calm voice): "edge", "step down", "head", "pole", "bike", "scoo
 ### Detector
 
 - MediaPipe Tasks Vision Object Detector with EfficientDet-Lite0 (COCO), video running mode, GPU delegate with automatic CPU fallback, score threshold 0.35, up to 10 results.
-- Input: the small camera frame from Phase 1 at 4 Hz. Load the model once at startup from `public/models` (cached offline).
-- Self-host the MediaPipe WASM files as well (`FilesetResolver.forVisionTasks("/mediapipe/wasm")`, original file names kept). The usual examples load them from a CDN, which breaks offline.
-- If the detector slows the safety loop, move it into a classic Web Worker. A module worker breaks it, because the library loads its files with `importScripts`.
+- Input: the small camera frame from Phase 1 at 4 Hz. Load the model once, when `/walk` loads, from `public/models` (cached offline).
+- Self-host the MediaPipe WASM files as well (`FilesetResolver.forVisionTasks("/mediapipe/wasm")`, original file names kept). The usual examples load them from a CDN, which breaks offline. Together they are about 46 MB, so `scripts/detector-assets.ts` puts them in `public` before `dev` and `build` (the model checked against a pinned SHA-256) and they are not committed.
+- The detector runs in a Web Worker (`lib/detect/detector.worker.ts`), one frame at a time, so it never holds up the safety loop. Turbopack starts it as a classic worker, where MediaPipe loads its classic build with `importScripts`. If the worker can't start, it runs on the page, outside the AR frame callback.
+- `/walk?detector=cpu` keeps it off the GPU, which ARCore and the camera also use, and `/walk?detector=off` turns it off. Compare update rates in the overlay to check the last "Done when" item.
 - Keep only the classes listed in the detector-class enumeration; map everything else to `unknown`.
 - Turn each box into an angle: box horizontal centre → (centre − 0.5) × camera horizontal field of view.
 
@@ -676,7 +677,7 @@ Voice clips (one calm voice): "edge", "step down", "head", "pole", "bike", "scoo
 
 Skip the frame if any is true: the phone is turning faster than 60°/s; mean brightness of the small frame is below 25/255; a triage call is already in flight; the local budget (1 call per 6 s, 150 per hour) is spent; the label is `person`, `car`, `bus` or `truck` (never reportable). Bicycles and motorcycles still go to triage: a bike or e-scooter left across the path is the main civic story, and COCO has no scooter class, so a scooter shows up as `bicycle`, `motorcycle` or nothing.
 
-When a trigger fires, capture the larger JPEG at that moment and call `/api/triage` with the hazard, grid cell and scene hint.
+When a trigger fires, capture the larger JPEG at that moment and call `/api/triage` with the hazard, grid cell and scene hint. Until triage (Phase 5) and reporting (Phase 9) exist, the gate only counts what it would send, in the debug overlay, which is enough for the "4 to 6 calls" check.
 
 ### Using the triage result
 
@@ -1166,6 +1167,7 @@ Drop-offs: same table shifted one band outward (start 3.5 m, continuous under 1.
 | Detector input / rate | 320 × 240 / 4 Hz |
 | Detector score threshold | 0.35 |
 | Label match window | ±10°, label held 1 s |
+| Label match box | obstacles: box reaches the lower two-thirds; head height: box starts in the upper half |
 | Agent frame size | ≤ 768 px long edge, JPEG 0.7, ≤ 400 KB |
 | Gate: new thing | active ≥ 1 s, 20 s cooldown per label + side |
 | Gate: lasting obstacle / drop-off / head-height | 30 s cooldown each |

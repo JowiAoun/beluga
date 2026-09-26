@@ -16,7 +16,7 @@ An installable web app for Android Chrome that warns blind and low-vision pedest
 
 - `npm run dev`: dev server on port 3000
 - `npm run lint`, `npm run typecheck`, `npm test`: run all three before committing
-- `npm run build`: production build, the same one Vercel runs
+- `npm run build`: production build, the same one Vercel runs. It and `npm run dev` first put the detector's model and WASM in `public` (`scripts/detector-assets.ts`)
 - `npm run phone`: sends the phone's `localhost:3000` to this laptop over USB (see Phone testing)
 - `npm run db:smoke`: Phase 0 database check, needs `DATABASE_URL` in `.env.local`
 - `npm run db:migrate`, `npm run seed`, `npm run sounds`, `npm run agents`: filled in by Phases 6, 8, 3 and 5
@@ -27,7 +27,7 @@ An installable web app for Android Chrome that warns blind and low-vision pedest
 2. Run `npm run phone`. It runs `adb reverse tcp:3000 tcp:3000` for each plugged-in phone and finds `adb` in the Android SDK when it isn't on PATH.
 3. Open `http://localhost:3000/walk` in Chrome on the phone. `localhost` counts as a secure page, so WebXR works with no tunnel.
 
-`/walk` is the walking app. The device check at `/walk/check` prints its results in the `npm run dev` terminal as `[beluga check]` lines. With the debug overlay on, each `/walk` session ends with a `[beluga walk]` summary line there too. The sound check at `/walk/sounds` plays every warning sound left, centre and right, and runs the blindfold test; each score prints as a `[beluga sounds]` line.
+`/walk` is the walking app. The device check at `/walk/check` prints its results in the `npm run dev` terminal as `[beluga check]` lines. With the debug overlay on, each `/walk` session ends with a `[beluga walk]` summary line there too. The sound check at `/walk/sounds` plays every warning sound left, centre and right, and runs the blindfold test; each score prints as a `[beluga sounds]` line. `/walk?detector=cpu` runs the object detector off the GPU and `/walk?detector=off` turns it off.
 
 ## Rules for every change
 
