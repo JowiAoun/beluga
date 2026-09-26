@@ -2,9 +2,18 @@ import type { Metadata, Viewport } from "next";
 import { Atkinson_Hyperlegible_Mono, Atkinson_Hyperlegible_Next } from "next/font/google";
 import "./globals.css";
 
-// Made by the Braille Institute for low-vision readers.
-const atkinson = Atkinson_Hyperlegible_Next({ subsets: ["latin"], variable: "--font-atkinson" });
-const atkinsonMono = Atkinson_Hyperlegible_Mono({ subsets: ["latin"], variable: "--font-atkinson-mono" });
+// Made by the Braille Institute for low-vision readers. Next has no size data for these fonts, so
+// there's no adjusted fallback to make.
+const atkinson = Atkinson_Hyperlegible_Next({
+  subsets: ["latin"],
+  variable: "--font-atkinson",
+  adjustFontFallback: false,
+});
+const atkinsonMono = Atkinson_Hyperlegible_Mono({
+  subsets: ["latin"],
+  variable: "--font-atkinson-mono",
+  adjustFontFallback: false,
+});
 
 // Sets Pause motion from the last visit before the first paint, so nothing moves for a moment first.
 const MOTION_SCRIPT = `try{if(localStorage.getItem("beluga-motion")==="paused")document.documentElement.dataset.motion="paused"}catch(e){}`;
