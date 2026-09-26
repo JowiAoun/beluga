@@ -10,6 +10,8 @@ export const LINES = {
   start_failed: "beluga could not start.",
   no_depth: "No depth on this phone. Obstacle alerts can't run.",
   ask_offline: "Ask is offline. Obstacle alerts still on.",
+  reporting_on: "reporting on",
+  reporting_off: "reporting off",
   sorry: "Sorry, I couldn't see that.",
 } as const;
 

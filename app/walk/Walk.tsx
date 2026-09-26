@@ -19,6 +19,7 @@ import {
 } from "@/lib/xr/session";
 import type { SensingUpdate } from "@/lib/xr/types";
 import { askAboutView } from "./ask";
+import { Reporting } from "./reporting";
 import AskButton from "./AskButton";
 import DebugOverlay, { type DebugView } from "./DebugOverlay";
 import { askLocation, locationPermission, watchLocation, type Fix } from "./location";
@@ -85,6 +86,7 @@ export default function Walk() {
   const latestRef = useRef<Latest>(freshLatest());
   const engineRef = useRef<HazardEngine | null>(null);
   const detectRef = useRef<DetectPipeline | null>(null);
+  const reportingRef = useRef<Reporting | null>(null);
 
   const [support, setSupport] = useState<Support>("checking");
   const [needLocation, setNeedLocation] = useState(false);
@@ -96,6 +98,7 @@ export default function Walk() {
   const [message, setMessage] = useState<string | null>(null);
   const [summary, setSummary] = useState<SessionSummary | null>(null);
   const [asking, setAsking] = useState(false);
+  const [reportingOn, setReportingOn] = useState(false);
 
   const runCleanups = useCallback(() => {
     cleanupRef.current.splice(0).forEach((fn) => fn());
@@ -124,12 +127,15 @@ export default function Walk() {
       const on = readDebugDefault();
       debugRef.current = on;
       setDebug(on);
+      setReportingOn(reportingRef.current?.isOn() ?? false);
     };
     void check();
     // The recorded sounds download now, so the walk itself needs no network.
     void fetchLibrary().then((raw) => {
       libraryRef.current = raw;
     });
+    // Reporting starts off until the user turns it on; an older consent counts as off.
+    reportingRef.current ??= new Reporting();
     // The detector model loads now too, ready for the first walk. `?detector=cpu` keeps it off
     // the GPU and `?detector=off` turns it off, to compare update rates on the phone.
     const detect = (detectRef.current ??= new DetectPipeline());
@@ -153,6 +159,7 @@ export default function Walk() {
         stats: sessionRef.current?.stats() ?? null,
         audio: soundRef.current?.stats() ?? null,
         detect: detectRef.current?.stats() ?? null,
+        reporting: reportingRef.current?.stats() ?? null,
       });
     }, DEBUG_OVERLAY.refreshMs);
     return () => window.clearInterval(id);
@@ -166,9 +173,23 @@ export default function Walk() {
     const detect = detectRef.current;
     const result = engineRef.current?.update(update, detect?.labelFor(update));
     if (!result) return;
-    detect?.check(update, result.hazards, latest.fix);
+    const reporting = reportingRef.current;
     // While tracking is lost the list is empty, so every warning goes quiet.
-    soundRef.current?.update(result.hazards, update);
+    soundRef.current?.update(result.hazards, update, reporting?.blocked);
+    const gate = detect?.check(update, result.hazards, latest.fix);
+    const session = sessionRef.current;
+    if (reporting) {
+      reporting.record(result.events, latest.fix);
+      if (gate?.fire && session) {
+        void reporting.triage(
+          gate.fire,
+          session,
+          latest.fix,
+          (on) => detect?.setTriageInFlight(on),
+          () => soundRef.current?.play("reported"),
+        );
+      }
+    }
     latest.hazards = result.hazards;
     if (result.floor) latest.floorSlope = result.floor.slope;
     if (result.events.length > 0) latest.events = [...result.events.reverse(), ...latest.events].slice(0, RECENT_EVENTS);
@@ -242,6 +263,11 @@ export default function Walk() {
     engineRef.current = new HazardEngine();
     const detect = detectRef.current;
     if (detect) cleanupRef.current.push(detect.attach(started));
+    const reporting = reportingRef.current;
+    if (reporting) {
+      reporting.start();
+      cleanupRef.current.push(() => reporting.stop());
+    }
     setSession(started);
     setMessage(null);
     setSummary(null);
@@ -287,6 +313,15 @@ export default function Walk() {
     } finally {
       setAsking(false);
     }
+  };
+
+  const toggleReporting = () => {
+    const reporting = reportingRef.current;
+    if (!reporting) return;
+    const next = !reporting.isOn();
+    reporting.setOn(next);
+    setReportingOn(next);
+    say(next ? "reporting_on" : "reporting_off");
   };
 
   const toggleDebug = () => {
@@ -396,6 +431,27 @@ export default function Walk() {
           )}
 
           {summary && debug && <Summary summary={summary} />}
+
+          <section className="flex flex-col gap-2 rounded-lg border border-neutral-600 p-3">
+            <label className="flex min-h-16 items-center gap-3 text-lg font-semibold">
+              <input type="checkbox" checked={reportingOn} onChange={toggleReporting} className="h-6 w-6" />
+              Help the city: share anonymous hazard reports
+            </label>
+            <p>
+              Sent: the hazard type, its distance, a rough location within about 100 metres, and the time. Never sent:
+              images, audio, your exact location or who you are.
+            </p>
+          </section>
+
+          {debug && (
+            <button
+              type="button"
+              onClick={() => reportingRef.current?.newReporter()}
+              className="min-h-16 rounded-lg border-2 border-neutral-500 px-4 text-lg"
+            >
+              New demo reporter (a fresh device key, so a second staged report isn&apos;t dropped as a repeat)
+            </button>
+          )}
 
           <label className="flex min-h-16 items-center gap-3 text-lg">
             <input type="checkbox" checked={debug} onChange={toggleDebug} className="h-6 w-6" />

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { AudioStats } from "@/lib/audio/engine";
 import { lateralOf, sideOf } from "@/lib/audio/placement";
 import type { DetectStats } from "@/lib/detect/pipeline";
+import type { ReportingStats } from "./reporting";
 import type { HazardEvent } from "@/lib/hazard/engine";
 import type { HazardUpdate } from "@/lib/shared/contracts";
 import { forwardOf } from "@/lib/xr/geometry";
@@ -23,6 +24,7 @@ export interface DebugView {
   audio: AudioStats | null;
   detect: DetectStats | null;
   lastAsk: { ms: number; outcome: string } | null;
+  reporting: ReportingStats | null;
 }
 
 // The same side the sound plays from: metres off the walking line, not the angle.
@@ -54,13 +56,25 @@ function describeDetector(detect: DetectStats): string {
   return `Detector on ${detect.delegate} in the ${detect.runsOn}, ${detect.msPerFrame.toFixed(0)} ms per frame, ${detect.framesPerSecond.toFixed(1)} frames/s, ${light}${why}`;
 }
 
-// Nothing is sent before reporting exists, so this says what the gate would have sent.
-function describeGate(detect: DetectStats, now: number): string {
+// With reporting off nothing is sent, so this says what the gate would have sent.
+function describeGate(detect: DetectStats, now: number, reportingOn: boolean): string {
   const { sent, last, lastSkip } = detect.gate;
   const ago = (t: number) => `${Math.round((now - t) / 1000)} s ago`;
-  const parts = [`Frame gate: ${sent} would send`];
+  const parts = [`Frame gate: ${sent} ${reportingOn ? "sent to triage" : "would send (reporting off)"}`];
   if (last) parts.push(`last ${last.reason.replace("_", " ")} (${last.label.replace("_", " ")}) ${ago(last.t)}`);
   if (lastSkip) parts.push(`held back ${lastSkip.trigger.replace("_", " ")} for ${lastSkip.reason.replace("_", " ")} ${ago(lastSkip.t)}`);
+  return parts.join(", ");
+}
+
+function describeReporting(reporting: ReportingStats): string {
+  const { queue, lastTriage, sceneHint } = reporting;
+  const parts = [`Reporting on: ${queue.queued} queued, ${queue.sent} sent`];
+  if (queue.lastError) parts.push(`last send failed (${queue.lastError})`);
+  if (lastTriage) {
+    const category = lastTriage.category ? ` ${lastTriage.category.replace(/_/g, " ")}` : "";
+    parts.push(`last triage ${lastTriage.outcome}${category} in ${(lastTriage.ms / 1000).toFixed(1)} s`);
+  }
+  if (sceneHint) parts.push(`scene ${sceneHint}`);
   return parts.join(", ");
 }
 
@@ -141,7 +155,8 @@ export default function DebugOverlay({ view, session }: { view: DebugView | null
       )}
       {view?.audio && <p>{describeSound(view.audio)}</p>}
       {view?.detect && <p>{describeDetector(view.detect)}</p>}
-      {view?.detect && update && <p>{describeGate(view.detect, update.t)}</p>}
+      {view?.detect && update && <p>{describeGate(view.detect, update.t, view.reporting?.on ?? false)}</p>}
+      {view?.reporting?.on && <p>{describeReporting(view.reporting)}</p>}
       {view?.lastAsk && (
         <p>
           Last Ask: {view.lastAsk.outcome.replace("_", " ")} in {(view.lastAsk.ms / 1000).toFixed(1)} s (target under 3 s)

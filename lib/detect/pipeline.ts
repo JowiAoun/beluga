@@ -32,7 +32,7 @@ export interface DetectStats {
   brightness: number | null;
   detections: Detection[];
   gate: {
-    // Frames the gate let through this session. Nothing is sent yet: reporting comes in Phase 9.
+    // Frames the gate let through this session. They go to triage only with reporting on.
     sent: number;
     last: { reason: string; label: string; t: number } | null;
     lastSkip: { reason: string; trigger: string; t: number } | null;
@@ -164,6 +164,11 @@ export class DetectPipeline {
     if (this.state !== "ready") return undefined;
     const hfov = update.fov.horizontal;
     return (query) => this.matcher.labelFor(query, update.t, hfov);
+  }
+
+  // While a triage call is out, the gate holds every other frame back.
+  setTriageInFlight(on: boolean): void {
+    this.gate.setInFlight(on);
   }
 
   // Asks the frame gate about this update. `fix` rounds to a grid cell for the lasting cooldown.

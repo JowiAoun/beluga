@@ -13,7 +13,8 @@ export type AskResult =
   | { kind: "offline" }
   | { kind: "no_frame" };
 
-async function toBase64(blob: Blob): Promise<string> {
+// A JPEG as raw base64, the way /api/ask and /api/triage take frames.
+export async function toBase64(blob: Blob): Promise<string> {
   const bytes = new Uint8Array(await blob.arrayBuffer());
   let binary = "";
   for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));

@@ -142,9 +142,10 @@ export class AudioEngine {
     this.timer = setInterval(() => this.tick(), AUDIO.schedulerTickMs);
   }
 
-  // Call on every hazard engine result. An empty list silences every voice.
-  update(hazards: HazardUpdate[], motion: { speed: number; stationary: boolean }): void {
-    this.scene = { hazards, speed: motion.speed, stationary: motion.stationary, leadS: this.leadS() };
+  // Call on every hazard engine result. An empty list silences every voice. `blocked` holds the
+  // hazards triage said block the path.
+  update(hazards: HazardUpdate[], motion: { speed: number; stationary: boolean }, blocked?: ReadonlySet<string>): void {
+    this.scene = { hazards, speed: motion.speed, stationary: motion.stationary, leadS: this.leadS(), blocked };
     // Straight away, not on the next tick: a new hazard should sound as soon as it is known.
     if (this.timer !== null) this.tick();
   }
