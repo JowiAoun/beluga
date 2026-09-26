@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AudioEngine } from "@/lib/audio/engine";
 import { decodeLibrary, fetchLibrary, type RawLibrary } from "@/lib/audio/library";
+import { DetectPipeline } from "@/lib/detect/pipeline";
 import { nearestAhead } from "@/lib/hazard/corridor";
 import { HazardEngine, type HazardEvent } from "@/lib/hazard/engine";
 import type { HazardUpdate } from "@/lib/shared/contracts";
@@ -79,6 +80,7 @@ export default function Walk() {
   const debugRef = useRef(false);
   const latestRef = useRef<Latest>(freshLatest());
   const engineRef = useRef<HazardEngine | null>(null);
+  const detectRef = useRef<DetectPipeline | null>(null);
 
   const [support, setSupport] = useState<Support>("checking");
   const [needLocation, setNeedLocation] = useState(false);
@@ -123,6 +125,12 @@ export default function Walk() {
     void fetchLibrary().then((raw) => {
       libraryRef.current = raw;
     });
+    // The detector model loads now too, ready for the first walk. `?detector=cpu` keeps it off
+    // the GPU and `?detector=off` turns it off, to compare update rates on the phone.
+    const detect = (detectRef.current ??= new DetectPipeline());
+    const choice = new URLSearchParams(window.location.search).get("detector");
+    if (choice === "off") detect.disable();
+    else void detect.load(choice === "cpu" ? "CPU" : "GPU");
 
     return () => {
       overlay?.removeEventListener("beforexrselect", stopSelect);
@@ -139,6 +147,7 @@ export default function Walk() {
         ...latestRef.current,
         stats: sessionRef.current?.stats() ?? null,
         audio: soundRef.current?.stats() ?? null,
+        detect: detectRef.current?.stats() ?? null,
       });
     }, DEBUG_OVERLAY.refreshMs);
     return () => window.clearInterval(id);
@@ -149,8 +158,10 @@ export default function Walk() {
     latest.update = update;
     // Out to the full depth range, so the tape-measure check works past the corridor's 3 m.
     latest.nearest = update.tracking ? nearestAhead(update, SENSING.depthMaxM) : null;
-    const result = engineRef.current?.update(update);
+    const detect = detectRef.current;
+    const result = engineRef.current?.update(update, detect?.labelFor(update));
     if (!result) return;
+    detect?.check(update, result.hazards, latest.fix);
     // While tracking is lost the list is empty, so every warning goes quiet.
     soundRef.current?.update(result.hazards, update);
     latest.hazards = result.hazards;
@@ -224,6 +235,8 @@ export default function Walk() {
 
     latestRef.current = freshLatest(latestRef.current.fix);
     engineRef.current = new HazardEngine();
+    const detect = detectRef.current;
+    if (detect) cleanupRef.current.push(detect.attach(started));
     setSession(started);
     setMessage(null);
     setSummary(null);

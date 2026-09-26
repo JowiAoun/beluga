@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { AudioStats } from "@/lib/audio/engine";
 import { lateralOf, sideOf } from "@/lib/audio/placement";
+import type { DetectStats } from "@/lib/detect/pipeline";
 import type { HazardEvent } from "@/lib/hazard/engine";
 import type { HazardUpdate } from "@/lib/shared/contracts";
 import { forwardOf } from "@/lib/xr/geometry";
@@ -20,6 +21,7 @@ export interface DebugView {
   floorSlope: number | null;
   stats: LiveStats | null;
   audio: AudioStats | null;
+  detect: DetectStats | null;
 }
 
 // The same side the sound plays from: metres off the walking line, not the angle.
@@ -41,6 +43,24 @@ function describeSound(audio: AudioStats): string {
   });
   const lead = `looks ${audio.leadMs} ms ahead (Chrome says ${audio.outputLatencyMs} ms output latency)`;
   return `Sound ${audio.state}: ${voices.length > 0 ? voices.join("; ") : "silent"}. ${lead}`;
+}
+
+function describeDetector(detect: DetectStats): string {
+  if (detect.state === "loading") return "Detector loading";
+  if (detect.state === "failed") return `Detector off: ${detect.error ?? "failed to load"}`;
+  const light = detect.brightness === null ? "no frames" : `brightness ${Math.round(detect.brightness)}`;
+  const why = detect.runsOn === "page" && detect.workerError ? ` (worker: ${detect.workerError})` : "";
+  return `Detector on ${detect.delegate} in the ${detect.runsOn}, ${detect.msPerFrame.toFixed(0)} ms per frame, ${detect.framesPerSecond.toFixed(1)} frames/s, ${light}${why}`;
+}
+
+// Nothing is sent before reporting exists, so this says what the gate would have sent.
+function describeGate(detect: DetectStats, now: number): string {
+  const { sent, last, lastSkip } = detect.gate;
+  const ago = (t: number) => `${Math.round((now - t) / 1000)} s ago`;
+  const parts = [`Frame gate: ${sent} would send`];
+  if (last) parts.push(`last ${last.reason.replace("_", " ")} (${last.label.replace("_", " ")}) ${ago(last.t)}`);
+  if (lastSkip) parts.push(`held back ${lastSkip.trigger.replace("_", " ")} for ${lastSkip.reason.replace("_", " ")} ${ago(lastSkip.t)}`);
+  return parts.join(", ");
 }
 
 const FEATURE_NAMES: Record<keyof Granted, string> = {
@@ -119,6 +139,8 @@ export default function DebugOverlay({ view, session }: { view: DebugView | null
         </p>
       )}
       {view?.audio && <p>{describeSound(view.audio)}</p>}
+      {view?.detect && <p>{describeDetector(view.detect)}</p>}
+      {view?.detect && update && <p>{describeGate(view.detect, update.t)}</p>}
       {stats && (
         <p>
           {stats.updateRate.toFixed(1)} updates/s, {stats.frameRate.toFixed(0)} frames/s, {stats.processingMs.toFixed(1)} ms per update
@@ -150,7 +172,26 @@ export default function DebugOverlay({ view, session }: { view: DebugView | null
         {missing.length > 0 && `. Not granted: ${missing.join(", ")}`}
       </p>
       <div className="mt-1 flex items-start gap-3">
-        <canvas ref={previewRef} aria-label="Detector frame" className="w-24 rounded border border-white/40" />
+        <div className="relative w-24 shrink-0">
+          <canvas ref={previewRef} aria-label="Detector frame" className="block w-full rounded border border-white/40" />
+          {/* Boxes are fractions of the frame, so they line up at any size. */}
+          {(view?.detect?.detections ?? []).map((d, i) => (
+            <div
+              key={i}
+              className="absolute border-2 border-yellow-300"
+              style={{
+                left: `${d.box.left * 100}%`,
+                top: `${d.box.top * 100}%`,
+                width: `${(d.box.right - d.box.left) * 100}%`,
+                height: `${(d.box.bottom - d.box.top) * 100}%`,
+              }}
+            >
+              <span className="absolute -top-4 left-0 bg-yellow-300 px-0.5 text-[10px] leading-4 text-black">
+                {d.label.replace("_", " ")} {Math.round(d.score * 100)}
+              </span>
+            </div>
+          ))}
+        </div>
         <div className="flex flex-col gap-1">
           <button type="button" onClick={testFrame} className="min-h-12 rounded bg-neutral-700 px-3 font-semibold">
             Test Ask frame
