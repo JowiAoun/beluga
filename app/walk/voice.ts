@@ -13,6 +13,7 @@ export const LINES = {
   reporting_on: "reporting on",
   reporting_off: "reporting off",
   sorry: "Sorry, I couldn't see that.",
+  camera_only: "Camera-only mode. It warns about things it can name, like people, bikes and chairs. No edge or step warnings.",
 } as const;
 
 export type Line = keyof typeof LINES;

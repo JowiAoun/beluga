@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AudioEngine } from "@/lib/audio/engine";
 import { decodeLibrary, fetchLibrary, type RawLibrary } from "@/lib/audio/library";
 import { DetectPipeline } from "@/lib/detect/pipeline";
+import { CameraOnlyEngine } from "@/lib/hazard/cameraOnly";
 import { nearestAhead } from "@/lib/hazard/corridor";
 import { HazardEngine, type HazardEvent } from "@/lib/hazard/engine";
 import type { HazardUpdate } from "@/lib/shared/contracts";
@@ -93,6 +94,10 @@ export default function Walk() {
   const debugRef = useRef(false);
   const latestRef = useRef<Latest>(freshLatest());
   const engineRef = useRef<HazardEngine | null>(null);
+  // Camera-only mode (Phase 10) swaps the depth engine for one that reads detector boxes.
+  const cameraEngineRef = useRef<CameraOnlyEngine | null>(null);
+  const cameraOnlyRef = useRef(false);
+  const [cameraOnly, setCameraOnly] = useState(false);
   const detectRef = useRef<DetectPipeline | null>(null);
   const reportingRef = useRef<Reporting | null>(null);
 
@@ -226,7 +231,11 @@ export default function Walk() {
     // Out to the full depth range, so the tape-measure check works past the corridor's 3 m.
     latest.nearest = update.tracking ? nearestAhead(update, SENSING.depthMaxM) : null;
     const detect = detectRef.current;
-    const result = engineRef.current?.update(update, detect?.labelFor(update));
+    // Called in both modes: it also hands the detector the view's width.
+    const labelFor = detect?.labelFor(update);
+    const result = cameraOnlyRef.current
+      ? cameraEngineRef.current?.update(update, detect?.latestDetections() ?? [])
+      : engineRef.current?.update(update, labelFor);
     if (!result) return;
     const reporting = reportingRef.current;
     // While tracking is lost the list is empty, so every warning goes quiet.
@@ -329,6 +338,9 @@ export default function Walk() {
     latestRef.current = freshLatest(latestRef.current.fix);
     // The head-height top follows the user's height.
     engineRef.current = new HazardEngine(settingsRef.current.heightM);
+    cameraEngineRef.current = new CameraOnlyEngine();
+    cameraOnlyRef.current = settingsRef.current.cameraOnly;
+    setCameraOnly(cameraOnlyRef.current);
     const detect = detectRef.current;
     if (detect) cleanupRef.current.push(detect.attach(started));
     const reporting = reportingRef.current;
@@ -347,9 +359,18 @@ export default function Walk() {
       (granted) => {
         latestRef.current.granted = granted;
         setPhase((p) => (p === "starting" ? "running" : p));
-        if (!granted.depth) {
+        // Without depth, the detector's boxes are all that is left to warn with.
+        const detectorOk = detectRef.current?.stats().state !== "failed";
+        if (!granted.depth && (!granted.camera || !detectorOk)) {
+          cameraOnlyRef.current = false;
+          setCameraOnly(false);
           say("no_depth");
           setMessage(LINES.no_depth);
+        } else if (!granted.depth || cameraOnlyRef.current) {
+          cameraOnlyRef.current = true;
+          setCameraOnly(true);
+          say("camera_only");
+          setMessage(LINES.camera_only);
         }
       },
       (err: unknown) => {
@@ -431,6 +452,7 @@ export default function Walk() {
   let status: string | null = null;
   if (phase === "starting") status = "Starting";
   else if (update && !update.tracking) status = "Hold steady";
+  else if (cameraOnly) status = "Camera-only mode";
   else if (update?.calibrating) status = "Calibrating — take three slow steps";
   else if (update?.floorSource === "calibrated") status = "Calibrated";
   else if (update && view?.granted?.depth) status = "Floor estimated — calibration unavailable";

@@ -8,8 +8,10 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { AudioEngine } from "@/lib/audio/engine";
 import { LabelMatcher } from "@/lib/detect/match";
+import { CameraOnlyEngine } from "@/lib/hazard/cameraOnly";
 import { nearestAhead } from "@/lib/hazard/corridor";
 import { HazardEngine, type HazardEvent } from "@/lib/hazard/engine";
+import type { Detection } from "@/lib/detect/detections";
 import { decodeClip, type ReplayClip } from "@/lib/replay/format";
 import { SENSING } from "@/lib/shared/params";
 import DebugOverlay, { type DebugView } from "./DebugOverlay";
@@ -69,6 +71,9 @@ export default function ReplayPlayer({ src }: { src: string }) {
     sound.setVolume(settings.volumeDb);
     const engine = new HazardEngine(settings.heightM);
     const matcher = new LabelMatcher();
+    // With camera-only mode on in the settings, the clip's boxes play without its depth.
+    const cameraEngine = settings.cameraOnly ? new CameraOnlyEngine() : null;
+    let boxes: Detection[] = [];
     let events: HazardEvent[] = [];
     let timer: number | null = null;
     let stopped = false;
@@ -81,12 +86,20 @@ export default function ReplayPlayer({ src }: { src: string }) {
         if (!loop) return stop();
         engine.reset();
         matcher.reset();
+        cameraEngine?.reset();
         return step(0, performance.now());
       }
       const update = clip.updates[i];
-      for (const d of clip.detections) if (d.t <= update.t && d.t > (clip.updates[i - 1]?.t ?? -Infinity)) matcher.update(d.detections, d.t);
+      for (const d of clip.detections) {
+        if (d.t <= update.t && d.t > (clip.updates[i - 1]?.t ?? -Infinity)) {
+          matcher.update(d.detections, d.t);
+          boxes = d.detections;
+        }
+      }
       const hfov = update.fov.horizontal;
-      const result = engine.update(update, (q) => matcher.labelFor(q, update.t, hfov));
+      const result = cameraEngine
+        ? cameraEngine.update(update, boxes)
+        : engine.update(update, (q) => matcher.labelFor(q, update.t, hfov));
       sound.update(result.hazards, update);
       if (result.events.length > 0) events = [...result.events.reverse(), ...events].slice(0, RECENT_EVENTS);
       setView({

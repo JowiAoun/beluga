@@ -15,6 +15,9 @@ export interface Settings {
   // Master volume in dB, 0 is the level the sounds were made at.
   volumeDb: number;
   firstRunDone: boolean;
+  // Hazards from the detector's boxes alone, for a phone without depth (Phase 10). Turns on by
+  // itself when a walk starts without depth.
+  cameraOnly: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -24,6 +27,7 @@ export const DEFAULT_SETTINGS: Settings = {
   aliveTick: false,
   volumeDb: 0,
   firstRunDone: false,
+  cameraOnly: false,
 };
 
 export const HEIGHT_RANGE_M = { min: 1.2, max: 2.1 } as const;
@@ -57,6 +61,7 @@ export function readSettings(): Settings {
         ? clamp(saved.volumeDb, VOLUME_RANGE_DB.min, VOLUME_RANGE_DB.max)
         : DEFAULT_SETTINGS.volumeDb,
     firstRunDone: saved.firstRunDone === true,
+    cameraOnly: saved.cameraOnly === true,
   };
 }
 

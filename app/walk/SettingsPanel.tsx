@@ -1,6 +1,6 @@
 "use client";
 
-// Settings outside the walk (Phase 9): height, starting station, sounds and volume.
+// Settings outside the walk (Phase 9): height, starting station, sounds, volume and camera-only mode.
 
 import { STATIONS, type StationId } from "@/lib/shared/stations";
 import { heightText, stepHeight, VOLUME_RANGE_DB, type Settings } from "./settings";
@@ -89,6 +89,17 @@ export default function SettingsPanel({
             onChange={(e) => set({ volumeDb: Number(e.target.value) })}
             className="min-h-12"
           />
+        </label>
+
+        <label className="flex min-h-16 items-center gap-3 text-lg">
+          <input
+            type="checkbox"
+            checked={settings.cameraOnly}
+            onChange={(e) => set({ cameraOnly: e.target.checked })}
+            className="h-6 w-6"
+          />
+          Camera-only mode, for a phone without depth: warns about things it can name, like people, bikes and
+          chairs, with no edge or step warnings. It turns on by itself when depth is missing.
         </label>
 
         <button type="button" onClick={onRunSetup} className="min-h-16 rounded-lg border-2 border-neutral-500 text-lg">

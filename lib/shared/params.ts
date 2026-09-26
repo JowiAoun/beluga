@@ -1,7 +1,7 @@
 // Every tunable number from "Tunable parameters" in docs/PLAN.md, plus the few numbers the
 // phases name outside that table. Tune here, on the phone, never inline in other modules.
 
-import type { HazardKind, Severity } from "./enums";
+import type { DetectorClass, HazardKind, Severity } from "./enums";
 
 export const SENSING = {
   updatesPerSecond: 10,
@@ -290,3 +290,32 @@ export const PRACTICE = {
   repeats: 3,
   repeatGapMs: 500,
 } as const;
+
+// Camera-only mode (Phase 10), for a phone that loses depth: hazards from detector boxes alone.
+export const CAMERA_ONLY = {
+  // A box whose bottom edge reaches this far down the frame (0 top, 1 bottom) is cut off.
+  cutOffEdge: 0.97,
+  // Detector results in a row before a thing starts sounding. They arrive about 4 times a second.
+  activateAfterBoxes: 2,
+  // A thing keeps its spot on the floor this long after its last box, then goes quiet.
+  holdMs: 1000,
+  // A new box joins a thing of the same class within this distance on the floor.
+  matchDistanceM: 0.7,
+} as const;
+
+// Usual heights of what the detector names. When the frame cuts off a box's bottom, its top edge
+// and this height place it instead. People as the plan has it; the rest are typical sizes.
+export const CAMERA_ONLY_HEIGHTS_M: Readonly<Partial<Record<DetectorClass, number>>> = {
+  person: 1.7,
+  bicycle: 1.0,
+  motorcycle: 1.1,
+  car: 1.5,
+  bus: 3.0,
+  truck: 3.0,
+  bench: 0.8,
+  chair: 0.9,
+  fire_hydrant: 0.7,
+  stop_sign: 2.2,
+  potted_plant: 0.8,
+  suitcase: 0.7,
+};

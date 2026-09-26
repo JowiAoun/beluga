@@ -53,3 +53,24 @@ export function toViewCoords(
   const ndcY = (projection[5] * p.y + projection[9] * p.z) / w;
   return { u: (ndcX + 1) / 2, v: (1 - ndcY) / 2 };
 }
+
+// Where the ray through view point (u, v) meets the level plane at height y, or null when it never
+// does in front of the camera. Camera-only mode and the yellow-strip check use it to put a point
+// seen in the camera image on the floor.
+export function rayToHeight(
+  u: number,
+  v: number,
+  y: number,
+  camera: Vec3,
+  worldFromView: ArrayLike<number>,
+  projection: ArrayLike<number>,
+): Vec3 | null {
+  const p = unproject(u, v, 1, projection, { x: 0, y: 0, z: 0 });
+  const m = worldFromView;
+  const dx = m[0] * p.x + m[4] * p.y + m[8] * p.z;
+  const dy = m[1] * p.x + m[5] * p.y + m[9] * p.z;
+  const dz = m[2] * p.x + m[6] * p.y + m[10] * p.z;
+  const s = (y - camera.y) / dy;
+  if (!Number.isFinite(s) || s <= 0) return null;
+  return { x: camera.x + s * dx, y, z: camera.z + s * dz };
+}
