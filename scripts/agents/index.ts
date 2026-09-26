@@ -10,8 +10,11 @@ import { AGENTS, triageNote, type AgentSpec } from "@/lib/server/agents/config";
 import { deleteConversation, runAgentTurn } from "@/lib/server/agents/turn";
 
 const API = "https://api.elevenlabs.io/v1";
-const LONGEST_CONVERSATION_S = 30;
-// Use the provider's supported default temperature.
+// The shortest the API allows. A turn takes a few seconds and the conversation is deleted after.
+const LONGEST_CONVERSATION_S = 60;
+// Anything the backend fails to delete goes after this many days.
+const RETENTION_DAYS = 1;
+// Google says Gemini 3 models can loop below 1.0; ElevenLabs agents default to 0.
 const TEMPERATURE = 1;
 // Server events the backend reads over the WebSocket.
 const CLIENT_EVENTS = [
@@ -87,7 +90,7 @@ async function upsertTool(agent: AgentSpec): Promise<string> {
   return id;
 }
 
-function agentBody(agent: AgentSpec, toolId: string, zeroRetention: boolean) {
+function agentBody(agent: AgentSpec, toolId: string) {
   return {
     name: agent.name,
     tags: ["beluga"],
@@ -102,16 +105,20 @@ function agentBody(agent: AgentSpec, toolId: string, zeroRetention: boolean) {
         text_only: true,
         max_duration_seconds: LONGEST_CONVERSATION_S,
         client_events: CLIENT_EVENTS,
-        file_input: { enabled: true, max_files_in_memory: 1, max_files_per_conversation: 1 },
+        // Two, in case an upload that was cut short and sent again lands both times.
+        file_input: { enabled: true, max_files_in_memory: 1, max_files_per_conversation: 2 },
       },
     },
     platform_settings: {
-      // Frames are in these conversations: keep as little as the account allows (rule 5).
+      // Frames are in these conversations: keep as little as the account allows (rule 5). Zero
+      // Retention Mode would keep less, but ElevenLabs turns off file uploads with it on, so the
+      // agent would never see the frame. The backend deletes each conversation after its answer.
       privacy: {
         record_voice: false,
         delete_audio: true,
         delete_transcript_and_pii: true,
-        ...(zeroRetention ? { zero_retention_mode: true } : {}),
+        zero_retention_mode: false,
+        retention_days: RETENTION_DAYS,
       },
       // Private agents: a conversation needs a signed URL from our backend.
       auth: { enable_auth: true },
@@ -121,21 +128,15 @@ function agentBody(agent: AgentSpec, toolId: string, zeroRetention: boolean) {
 
 async function upsertAgent(agent: AgentSpec, toolId: string): Promise<string> {
   const existingId = process.env[agent.idEnv];
-  const send = (zeroRetention: boolean) =>
-    existingId
-      ? api(`/convai/agents/${existingId}`, { method: "PATCH", body: agentBody(agent, toolId, zeroRetention) }).then(
-          () => existingId,
-        )
-      : api<{ agent_id: string }>("/convai/agents/create", {
-          method: "POST",
-          body: agentBody(agent, toolId, zeroRetention),
-        }).then((r) => r.agent_id);
-  try {
-    return await send(true);
-  } catch (err) {
-    console.warn(`${agent.name}: Zero Retention Mode refused (${String(err).slice(0, 160)}). Trying without it.`);
-    return send(false);
+  if (existingId) {
+    await api(`/convai/agents/${existingId}`, { method: "PATCH", body: agentBody(agent, toolId) });
+    return existingId;
   }
+  const { agent_id: agentId } = await api<{ agent_id: string }>("/convai/agents/create", {
+    method: "POST",
+    body: agentBody(agent, toolId),
+  });
+  return agentId;
 }
 
 async function check(photo: string): Promise<void> {

@@ -8,6 +8,12 @@ import { env } from "../env";
 import type { AgentSpec } from "./config";
 
 const API = "https://api.elevenlabs.io/v1";
+// The server takes a moment to register a new conversation. An upload sent the instant it says the
+// conversation started hangs for 5 s and comes back 408, "not active"; 300 ms later it goes through.
+const UPLOAD_WAIT_MS = 400;
+// An upload takes about a second. A slower one is cut short and sent once more.
+const UPLOAD_ATTEMPT_MS = 2500;
+const UPLOAD_ATTEMPTS = 2;
 
 export class AgentError extends Error {}
 
@@ -22,6 +28,7 @@ export interface TurnDeps {
   fetch: typeof fetch;
   connect(url: string): SocketLike;
   now(): number;
+  sleep(ms: number): Promise<void>;
 }
 
 const LIVE: TurnDeps = {
@@ -29,6 +36,7 @@ const LIVE: TurnDeps = {
   // The same subprotocol the ElevenLabs client sends.
   connect: (url) => new WebSocket(url, ["convai"]) as unknown as SocketLike,
   now: () => Date.now(),
+  sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 };
 
 export interface AgentTurn {
@@ -59,18 +67,33 @@ function timeLeft(deadline: number, deps: TurnDeps): number {
 }
 
 async function uploadFrame(conversationId: string, jpeg: Uint8Array, key: string, deadline: number, deps: TurnDeps) {
-  const form = new FormData();
-  form.append("file", new Blob([jpeg as Uint8Array<ArrayBuffer>], { type: "image/jpeg" }), "frame.jpg");
-  const response = await deps.fetch(`${API}/convai/conversations/${conversationId}/files`, {
-    method: "POST",
-    headers: { "xi-api-key": key },
-    body: form,
-    signal: AbortSignal.timeout(timeLeft(deadline, deps)),
-  });
-  if (!response.ok) throw new AgentError(`frame upload: ${response.status}`);
-  const { file_id: fileId } = (await response.json()) as { file_id?: string };
-  if (!fileId) throw new AgentError("frame upload: no file id");
-  return fileId;
+  await deps.sleep(UPLOAD_WAIT_MS);
+  for (let attempt = 1; ; attempt++) {
+    const last = attempt === UPLOAD_ATTEMPTS;
+    const form = new FormData();
+    form.append("file", new Blob([jpeg as Uint8Array<ArrayBuffer>], { type: "image/jpeg" }), "frame.jpg");
+    const limit = last ? timeLeft(deadline, deps) : Math.min(UPLOAD_ATTEMPT_MS, timeLeft(deadline, deps));
+    const response = await deps
+      .fetch(`${API}/convai/conversations/${conversationId}/files`, {
+        method: "POST",
+        headers: { "xi-api-key": key },
+        body: form,
+        signal: AbortSignal.timeout(limit),
+      })
+      .catch((err: unknown) => {
+        if (last) throw new AgentError(`frame upload: ${err instanceof Error ? err.message : String(err)}`);
+        return null;
+      });
+    if (response?.ok) {
+      const { file_id: fileId } = (await response.json()) as { file_id?: string };
+      if (!fileId) throw new AgentError("frame upload: no file id");
+      return fileId;
+    }
+    if (response && (last || response.status !== 408)) {
+      const detail = await response.text().catch(() => "");
+      throw new AgentError(`frame upload: ${response.status} ${detail.slice(0, 200)}`.trim());
+    }
+  }
 }
 
 export async function runAgentTurn(turn: AgentTurn, deps: TurnDeps = LIVE): Promise<TurnResult> {
@@ -115,9 +138,11 @@ export async function runAgentTurn(turn: AgentTurn, deps: TurnDeps = LIVE): Prom
             turn.onConversation?.(id);
             uploadFrame(id, turn.jpeg, key, turn.deadline, deps).then(
               (fileId) =>
+                // Both spellings, as the ElevenLabs client sends them: `file` alone is the older one.
                 send({
                   type: "multimodal_message",
                   text: { type: "user_message", text: turn.text },
+                  file: { type: "file_input", file_id: fileId },
                   files: [{ type: "file_input", file_id: fileId }],
                 }),
               (err: unknown) => fail(err instanceof Error ? err.message : String(err)),

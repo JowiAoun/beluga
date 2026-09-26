@@ -710,6 +710,8 @@ The docs show images in chat (text-only) sessions, and don't list which models t
 
 If Gemini in the agent can't see the photo, use the fallback: call Gemini directly with the billing key, and say so in the README.
 
+Result, Sept 26: a drawn sidewalk with a "sidewalk closed" barrier came back as `construction_barrier`, confidence 0.95, with a box around the barrier, 2.5 s from connect to answer. The conversation was deleted and reads back 404. The agents see images, so no fallback.
+
 ### Agents and the database
 
 The agents never connect to Tiger Data, and get no MCP server or webhook tools. Each agent has one client tool, and all it does is carry the answer back to our backend. The backend does all database work with plain SQL: the 15-minute dedup check and the budget count in `/api/triage`, then the insert later through `/api/events`.
@@ -728,10 +730,10 @@ MCP suits apps and agents that find their tools at runtime. The backend knows ex
 | Mode | text-only | text-only (design B below needs voice) |
 | LLM | `gemini-3.5-flash-lite` | `gemini-3.5-flash` |
 | Temperature | 1.0 | 1.0 |
-| File input | on, 1 file | on, 1 file |
+| File input | on, 1 file (2 per conversation, for an upload sent twice) | same |
 | Client tool | `triage_answer`, fields below | `ask_answer`: answer, target label (nullable), box (nullable) |
-| Longest conversation | 30 s | 30 s |
-| Privacy | Zero Retention Mode when the account allows it, no audio recording, private (signed URLs only) | same |
+| Longest conversation | 60 s, the API's minimum | 60 s |
+| Privacy | no audio recording, transcripts kept 1 day at most, private (signed URLs only). Not Zero Retention Mode: ElevenLabs turns off file uploads with it on | same |
 
 Temperature is set to 1.0 on purpose: ElevenLabs agents default to 0, and Google says values below 1.0 on Gemini 3 models can cause looping or worse output. The script also checks the account's model list (`GET /v1/convai/llm/list`) and stops if a chosen model can't take images.
 
@@ -741,7 +743,7 @@ One helper in `lib/server/agents` does this and closes:
 
 1. Get a signed URL for the agent (`GET /v1/convai/conversation/get-signed-url`) with the API key.
 2. Open the WebSocket with Node's built-in `WebSocket`. Wait for `conversation_initiation_metadata`, which carries the conversation id. Answer every `ping` with a `pong`.
-3. Upload the JPEG (`POST /v1/convai/conversations/{id}/files`) and keep the `file_id`.
+3. Wait 400 ms, then upload the JPEG (`POST /v1/convai/conversations/{id}/files`) and keep the `file_id`. The server needs a moment to register a new conversation: an upload sent the instant the id arrives hangs 5 s and fails with 408. An upload slower than 2.5 s is sent once more.
 4. Send a `multimodal_message` with the phone's note as text and the `file_id`.
 5. Wait for the `client_tool_call`. Check its `parameters` with the zod schema from `lib/shared/contracts`, reply with a `client_tool_result`, then close.
 6. Delete the conversation (`DELETE /v1/convai/conversations/{id}`), also after a failure or timeout.

@@ -29,11 +29,13 @@ interface Fake {
   calls: string[];
 }
 
-function fake(): Fake {
+// `uploads` are the statuses the file upload answers with, in turn; 200 once they run out.
+function fake(uploads: number[] = []): Fake {
   const sockets: FakeSocket[] = [];
   const calls: string[] = [];
   const deps: TurnDeps = {
     now: () => Date.now(),
+    sleep: () => Promise.resolve(),
     connect: () => {
       const socket = new FakeSocket();
       sockets.push(socket);
@@ -43,7 +45,10 @@ function fake(): Fake {
       const url = String(input);
       calls.push(`${init?.method ?? "GET"} ${url.replace("https://api.elevenlabs.io/v1", "")}`);
       if (url.includes("get-signed-url")) return Response.json({ signed_url: "wss://fake/convai?conversation_signature=x" });
-      if (url.endsWith("/files")) return Response.json({ file_id: "file-1" });
+      if (url.endsWith("/files")) {
+        const status = uploads.shift() ?? 200;
+        return status === 200 ? Response.json({ file_id: "file-1" }) : new Response(null, { status });
+      }
       return new Response(null, { status: 200 });
     },
   };
@@ -84,6 +89,7 @@ describe("runAgentTurn", () => {
     expect(socket.sent[1]).toEqual({
       type: "multimodal_message",
       text: { type: "user_message", text: "Hazard: obstacle" },
+      file: { type: "file_input", file_id: "file-1" },
       files: [{ type: "file_input", file_id: "file-1" }],
     });
     socket.emit("message", { type: "ping", ping_event: { event_id: 7, ping_ms: 50 } });
@@ -100,6 +106,29 @@ describe("runAgentTurn", () => {
       "GET /convai/conversation/get-signed-url?agent_id=agent-triage",
       "POST /convai/conversations/conv-1/files",
     ]);
+  });
+
+  it("sends the frame again when the conversation wasn't ready for it, and gives up after that", async () => {
+    const once = fake([408]);
+    const result = runAgentTurn({ ...TURN, deadline: Date.now() + 5000 }, once.deps);
+    await tick();
+    const socket = await startConversation(once);
+    await tick();
+    expect(once.calls.filter((c) => c.endsWith("/files"))).toHaveLength(2);
+    expect(socket.sent[1]).toMatchObject({ type: "multimodal_message", file: { file_id: "file-1" } });
+    socket.emit("message", {
+      type: "client_tool_call",
+      client_tool_call: { tool_name: "triage_answer", tool_call_id: "c", parameters: {} },
+    });
+    await expect(result).resolves.toMatchObject({ conversationId: "conv-1" });
+
+    const twice = fake([408, 408]);
+    const failed = expect(runAgentTurn({ ...TURN, deadline: Date.now() + 5000 }, twice.deps)).rejects.toThrow(
+      "frame upload: 408",
+    );
+    await tick();
+    await startConversation(twice);
+    await failed;
   });
 
   it("fails when the agent answers in plain text, or with another tool", async () => {
