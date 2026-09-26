@@ -82,6 +82,9 @@ function readManifest(): LibraryManifest | null {
 
 async function main(): Promise<void> {
   if (!apiKey) fail("Set ELEVENLABS_API_KEY in .env.local first.");
+  if (!apiKey.startsWith("sk_")) {
+    fail("ELEVENLABS_API_KEY doesn't start with sk_: that looks like the key's ID. Paste the secret key instead.");
+  }
   try {
     execFileSync("ffmpeg", ["-version"], { stdio: "ignore" });
   } catch {
