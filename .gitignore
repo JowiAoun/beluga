@@ -1,0 +1,6 @@
+
+# Mission Control — files it installs per session; managed by the app, do not commit
+CLAUDE.local.md
+.claude/skills/diagram/
+.claude/skills/git-workflow/
+.claude/skills/recall/
