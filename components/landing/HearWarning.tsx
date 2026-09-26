@@ -173,7 +173,12 @@ export function HearWarning() {
 
           <Reveal delay={0.2} className="mt-8 flex flex-wrap items-center gap-3">
             {/* One button for both, so keyboard focus stays on it. */}
-            <Button size="lg" variant={playing ? "secondary" : "primary"} onClick={playing ? stop : play}>
+            <Button
+              size="lg"
+              variant={playing ? "secondary" : "primary"}
+              onClick={playing ? stop : play}
+              className="w-full text-base sm:w-auto sm:text-lg"
+            >
               {playing ? <IconPlayerStopFilled aria-hidden size={22} /> : <IconHeadphones aria-hidden size={24} />}
               {playing ? "Stop" : "Hear a warning (headphones on)"}
             </Button>

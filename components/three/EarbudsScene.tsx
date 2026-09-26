@@ -182,7 +182,7 @@ export default function EarbudsScene({
       aria-hidden
       dpr={[1, dpr]}
       frameloop={onScreen ? "always" : "never"}
-      camera={{ position: [0, 0.2, -0.27], fov: 34, near: 0.01, far: 5 }}
+      camera={{ position: [0, 0.21, -0.29], fov: 36, near: 0.01, far: 5 }}
       gl={{ alpha: true, antialias: true, powerPreference: "low-power" }}
     >
       <PerformanceMonitor onDecline={() => setDpr(1)} onFallback={onFallback} flipflops={3}>

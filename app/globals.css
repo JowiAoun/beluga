@@ -44,6 +44,9 @@
   --animate-rise: rise 0.9s var(--ease-water) both;
   --animate-shimmer: shimmer 6s linear infinite;
   --animate-drift: drift 20s linear infinite;
+  --animate-pulse-ring: pulse-ring 2.4s var(--ease-water) infinite;
+  --animate-scan: scan 2.8s var(--ease-water) infinite;
+  --animate-eq: eq 1.1s ease-in-out infinite;
 
   /* A sonar ring: grows out of its centre and fades. */
   @keyframes ring {
@@ -76,6 +79,41 @@
     to {
       opacity: 1;
       transform: translateY(0);
+    }
+  }
+  /* The same ring for SVG shapes, which scale around their own centre. */
+  @keyframes pulse-ring {
+    from {
+      transform: scale(0.2);
+      opacity: 0.9;
+    }
+    to {
+      transform: scale(1);
+      opacity: 0;
+    }
+  }
+  /* The depth scan moving away from the phone, up the corridor. */
+  @keyframes scan {
+    0% {
+      transform: translateY(0);
+      opacity: 0;
+    }
+    15%,
+    80% {
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(-230px);
+      opacity: 0;
+    }
+  }
+  @keyframes eq {
+    0%,
+    100% {
+      transform: scaleY(0.35);
+    }
+    50% {
+      transform: scaleY(1);
     }
   }
   @keyframes drift {
