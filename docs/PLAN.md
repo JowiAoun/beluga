@@ -65,8 +65,10 @@ Devpost submission closes **10:00 EDT, Sunday Sept 27, 2026**, with a public Git
 | Risk | Level | What we do |
 | --- | --- | --- |
 | TalkBack takes raw taps, so double-tap-anywhere Ask could never work for a TalkBack user, and the plan's own TalkBack test would fail. | High | Ask and Stop are real DOM buttons (Phase 9). |
-| The 150 ms sound target can't be met: 3 updates at 10 Hz take 200 to 300 ms, and Bluetooth adds 150 to 300 ms. | Medium | Target is now 0.6 s (Phase 3). If still late, close hazards activate after 2 updates (Fallbacks). |
-| Left and right are weak on bone conduction: the skull carries sound to both ears. | Medium | Existing fallback: more angle exaggeration, a level difference, and the spoken "left" and "right". |
+| The 150 ms sound target can't be met: 3 updates at 10 Hz take 200 to 300 ms, and Bluetooth adds 150 to 300 ms. | Medium | Target is now 0.6 s (Phase 3). Bands use the distance the user will be at when the sound plays: distance − speed × Chrome's output latency. If still late, close hazards activate after 2 updates (Fallbacks). |
+| Left and right are weak on the bone-conduction earbuds (AfterShokz Trekz Air). The skull carries each side to both ears, and the earbuds skip the outer ear, so HRTF cues are lost. | Medium | No HRTF. The far ear drops 24 dB × pan and goes silent at full pan, and hears it up to 0.6 ms later. Pan follows the hazard's offset from the walking line, so a pole 0.3 m left sounds left from 3 m. Voice clips add the side: "pole, left" (Phase 3b). |
+| Bone conduction plays little below about 300 Hz and buzzes when pushed, and no earbud can place a sound up or down. | Medium | No note starts below 440 Hz, sound files are cut below 250 Hz, and pitch stands for height: a high chime for head height, a falling tone for drop-offs (Phase 3a). A limiter on the mix. |
+| Android and Bluetooth earbuds go idle after a few seconds of silence, then clip the start of the next sound: the first warning after a quiet stretch. | Medium | A keep-alive noise at −70 dBFS plays for the whole walk (Phase 3b). |
 | A streamed MP3 can't play through the panner as it arrives. | Medium | Whole MP3 in one response; PCM streaming only if Ask misses 3 s (Ask contract). |
 | Sounds longer than their repeat interval stack up. `loudnorm` can't measure clips shorter than 0.4 s. | Low | One instance per hazard, loop variants, peak normalising (Phase 3). |
 
@@ -141,6 +143,9 @@ Settled on Sept 26:
 
 - Team: 4 people, one per track, with coding agents doing most of the code.
 - Hardware: an ARCore depth phone, a second Android phone, and bone-conduction earbuds. No chest mount yet.
+- Phone: Samsung Galaxy S22 with Android 16 and Chrome. Phase 0 measured a portrait view of 38° × 74°, depth at 160 × 90 and 30 frames a second.
+- Earbuds: AfterShokz Trekz Air, Bluetooth bone conduction, one pair. Judges hear through the `scrcpy` mirror. Phase 3 is built around them.
+- Domain: `beluga.surf`, served by Vercel at `www.beluga.surf`.
 - Accounts: domain registered, Gemini key with billing, ElevenLabs credits applied, Tiger Cloud service created. The Phase 0 database smoke test still runs.
 - Judging: judges visit our table.
 
@@ -148,9 +153,6 @@ Still open. Each one has a default, so no track waits for the answer.
 
 | Question | Default until answered |
 | --- | --- |
-| What is the domain name? | Vercel address until it is known |
-| Which phone model is the main one? | Whatever passes Phase 0 |
-| Are the earbuds Bluetooth, and is there a second pair for judges? | Bluetooth, one pair; judges hear through the `scrcpy` mirror |
 | How will the phone be worn? There is no mount yet. | A bike phone clamp on a backpack shoulder strap, portrait. Buy or borrow one today |
 | What can be staged for the civic demo: an e-scooter, a bike, a construction barrier? | A bike laid across the hallway |
 | How long is each judge visit? | 5 minutes |
@@ -168,7 +170,7 @@ Still open. Each one has a default, so no track waits for the answer.
 | Hosting | Vercel | HTTPS by default (required for WebXR, camera, location, install) |
 | AR + depth | WebXR Device API in Chrome for Android, `immersive-ar` session with `depth-sensing`, `camera-access`, `hit-test`, `dom-overlay`, `local-floor` | No 3D engine needed; a bare WebGL context for the XR layer and camera texture |
 | On-device detector | MediaPipe Tasks Vision Object Detector, EfficientDet-Lite0 (COCO classes), GPU delegate | Model file served from the app and cached for offline |
-| Audio | Web Audio API: one AudioContext, PannerNode with HRTF panning, GainNodes | All sounds pre-decoded at start |
+| Audio | Web Audio API: one AudioContext, a gain and a delay per ear for each sound, a limiter | No HRTF: bone conduction skips the outer ear. All sounds pre-decoded at start |
 | Offline + install | Web app manifest + service worker | Caches app shell, sound library and detector model |
 | Backend | Next.js route handlers (Node runtime, not Edge, for the database driver) | Holds all keys |
 | Gemini | Google Gen AI SDK for JavaScript | Structured JSON output with a response schema |
@@ -435,7 +437,7 @@ A missing strip at a platform edge shouldn't need three people to nearly fall fi
    - Session starts with optional features depth sensing (`usagePreference: ["cpu-optimized"]`, `dataFormatPreference: ["luminance-alpha", "unsigned-short"]`; Chrome on ARCore gives no `float32` depth, so asking for it alone returns none), camera access, hit test, DOM overlay, local-floor reference space; list which features were actually granted, and check `session.domOverlayState`, since Chrome drops an optional DOM overlay without saying so
    - Depth data arrives (show width, height, and the distance at screen centre, updating)
    - A camera image arrives (show its size and a tiny preview drawn from the camera texture)
-   - Audio: an AudioContext resumed from the same tap plays a test tone hard left, then centre, then hard right through an HRTF panner, on the Bluetooth bone-conduction earbuds. Note how late the tone sounds after the tap
+   - Audio: an AudioContext resumed from the same tap plays a test tone hard left, then centre, then hard right, placed the way Phase 3 places warnings, on the Bluetooth bone-conduction earbuds. Note how late the tone sounds after the tap
    - Screen wake lock acquired
    - Geolocation fix with reported accuracy
    - Device orientation / compass heading available
@@ -579,22 +581,24 @@ All tests pass, and on the phone the debug overlay correctly shows a chair, a he
 
 ### 3a. Build the library (script, run once, commit the output)
 
+The earbuds are AfterShokz Trekz Air: Bluetooth bone conduction, which leaves the ears open to traffic. Three rules follow for every sound. Nothing important sits below about 300 Hz, since bone conduction plays little there and buzzes when pushed. Pitch stands for height, since no earbud can place a sound up or down: head height is high, a drop-off falls. Each sound starts sharp, so it cuts through street noise.
+
 1. For each sound effect below, call the ElevenLabs Sound Effects endpoint three times (text prompt, 0.5–1.0 s duration, prompt influence 0.7–0.8, no loop) and save all variants.
 2. For each voice clip, call Text to Speech with the chosen voice and the Flash v2.5 model.
-3. Process with ffmpeg: strip leading silence, trim effects to their target length, 50 ms fade-out, convert to mono 44.1 kHz. Normalise effects by peak (−3 dBFS): loudness in LUFS can't be measured on clips shorter than 0.4 s. Normalise voice clips to about −16 LUFS. Voice clips keep their full length. Final balance between sounds comes from the gain trims, set by ear on the audition page.
+3. Process with ffmpeg: high-pass at 250 Hz, strip leading silence, trim effects to their target length, 50 ms fade-out, convert to mono 44.1 kHz. Normalise effects by peak (−3 dBFS): loudness in LUFS can't be measured on clips shorter than 0.4 s. Normalise voice clips to about −16 LUFS. Voice clips keep their full length. Final balance between sounds comes from the gain trims, set by ear on the audition page.
 4. For `edge_pulse`, `head_chime` and `tick`, also generate a loop variant (`loop: true`, which needs the `eleven_text_to_sound_v2` model) for the closest distance band.
 5. Write a manifest (sound id → chosen file, duration, gain trim) to `public/sounds`.
-6. Add a hidden audition page under `/walk` that plays every variant through the earbuds left/centre/right so the team picks the best one by ear.
+6. Add a hidden audition page at `/walk/sounds` that plays every variant through the earbuds left, centre and right, so the team picks the best one by ear. It also runs the blindfold test from "Done when". Until the library exists, it plays the temporary tones from `lib/audio/tones.ts`, which follow the same rules.
 
 | Sound id | Used for | Prompt | Target length |
 | --- | --- | --- | --- |
-| edge\_pulse | Drop-off | Deep soft sub-bass thump with a short rumble tail, clean studio recording, no reverb | 0.25 s |
-| head\_chime | Head-height | Two-note descending glass chime, high then low, bright and short | 0.25 s |
+| edge\_pulse | Drop-off | Short soft tone sliding down in pitch, like a falling whistle, mid range, clean, no reverb | 0.25 s |
+| head\_chime | Head-height | Two quick bright glass chime notes, the second higher, short and clean | 0.25 s |
 | tick | Generic obstacle | Short dry wooden block tick, percussive, no reverb | 0.12 s |
 | ping | Pole-like | Single tiny metallic ping, like tapping a thin steel pole, very short and dry | 0.15 s |
 | bell | Bicycle / motorcycle | Quick tiny double bicycle bell ring, crisp and dry | 0.2 s |
-| marimba | Person | Soft muted marimba note, warm, short decay | 0.15 s |
-| buzz | Car, bus, truck | Very short low gentle horn buzz, not alarming | 0.2 s |
+| marimba | Person | Soft muted marimba note in the middle register, warm, short decay | 0.15 s |
+| buzz | Car, bus, truck | Very short gentle car horn beep, mid pitch, not alarming, no reverb | 0.2 s |
 | taps | Blocked path | Three rapid soft taps on hollow plastic | 0.25 s |
 | listening | Ask started | Gentle rising two-tone chime, friendly | 0.3 s |
 | ready | App ready | Warm soft three-note rising chime | 0.8 s |
@@ -603,23 +607,26 @@ All tests pass, and on the phone the debug overlay correctly shows a chair, a he
 
 Voice clips (one calm voice): "edge", "step down", "head", "pole", "bike", "scooter", "car", "person", "blocked", "stairs", "left", "right", "ahead", "beluga ready, tap to start", "take three slow steps", "calibrated", "hold steady", "beluga stopped", "reported", "reporting on", "reporting off", "Ask is offline. Obstacle alerts still on.", "Sorry, I couldn't see that.", "beluga works alongside your cane or guide dog. It can miss things."
 
-### 3b. Spatial playback engine
+### 3b. Stereo playback engine
 
 - One AudioContext, created and resumed on the start tap. All sounds decoded to buffers at startup.
-- Per active hazard (max 2 at a time): source → HRTF panner → gain → master gain. The panner uses no distance roll-off; loudness is set by the volume table, not by virtual distance.
-- Placement: audio angle = hazard angle × 1.5, clamped to ±80°; the source sits 1.5 m from the listener on a frontal arc at that angle, at ear height. Never place a source behind the listener.
-- Centre marker: if |angle| < 8°, also play `centre_tick` in both ears with each repeat.
+- Per active hazard (max 2 at a time): source → voice gain → a left and a right path, each with its own gain and delay → master gain → limiter. No HRTF panner: the earbuds skip the outer ear, so HRTF cues are lost and only colour the sound. Loudness comes from the volume table.
+- Placement: pan = the hazard's offset from the walking line ÷ 0.45 m (the corridor half-width), clamped to ±1. The far ear drops 24 dB × pan, goes silent at full pan, and hears the sound up to 0.6 ms later. Offset, not angle: a pole 0.3 m left is only 6° off at 3 m, which sounds centred, while its offset says "left" from the first sound. Ask answers only have an angle, so ±20° is full pan for them.
+- Centre marker: if the hazard is within 0.09 m of the walking line (the middle bucket), also play `centre_tick` in both ears with each repeat.
+- Bluetooth lead: the table uses the distance the user will be at when the sound plays, distance − speed × Chrome's output latency (capped at 0.4 s). At 1.4 m/s and 0.25 s that is 0.35 m, most of a band.
+- Keep-alive: a noise at −70 dBFS plays for the whole walk. Without it, Android and the earbuds go idle after a few seconds of silence and clip the start of the next warning. Raise it if the first sound still clips; lower it if anyone hears a hiss.
+- A limiter on the mix (threshold −3 dB), since clipping buzzes on bone conduction.
 - Scheduling runs on the audio clock: a 25 ms timer checks each voice and schedules the next repeat when due. Repeat interval and volume come from the distance table in "Tunable parameters". Under 0.5 m (1.0 m for drop-offs), repeat every 80 ms (effectively continuous).
 - Each hazard plays one instance at a time. A new repeat cuts the one still playing with a 10 ms fade. In the closest band, a sound longer than its interval switches to its loop variant. Without this, a 0.25 s sound every 80 ms stacks three deep and turns to mush.
 - Drop-offs use the table shifted one band outward (start at 3.5 m).
-- Voice clip: when a hazard enters the 1.5–2.0 m band for the first time, play its word once through the same panner, subject to the 8 s cooldown per kind + side.
+- Voice clip: when a hazard enters the 1.5 to 2.0 m band for the first time, play its word and then its side ("pole, left") once through the same voice, subject to the 8 s cooldown per word + side. The side is spoken because side cues are weak on bone conduction. Until the clips exist, the phone's own voice says them, from both sides.
 - Priority 1 always plays; while it plays, lower-priority voices drop by 12 dB.
 - Stationary for more than 5 s: obstacle voices drop 6 dB and stop after 3 more repeats until the user moves; drop-off voices are never reduced.
 - Ask playback uses the same engine at the target angle, ducked 12 dB under any hazard; a priority 1–2 hazard stops it.
 
 ### Done when
 
-- Blindfolded on the bone-conduction earbuds, a teammate names left / centre / right correctly for at least 8 of 10 random cues.
+- Blindfolded on the bone-conduction earbuds, a teammate names left / centre / right correctly for at least 8 of 10 random cues (the test on `/walk/sounds`).
 - From an obstacle entering the corridor to the first sound takes under 0.6 s on the Bluetooth earbuds (measure by recording video with audio). 150 ms can't be reached: 3 updates at 10 Hz alone take 200 to 300 ms, and Bluetooth adds another 150 to 300 ms. Warnings start at 3 m, so at walking pace (1.4 m/s) a 0.6 s delay still leaves about 2 m.
 - No clicks, pile-ups or runaway repeats after a 5-minute walk.
 
@@ -1091,15 +1098,20 @@ Drop-offs: same table shifted one band outward (start 3.5 m, continuous under 1.
 
 | Parameter | Default |
 | --- | --- |
-| Angle exaggeration / clamp | ×1.5 / ±80° |
-| Source distance on the arc | 1.5 m |
-| Centre marker zone | ±8° |
+| Pan | offset from the walking line ÷ 0.45 m, clamped to ±1. Ask answers: angle ÷ 20° |
+| Far ear | −24 dB × pan, silent at full pan, up to 0.6 ms late |
+| Centre marker zone | within 0.09 m of the walking line (the middle bucket) |
 | Max simultaneous hazard sounds | 2 |
 | Lower-priority duck | −12 dB |
 | Stationary reduction | −6 dB, stop after 3 repeats (never for drop-offs) |
 | Voice clip trigger | entering 1.5–2.0 m band |
-| Voice clip cooldown | 8 s per kind + side |
-| Scheduler tick | 25 ms |
+| Voice clip | the word, then the side ("pole, left") |
+| Voice clip cooldown | 8 s per word + side |
+| Scheduler tick / schedule ahead | 25 ms / 100 ms |
+| Bluetooth lead | bands use distance − speed × output latency, latency capped at 0.4 s |
+| Keep-alive noise | −70 dBFS for the whole walk |
+| Limiter threshold | −3 dB |
+| High-pass on sound files | 250 Hz |
 | Alive tick (optional) | every 30 s |
 
 ### Detector, gate and network
@@ -1148,7 +1160,7 @@ Drop-offs: same table shifted one band outward (start 3.5 m, continuous under 1.
 | Demo phone has no WebXR depth | Borrow an ARCore-depth phone; else camera-only mode (Phase 10) and say so |
 | Camera access not granted inside AR | Use depth-only sounds and disable Ask and triage (no frames to send); warnings still work. Say so in the limitations |
 | Detector too slow | Drop to 2 Hz, then disable; depth-only sounds |
-| HRTF panning sounds weak on bone conduction | Increase angle exaggeration to ×2; add a small left/right level difference on top |
+| Left and right still weak on the bone-conduction earbuds (under 8 of 10 in the blindfold test) | Full pan from 0.3 m off the walking line; say the side for every obstacle, not only named ones; try wired earbuds to tell a sound design problem from a bone conduction limit |
 | Gemini quota runs out | Switch to the billing-enabled key (env var only); raise gate cooldowns |
 | ElevenLabs down during Ask | Cached apology line; sounds unaffected (pre-generated) |
 | Tiger free service hits a limit | Trial service; change `DATABASE_URL`; re-run migrations and seed |

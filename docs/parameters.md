@@ -51,15 +51,20 @@ Drop-offs: same table shifted one band outward (start 3.5 m, continuous under 1.
 
 | Parameter | Default |
 | --- | --- |
-| Angle exaggeration / clamp | ×1.5 / ±80° |
-| Source distance on the arc | 1.5 m |
-| Centre marker zone | ±8° |
+| Pan | offset from the walking line ÷ 0.45 m, clamped to ±1. Ask answers: angle ÷ 20° |
+| Far ear | −24 dB × pan, silent at full pan, up to 0.6 ms late |
+| Centre marker zone | within 0.09 m of the walking line (the middle bucket) |
 | Max simultaneous hazard sounds | 2 |
 | Lower-priority duck | −12 dB |
 | Stationary reduction | −6 dB, stop after 3 repeats (never for drop-offs) |
 | Voice clip trigger | entering 1.5–2.0 m band |
-| Voice clip cooldown | 8 s per kind + side |
-| Scheduler tick | 25 ms |
+| Voice clip | the word, then the side ("pole, left") |
+| Voice clip cooldown | 8 s per word + side |
+| Scheduler tick / schedule ahead | 25 ms / 100 ms |
+| Bluetooth lead | bands use distance − speed × output latency, latency capped at 0.4 s |
+| Keep-alive noise | −70 dBFS for the whole walk |
+| Limiter threshold | −3 dB |
+| High-pass on sound files | 250 Hz |
 | Alive tick (optional) | every 30 s |
 
 ## Detector, gate and network
