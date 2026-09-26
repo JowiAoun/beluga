@@ -9,8 +9,8 @@ import { createHmac } from "node:crypto";
 import type postgres from "postgres";
 import { EventSchema, type BelugaEvent } from "@/lib/shared/contracts";
 import { cellOf, coarsen } from "@/lib/shared/geo";
-import { NETWORK } from "@/lib/shared/params";
-import { db } from "./db/client";
+import { DATABASE, NETWORK } from "@/lib/shared/params";
+import { db, inTime } from "./db/client";
 
 export interface EventRow {
   time: string;
@@ -96,13 +96,17 @@ export async function isDuplicateReport(
   salt: string,
 ): Promise<boolean> {
   try {
-    const rows = await db()`
-      select 1 from hazard_events
-      where device_hash = ${deviceHash(deviceKey, salt)}
-        and cell = ${cell}
-        and civic_category = ${category}
-        and time > now() - ${`${NETWORK.reportDedupMs} milliseconds`}::interval
-      limit 1`;
+    // Triage waits on this, so a slow database counts as no repeat.
+    const rows = await inTime(
+      db()`
+        select 1 from hazard_events
+        where device_hash = ${deviceHash(deviceKey, salt)}
+          and cell = ${cell}
+          and civic_category = ${category}
+          and time > now() - ${`${NETWORK.reportDedupMs} milliseconds`}::interval
+        limit 1`,
+      DATABASE.quickQueryMs,
+    );
     return rows.length > 0;
   } catch {
     return false;

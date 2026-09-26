@@ -4,8 +4,8 @@ import "server-only";
 // ElevenLabs credits. The count lives in the `api_budget` table, shared by every server instance.
 // If the database can't be reached, each instance keeps its own count in memory instead.
 
-import { NETWORK } from "@/lib/shared/params";
-import { db } from "./db/client";
+import { DATABASE, NETWORK } from "@/lib/shared/params";
+import { db, inTime } from "./db/client";
 import { envNumber } from "./env";
 
 export type BudgetRoute = "triage" | "ask";
@@ -31,16 +31,20 @@ function takeFromMemory(route: BudgetRoute, limit: number, now: number): number 
 }
 
 // Counts one call if the hour has room. Returns how many are left after it, or null when spent.
+// A slow database costs at most DATABASE.quickQueryMs, then the memory count decides.
 export async function takeBudget(route: BudgetRoute): Promise<number | null> {
   const limit = limitFor(route);
   try {
     const sql = db();
-    const rows = await sql<{ count: number }[]>`
-      insert into api_budget (hour, route, count)
-      values (date_trunc('hour', now()), ${route}, 1)
-      on conflict (hour, route) do update set count = api_budget.count + 1
-      where api_budget.count < ${limit}
-      returning count`;
+    const rows = await inTime(
+      sql<{ count: number }[]>`
+        insert into api_budget (hour, route, count)
+        values (date_trunc('hour', now()), ${route}, 1)
+        on conflict (hour, route) do update set count = api_budget.count + 1
+        where api_budget.count < ${limit}
+        returning count`,
+      DATABASE.quickQueryMs,
+    );
     return rows.length === 0 ? null : limit - rows[0].count;
   } catch {
     return takeFromMemory(route, limit, Date.now());

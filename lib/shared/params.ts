@@ -247,9 +247,12 @@ export const DATABASE = {
   compressAfterDays: 7,
   deleteRawAfterDays: 180,
   clientMaxConnections: 2,
+  // A database that can't be reached fails in this time, not postgres.js's default 30 s.
   clientConnectTimeoutS: 2,
   clientIdleTimeoutS: 20,
   freeServiceLimitMb: 750,
+  // Checks Ask and triage wait on (the budget, the repeat-report check) give up after this.
+  quickQueryMs: 1000,
 } as const;
 
 export const DASHBOARD = {

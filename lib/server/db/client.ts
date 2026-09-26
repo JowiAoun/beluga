@@ -24,3 +24,14 @@ export function db(): postgres.Sql {
   }
   return client;
 }
+
+// Rejects when a query takes longer than `ms`, so a slow or unreachable database costs a route at
+// most that long. The query keeps going; its failure is handled here so it never goes unhandled.
+export function inTime<T>(query: Promise<T>, ms: number): Promise<T> {
+  query.catch(() => {});
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("database too slow")), ms);
+  });
+  return Promise.race([query, late]).finally(() => clearTimeout(timer));
+}
