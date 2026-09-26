@@ -94,6 +94,16 @@ export default function SettingsPanel({
         <label className="flex min-h-16 items-center gap-3 text-lg">
           <input
             type="checkbox"
+            checked={settings.headsetAsk}
+            onChange={(e) => set({ headsetAsk: e.target.checked })}
+            className="h-6 w-6"
+          />
+          Ask with the earbuds&apos; play/pause button during a walk
+        </label>
+
+        <label className="flex min-h-16 items-center gap-3 text-lg">
+          <input
+            type="checkbox"
             checked={settings.cameraOnly}
             onChange={(e) => set({ cameraOnly: e.target.checked })}
             className="h-6 w-6"

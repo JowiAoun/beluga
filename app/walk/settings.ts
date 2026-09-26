@@ -18,6 +18,8 @@ export interface Settings {
   // Hazards from the detector's boxes alone, for a phone without depth (Phase 10). Turns on by
   // itself when a walk starts without depth.
   cameraOnly: boolean;
+  // The earbuds' play/pause button asks too (Phase 9 stretch).
+  headsetAsk: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -28,6 +30,7 @@ export const DEFAULT_SETTINGS: Settings = {
   volumeDb: 0,
   firstRunDone: false,
   cameraOnly: false,
+  headsetAsk: true,
 };
 
 export const HEIGHT_RANGE_M = { min: 1.2, max: 2.1 } as const;
@@ -62,6 +65,7 @@ export function readSettings(): Settings {
         : DEFAULT_SETTINGS.volumeDb,
     firstRunDone: saved.firstRunDone === true,
     cameraOnly: saved.cameraOnly === true,
+    headsetAsk: typeof saved.headsetAsk === "boolean" ? saved.headsetAsk : DEFAULT_SETTINGS.headsetAsk,
   };
 }
 

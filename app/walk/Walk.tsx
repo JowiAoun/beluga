@@ -29,6 +29,7 @@ import { DEFAULT_SETTINGS, readSettings, saveSettings, type Settings } from "./s
 import SettingsPanel from "./SettingsPanel";
 import AskButton from "./AskButton";
 import DebugOverlay, { type DebugView } from "./DebugOverlay";
+import { startHeadsetButton } from "./headset";
 import { askLocation, locationPermission, watchLocation, type Fix } from "./location";
 import StopButton from "./StopButton";
 import MicrophoneSetup from "./MicrophoneSetup";
@@ -111,6 +112,8 @@ export default function Walk() {
   const [message, setMessage] = useState<string | null>(null);
   const [summary, setSummary] = useState<SessionSummary | null>(null);
   const [asking, setAsking] = useState(false);
+  // The earbuds' button calls the latest ask, set after each render.
+  const askRef = useRef<() => void>(() => {});
   const [reportingOn, setReportingOn] = useState(false);
   // Null until read from storage, so the first-run steps never flash for a returning user.
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -321,6 +324,8 @@ export default function Walk() {
       sound.stop();
       if (soundRef.current === sound) soundRef.current = null;
     });
+    // The silent clip behind the earbuds' button needs this tap to play.
+    if (settingsRef.current.headsetAsk) cleanupRef.current.push(startHeadsetButton(() => askRef.current()));
     void requestWakeLock().then((lock) => {
       if (!lock) return;
       if (sessionRef.current === started) cleanupRef.current.push(() => void lock.release());
@@ -404,6 +409,10 @@ export default function Walk() {
       setAsking(false);
     }
   };
+
+  useEffect(() => {
+    askRef.current = () => void ask();
+  });
 
   const record = () => {
     recorderRef.current = new Recorder();
