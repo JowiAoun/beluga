@@ -616,9 +616,9 @@ Voice clips (one calm voice): "edge", "step down", "head", "pole", "bike", "scoo
 ### 3b. Stereo playback engine
 
 - One AudioContext, created and resumed on the start tap. All sounds decoded to buffers at startup.
-- Per active hazard (max 2 at a time): source → voice gain → a left and a right path, each with its own gain and delay → master gain → limiter. No HRTF panner: the earbuds skip the outer ear, so HRTF cues are lost and only colour the sound. Loudness comes from the volume table.
+- Per active hazard (one at a time): source → voice gain → a left and a right path, each with its own gain and delay → master gain → limiter. No HRTF panner: the earbuds skip the outer ear, so HRTF cues are lost and only colour the sound. Loudness comes from the volume table.
 - Placement: pan = the hazard's offset from the walking line ÷ 0.45 m (the corridor half-width), clamped to ±1. The far ear drops 24 dB × pan, goes silent at full pan, and hears the sound up to 0.6 ms later. Offset, not angle: a pole 0.3 m left is only 6° off at 3 m, which sounds centred, while its offset says "left" from the first sound. Ask answers only have an angle, so ±20° is full pan for them.
-- Centre marker: if the hazard is within 0.09 m of the walking line (the middle bucket), also play `centre_tick` in both ears with each repeat.
+- Centre marker: if the hazard is within 0.09 m of the walking line (the middle bucket), also play `centre_tick` in both ears with its first repeat, then at most once a second.
 - Bluetooth lead: the table uses the distance the user will be at when the sound plays, distance − speed × Chrome's output latency (capped at 0.4 s). At 1.4 m/s and 0.25 s that is 0.35 m, most of a band.
 - Keep-alive: a noise at −70 dBFS plays for the whole walk. Without it, Android and the earbuds go idle after a few seconds of silence and clip the start of the next warning. Raise it if the first sound still clips; lower it if anyone hears a hiss.
 - A limiter on the mix (threshold −3 dB), since clipping buzzes on bone conduction.
@@ -626,7 +626,7 @@ Voice clips (one calm voice): "edge", "step down", "head", "pole", "bike", "scoo
 - Each hazard plays one instance at a time. A new repeat cuts the one still playing with a 10 ms fade. In the closest band, a sound longer than its interval switches to its loop variant. Without this, a 0.25 s sound every 80 ms stacks three deep and turns to mush.
 - Drop-offs use the table shifted one band outward (start at 3.5 m).
 - Voice clip: when a hazard enters the 1.5 to 2.0 m band for the first time, play its word and then its side ("pole, left") once through the same voice, subject to the 8 s cooldown per word + side. The side is spoken because side cues are weak on bone conduction. Until the clips exist, the phone's own voice says them, from both sides.
-- Priority 1 always plays; while it plays, lower-priority voices drop by 12 dB.
+- One hazard sounds at a time: the one in the nearest band, then the most urgent kind by priority. In a tie the one already sounding stays, so the sound doesn't jump between sides. Tuned up to 2, lower-priority voices drop by 12 dB while a drop-off plays.
 - Stationary for more than 5 s: obstacle voices drop 6 dB and stop after 3 more repeats until the user moves; drop-off voices are never reduced.
 - Ask playback uses the same engine at the target angle, ducked 12 dB under any hazard; a priority 1–2 hazard stops it.
 
@@ -1151,7 +1151,8 @@ Drop-offs: same table shifted one band outward (start 3.5 m, continuous under 1.
 | Pan | offset from the walking line ÷ 0.45 m, clamped to ±1. Ask answers: angle ÷ 20° |
 | Far ear | −24 dB × pan, silent at full pan, up to 0.6 ms late |
 | Centre marker zone | within 0.09 m of the walking line (the middle bucket) |
-| Max simultaneous hazard sounds | 2 |
+| Max simultaneous hazard sounds | 1, the nearest band first |
+| Centre marker | first repeat straight ahead, then at most every 1 s |
 | Lower-priority duck | −12 dB |
 | Stationary reduction | −6 dB, stop after 3 repeats (never for drop-offs) |
 | Voice clip trigger | entering 1.5–2.0 m band |

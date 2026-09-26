@@ -126,7 +126,8 @@ export const AUDIO = {
   farEarCutDb: 24,
   // The far ear also hears it later, by this × pan.
   maxEarDelayMs: 0.6,
-  maxHazardVoices: 2,
+  // Hazards sounding at once. One at a time keeps each side clear; the nearest band wins.
+  maxHazardVoices: 1,
   lowerPriorityDuckDb: -12,
   askDuckDb: -12,
   stationaryAfterMs: 5000,
@@ -154,6 +155,8 @@ export const AUDIO = {
   highPassHz: 250,
   // Voice clips add "left", "right" or "ahead", since side cues are weak on bone conduction.
   voiceClipSaysSide: true,
+  // The centre marker plays with the first repeat straight ahead, then at most this often.
+  centreMarkerEveryMs: 1000,
 } as const;
 
 export const DETECTOR = {

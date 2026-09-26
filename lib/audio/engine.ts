@@ -129,7 +129,7 @@ export class AudioEngine {
   ) {
     this.ears = options.ears ?? DEFAULT_EARS;
     this.speak = options.speak;
-    // Two hazards and a voice at once would clip, and clipping buzzes on bone conduction.
+    // A hazard, its centre marker and a voice at once could clip, and clipping buzzes on bone conduction.
     this.limiter = new DynamicsCompressorNode(ctx, {
       threshold: AUDIO.limiterThresholdDb,
       knee: 0,

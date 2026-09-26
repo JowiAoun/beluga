@@ -54,7 +54,8 @@ Drop-offs: same table shifted one band outward (start 3.5 m, continuous under 1.
 | Pan | offset from the walking line ÷ 0.45 m, clamped to ±1. Ask answers: angle ÷ 20° |
 | Far ear | −24 dB × pan, silent at full pan, up to 0.6 ms late |
 | Centre marker zone | within 0.09 m of the walking line (the middle bucket) |
-| Max simultaneous hazard sounds | 2 |
+| Max simultaneous hazard sounds | 1, the nearest band first |
+| Centre marker | first repeat straight ahead, then at most every 1 s |
 | Lower-priority duck | −12 dB |
 | Stationary reduction | −6 dB, stop after 3 repeats (never for drop-offs) |
 | Voice clip trigger | entering 1.5–2.0 m band |

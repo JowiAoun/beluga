@@ -53,6 +53,8 @@ interface Voice extends VoiceView {
   nextAt: number | null;
   lastHitAt: number | null;
   stationaryRepeats: number;
+  // When the centre marker last played with this voice; null while the hazard is off to a side.
+  lastCentreAt: number | null;
 }
 
 export class Scheduler {
@@ -61,7 +63,10 @@ export class Scheduler {
   private spoken = new Set<string>();
   private lastSaid = new Map<string, number>();
 
-  constructor(private sounds: Readonly<Record<SoundId, SoundInfo>>) {}
+  constructor(
+    private sounds: Readonly<Record<SoundId, SoundInfo>>,
+    private readonly maxVoices: number = AUDIO.maxHazardVoices,
+  ) {}
 
   // When the recorded library replaces the tones, lengths and loops change.
   setSounds(sounds: Readonly<Record<SoundId, SoundInfo>>): void {
@@ -97,13 +102,21 @@ export class Scheduler {
     const aheadS = AUDIO.scheduleAheadMs / 1000;
     const lead = scene.stationary ? 0 : scene.speed * scene.leadS;
 
-    const audible = [];
+    const candidates = [];
     for (const hazard of scene.hazards) {
       const distance = Math.max(0, hazard.distance - lead);
       const band = audioBandFor(distance, hazard.kind);
-      if (band) audible.push({ hazard, distance, band });
-      if (audible.length === AUDIO.maxHazardVoices) break;
+      if (!band) continue;
+      const playing = this.voices.has(hazard.id) ? 0 : 1;
+      const rank = AUDIO_BANDS.indexOf(band);
+      candidates.push({ hazard, distance, band, rank, priority: priorityOf(hazard), playing });
     }
+    // The nearest band first (drop-offs use theirs, shifted out), then the most urgent kind. In a
+    // tie the one already sounding stays, so the sound doesn't flip between two sides.
+    candidates.sort(
+      (a, b) => a.rank - b.rank || a.priority - b.priority || a.playing - b.playing || a.distance - b.distance,
+    );
+    const audible = candidates.slice(0, this.maxVoices);
 
     const keep = new Set(audible.map((a) => a.hazard.id));
     for (const voice of this.voices.values()) {
@@ -114,9 +127,9 @@ export class Scheduler {
     const present = new Set(scene.hazards.map((h) => h.id));
     for (const id of this.spoken) if (!present.has(id)) this.spoken.delete(id);
 
-    const dropOffPlaying = audible.length > 0 && priorityOf(audible[0].hazard) === 1;
+    const dropOffPlaying = audible.some((a) => a.priority === 1);
 
-    for (const { hazard, distance, band } of audible) {
+    for (const { hazard, distance, band, priority } of audible) {
       const lateral = lateralOf(hazard);
       const pan = panForLateral(lateral);
       const side = sideOf(lateral);
@@ -138,6 +151,7 @@ export class Scheduler {
           nextAt: null,
           lastHitAt: null,
           stationaryRepeats: 0,
+          lastCentreAt: null,
         };
         this.voices.set(hazard.id, voice);
       }
@@ -156,7 +170,7 @@ export class Scheduler {
       if (!reduced) voice.stationaryRepeats = 0;
       voice.muted = reduced && voice.stationaryRepeats >= AUDIO.stationaryStopAfterRepeats;
 
-      const ducked = dropOffPlaying && priorityOf(hazard) > 1;
+      const ducked = dropOffPlaying && priority > 1;
       voice.gainDb =
         band.gainDb + (ducked ? AUDIO.lowerPriorityDuckDb : 0) + (reduced ? AUDIO.stationaryReductionDb : 0);
       actions.push({ type: "voice", id: voice.id, pan, gainDb: voice.gainDb });
@@ -178,9 +192,14 @@ export class Scheduler {
         if (voice.nextAt === null) voice.nextAt = now;
         // Closer means a shorter repeat, and the next one comes sooner.
         else if (voice.lastHitAt !== null) voice.nextAt = Math.min(voice.nextAt, voice.lastHitAt + interval);
+        if (side !== "ahead") voice.lastCentreAt = null;
         while (voice.nextAt <= now + aheadS) {
           const at = Math.max(voice.nextAt, now);
-          actions.push({ type: "hit", id: voice.id, sound, at, centre: side === "ahead" });
+          const centre =
+            side === "ahead" &&
+            (voice.lastCentreAt === null || at - voice.lastCentreAt >= AUDIO.centreMarkerEveryMs / 1000 - 1e-9);
+          if (centre) voice.lastCentreAt = at;
+          actions.push({ type: "hit", id: voice.id, sound, at, centre });
           voice.lastHitAt = at;
           voice.nextAt = at + interval;
           if (reduced && ++voice.stationaryRepeats >= AUDIO.stationaryStopAfterRepeats) {

@@ -83,17 +83,33 @@ describe("Scheduler", () => {
     expect(times[1] - times[0]).toBeCloseTo(0.08, 6);
   });
 
-  it("plays two hazards at most, and a drop-off ducks the other by 12 dB", () => {
-    const hazards = [
-      hazard("drop", 2.2, 0, { kind: "drop_off" }),
-      hazard("pole", 1.2, -0.2, { label: "pole_like" }),
-      hazard("box", 1.4, 0.3),
-    ];
-    const actions = run(new Scheduler(INFO), 0, 0.2, scene(hazards));
-    const voices = actions.filter((a) => a.type === "voice");
-    expect(new Set(voices.map((v) => v.id))).toEqual(new Set(["drop", "pole"]));
+  it("plays one hazard at a time: the nearest band first, then the most urgent kind", () => {
+    const ids = (hazards: HazardUpdate[]) =>
+      new Set(run(new Scheduler(INFO), 0, 0.2, scene(hazards)).flatMap((a) => (a.type === "voice" ? [a.id] : [])));
+    const drop = (d: number) => hazard("drop", d, 0, { kind: "drop_off" });
+    const pole = hazard("pole", 1.2, -0.2, { label: "pole_like" });
+    // A drop-off at 2.2 m is a band further out than a pole at 1.2 m, even with its bands shifted.
+    expect(ids([drop(2.2), pole, hazard("box", 1.4, 0.3)])).toEqual(new Set(["pole"]));
+    // In the same band, the drop-off comes first.
+    expect(ids([drop(1.6), pole])).toEqual(new Set(["drop"]));
+  });
+
+  it("keeps the hazard already sounding against a closer one in the same band, until it is a band nearer", () => {
+    const s = new Scheduler(INFO);
+    const voiced = (actions: Action[]) => actions.flatMap((a) => (a.type === "voice" ? [a.id] : []));
+    expect(voiced(run(s, 0, 0.1, scene([hazard("a", 1.4, -0.3)])))).toEqual(["a", "a", "a", "a"]);
+    const same = run(s, 0.1, 0.3, scene([hazard("b", 1.1, 0.3), hazard("a", 1.4, -0.3)]));
+    expect(new Set(voiced(same))).toEqual(new Set(["a"]));
+    const nearer = run(s, 0.3, 0.4, scene([hazard("b", 0.9, 0.3), hazard("a", 1.3, -0.3)]));
+    expect(nearer[0]).toEqual({ type: "end", id: "a" });
+    expect(new Set(voiced(nearer))).toEqual(new Set(["b"]));
+  });
+
+  it("lets a drop-off duck a second hazard by 12 dB when two can play", () => {
+    const hazards = [hazard("drop", 1.6, 0, { kind: "drop_off" }), hazard("pole", 1.2, -0.2, { label: "pole_like" })];
+    const voices = run(new Scheduler(INFO, 2), 0, 0.2, scene(hazards)).filter((a) => a.type === "voice");
     expect(voices.find((v) => v.id === "pole")).toMatchObject({ gainDb: -3 - 12 });
-    expect(voices.find((v) => v.id === "drop")).toMatchObject({ gainDb: -6 });
+    expect(voices.find((v) => v.id === "drop")).toMatchObject({ gainDb: -3 });
   });
 
   it("drops an obstacle 6 dB when standing still, then stops it after 3 repeats until moving", () => {
@@ -133,11 +149,15 @@ describe("Scheduler", () => {
     expect(actions.find((a) => a.type === "voice")).toMatchObject({ gainDb: -6 });
   });
 
-  it("marks hits straight ahead for the centre tick", () => {
+  it("marks the first hit straight ahead for the centre tick, then once a second", () => {
     const ahead = run(new Scheduler(INFO), 0, 0.1, scene([hazard("a", 1.2, 0.02)]));
     const side = run(new Scheduler(INFO), 0, 0.1, scene([hazard("a", 1.2, 0.3)]));
     expect(ahead.find((a) => a.type === "hit")).toMatchObject({ centre: true });
     expect(side.find((a) => a.type === "hit")).toMatchObject({ centre: false });
+    // Every 220 ms for 2 s, with the marker at 0, 1.1 and 2.2 s at most.
+    const hits = run(new Scheduler(INFO), 0, 2, scene([hazard("a", 1.2, 0.02)])).filter((a) => a.type === "hit");
+    expect(hits.length).toBeGreaterThan(8);
+    expect(hits.flatMap((a) => (a.type === "hit" && a.centre ? [a.at] : []))).toEqual([0, expect.closeTo(1.1, 6)]);
   });
 
   it("ends a voice when its hazard goes, and every voice on clear", () => {
