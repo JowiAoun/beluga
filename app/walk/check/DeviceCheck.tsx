@@ -15,6 +15,8 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { CARD } from "@/components/brand/Card";
+import { DISPLAY, Name } from "@/components/brand/Display";
 import { BelugaMark } from "@/components/brand/Logo";
 import { cn } from "@/lib/utils";
 import { CHECKS, initialResults, type CheckId, type CheckResults, type CheckStatus, type Report } from "./checks";
@@ -42,13 +44,14 @@ const STATUS_TEXT: Record<CheckStatus, string> = {
   info: "info",
 };
 
+// Running is filled and "check" is outlined, so the two blues differ by more than shade.
 const STATUS_CLASS: Record<CheckStatus, string> = {
-  idle: "border border-white/15 text-muted",
-  running: "bg-sonar/15 text-sonar",
+  idle: "border border-line text-muted",
+  running: "bg-accent/15 text-sonar",
   pass: "bg-emerald-400/15 text-emerald-300",
-  warn: "bg-accent/15 text-accent",
+  warn: "border border-accent text-foreground",
   fail: "bg-red-500/20 text-red-300",
-  info: "bg-white/10 text-foreground",
+  info: "bg-line text-foreground",
 };
 
 // Always next to the word, so the result never rests on colour alone. No spinner: the test runs
@@ -330,7 +333,9 @@ export default function DeviceCheck() {
           <header className="flex flex-col gap-4">
             <div className="flex items-center gap-3">
               <BelugaMark size={64} className="size-14" />
-              <h1 className="text-3xl font-extrabold tracking-tight">beluga device check</h1>
+              <h1 className={cn(DISPLAY, "text-4xl sm:text-5xl")}>
+                <Name /> device check
+              </h1>
             </div>
             <p className="text-xl text-muted">
               Checks that this phone gives depth, camera frames, spatial sound, wake lock and location together.
@@ -354,7 +359,7 @@ export default function DeviceCheck() {
         )}
 
         {inAr && live && (
-          <section aria-live="off" className="rounded-2xl border border-white/15 bg-abyss/85 p-3 text-foreground">
+          <section aria-live="off" className="border border-line bg-abyss/85 p-3 text-foreground">
             <p className="font-mono text-5xl font-medium tabular-nums">
               {live.centreDepth === null ? "no depth" : `${live.centreDepth.toFixed(2)} m`}
             </p>
@@ -377,7 +382,7 @@ export default function DeviceCheck() {
         <canvas
           ref={previewRef}
           aria-label="Camera preview"
-          className={`w-40 self-end rounded-lg border border-white/30 ${results.camera.status === "pass" ? "" : "hidden"}`}
+          className={`w-40 self-end border border-line-strong ${results.camera.status === "pass" ? "" : "hidden"}`}
         />
 
         {phase !== "running" && (
@@ -399,13 +404,13 @@ export default function DeviceCheck() {
         )}
 
         {audioQuestion && (
-          <div className="flex flex-col gap-3 rounded-2xl border border-white/15 bg-abyss/90 p-4 text-foreground">
+          <div className="flex flex-col gap-3 border border-line bg-abyss/90 p-4 text-foreground">
             <p className="text-xl font-semibold">Did you hear left, then centre, then right?</p>
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => answerAudio(true)}
-                className="flex min-h-16 items-center justify-center gap-1.5 rounded-2xl border border-emerald-300/50 bg-emerald-900/70 text-lg font-bold"
+                className="flex min-h-16 items-center justify-center gap-1.5 rounded-md border border-emerald-300/50 bg-emerald-900/70 text-lg font-bold"
               >
                 <IconCheck aria-hidden size={22} />
                 Yes
@@ -413,7 +418,7 @@ export default function DeviceCheck() {
               <button
                 type="button"
                 onClick={() => answerAudio(false)}
-                className="flex min-h-16 items-center justify-center gap-1.5 rounded-2xl bg-danger text-lg font-bold text-white"
+                className="flex min-h-16 items-center justify-center gap-1.5 rounded-md bg-danger text-lg font-bold text-white"
               >
                 <IconX aria-hidden size={22} />
                 No
@@ -421,7 +426,7 @@ export default function DeviceCheck() {
               <button
                 type="button"
                 onClick={playTones}
-                className="min-h-16 rounded-2xl border border-white/20 bg-white/10 px-1 text-lg leading-tight font-bold"
+                className="min-h-16 rounded-md border border-line-strong bg-surface px-1 text-lg leading-tight font-bold"
               >
                 Play again
               </button>
@@ -432,17 +437,17 @@ export default function DeviceCheck() {
         <ul
           className={cn(
             "flex flex-col gap-2",
-            inAr && "max-h-[40dvh] overflow-y-auto rounded-2xl border border-white/15 bg-abyss/85 p-2 text-foreground",
+            inAr && "max-h-[40dvh] overflow-y-auto border border-line bg-abyss/85 p-2 text-foreground",
           )}
         >
           {CHECKS.map(({ id, label }) => {
             const result = results[id];
             const Icon = STATUS_ICON[result.status];
             return (
-              <li key={id} className="flex items-start gap-3 rounded-2xl border border-line bg-surface p-3">
+              <li key={id} className={cn(CARD, "flex items-start gap-3 p-3")}>
                 <span
                   className={cn(
-                    "mt-0.5 flex w-28 shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-sm font-bold uppercase",
+                    "mt-0.5 flex w-28 shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1 text-sm font-bold uppercase",
                     STATUS_CLASS[result.status],
                   )}
                 >

@@ -147,13 +147,13 @@ export default function VoiceAsk({ session, microphone, getAudio, getEngine, get
     }
   };
 
-  return <section aria-label="Ask about the scene" className="flex flex-col gap-3 rounded-2xl border border-white/15 bg-abyss/90 p-4 text-xl text-foreground">
+  return <section aria-label="Ask about the scene" className="flex flex-col gap-3 rounded-md border border-line bg-abyss/90 p-4 text-xl text-foreground">
     <p>Stop walking to ask. Your question and one camera frame go to ElevenLabs.</p>
-    {stage === "recording" ? <button type="button" onClick={() => recorder.current?.stop()} className="min-h-24 rounded-2xl bg-danger px-4 text-2xl font-bold text-white">Finish question</button> :
-      <button type="button" disabled={stage !== "idle" || !microphone} onClick={() => void begin(true)} className="min-h-24 rounded-2xl bg-accent px-4 text-2xl font-bold text-background disabled:opacity-50">Ask by voice</button>}
+    {stage === "recording" ? <button type="button" onClick={() => recorder.current?.stop()} className="min-h-24 rounded-md bg-danger px-4 text-2xl font-bold text-white">Finish question</button> :
+      <button type="button" disabled={stage !== "idle" || !microphone} onClick={() => void begin(true)} className="min-h-24 rounded-md bg-accent px-4 text-2xl font-bold text-on-accent disabled:opacity-50">Ask by voice</button>}
     {!microphone && <p>Set up a microphone before starting your next walk to enable voice questions.</p>}
-    <button type="button" disabled={stage !== "idle"} onClick={() => void begin(false)} className="min-h-16 rounded-2xl border-2 border-white/60 bg-white/10 px-4 text-xl font-semibold disabled:opacity-50">Describe ahead</button>
-    {stage !== "idle" && <button type="button" onClick={cancel} className="min-h-16 rounded-2xl border-2 border-white/60 bg-white/10 text-xl">Cancel question</button>}
+    <button type="button" disabled={stage !== "idle"} onClick={() => void begin(false)} className="min-h-16 rounded-md border-2 border-line-strong bg-surface px-4 text-xl font-semibold disabled:opacity-50">Describe ahead</button>
+    {stage !== "idle" && <button type="button" onClick={cancel} className="min-h-16 rounded-md border-2 border-line-strong bg-surface text-xl">Cancel question</button>}
     <p role="status" aria-atomic="true">{message}</p>
     {question && <p>You asked: {question}</p>}
     {answer && <p className="text-2xl font-semibold">{answer}</p>}

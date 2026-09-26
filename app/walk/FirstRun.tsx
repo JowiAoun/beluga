@@ -15,7 +15,8 @@ import {
   IconRuler,
   IconX,
 } from "@tabler/icons-react";
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
+import { DISPLAY, Name } from "@/components/brand/Display";
 import { cn } from "@/lib/utils";
 import { heightText, stepHeight } from "./settings";
 import { PANEL, PRIMARY, SECONDARY } from "./styles";
@@ -44,6 +45,17 @@ const ICONS: Record<Step, typeof IconBlind> = {
 
 const BIG_PRIMARY = cn(PRIMARY, "min-h-20");
 const BIG_SECONDARY = cn(SECONDARY, "min-h-20");
+const HEADING = cn(DISPLAY, "text-3xl leading-[1.1] sm:text-4xl");
+
+// The heading is uppercase, but the name inside it stays lowercase.
+function withName(text: string) {
+  return text.split("beluga").map((part, i) => (
+    <Fragment key={i}>
+      {i > 0 && <Name />}
+      {part}
+    </Fragment>
+  ));
+}
 
 export interface FirstRunResult {
   reporting: boolean;
@@ -63,7 +75,7 @@ function StepDots({ step }: { step: Step }) {
               "h-2.5 rounded-full transition-[width,background-color] duration-300 ease-water motion-reduce:transition-none",
               i === at ? "w-8 bg-accent" : "w-2.5",
               i < at && "bg-sonar",
-              i > at && "bg-white/20",
+              i > at && "bg-line",
             )}
           />
         ))}
@@ -105,7 +117,9 @@ export default function FirstRun({
   if (step === null) {
     return (
       <section className={cn(PANEL, "flex flex-col gap-5")}>
-        <h2 className="text-3xl font-bold">Set up beluga</h2>
+        <h2 className={HEADING}>
+          Set up <Name />
+        </h2>
         <p className="text-xl text-muted">Five short steps, spoken aloud. They take about a minute.</p>
         <button
           type="button"
@@ -134,13 +148,13 @@ export default function FirstRun({
         {StepIcon && (
           <span
             aria-hidden
-            className="grid size-16 place-items-center rounded-2xl border border-sonar/30 bg-sonar/10 text-sonar"
+            className="grid size-16 place-items-center rounded-md border border-line-strong bg-surface text-sonar"
           >
             <StepIcon size={34} stroke={1.75} />
           </span>
         )}
-        <h2 ref={headingRef} tabIndex={-1} className="mb-2 text-3xl leading-tight font-bold text-balance outline-none">
-          {PROMPTS[step]}
+        <h2 ref={headingRef} tabIndex={-1} className={cn(HEADING, "mb-2 outline-none")}>
+          {withName(PROMPTS[step])}
         </h2>
 
         {step === "welcome" && (

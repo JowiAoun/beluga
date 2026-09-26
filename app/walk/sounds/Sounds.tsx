@@ -10,6 +10,7 @@ import {
 } from "@tabler/icons-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { DISPLAY, Name } from "@/components/brand/Display";
 import { BelugaMark } from "@/components/brand/Logo";
 import { SonarRings } from "@/components/brand/SonarRings";
 import { AudioEngine } from "@/lib/audio/engine";
@@ -48,7 +49,7 @@ const SIDES: Side[] = ["left", "ahead", "right"];
 const SIDE_NAMES: Record<Side, string> = { left: "Left", ahead: "Centre", right: "Right" };
 const SIDE_ICONS: Record<Side, typeof IconArrowUp> = { left: IconArrowLeft, ahead: IconArrowUp, right: IconArrowRight };
 
-const PLAY_BUTTON = "min-h-12 rounded-xl border border-line bg-white/5 font-semibold hover:border-white/30";
+const PLAY_BUTTON = "min-h-12 rounded-md border border-line-strong bg-surface font-semibold hover:border-foreground";
 
 function sideOfPan(pan: number): Side {
   return pan < 0 ? "left" : pan > 0 ? "right" : "ahead";
@@ -229,9 +230,9 @@ export default function Sounds() {
         <p role="status" className="px-2 pt-3 text-center text-xl font-semibold">
           Cue {test.answers.length + 1} of {test.cues.length}. Tap the side you heard.
         </p>
-        <div aria-hidden className="mx-2 h-2 overflow-hidden rounded-full bg-white/10">
+        <div aria-hidden className="mx-2 h-2 overflow-hidden bg-line">
           <div
-            className="h-full rounded-full bg-sonar"
+            className="h-full bg-accent"
             style={{ width: `${(test.answers.length / test.cues.length) * 100}%` }}
           />
         </div>
@@ -243,7 +244,7 @@ export default function Sounds() {
                 key={side}
                 type="button"
                 onClick={() => answer(side)}
-                className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-line bg-surface text-2xl font-bold active:bg-accent active:text-background"
+                className="flex flex-col items-center justify-center gap-3 rounded-md border border-line-strong bg-surface text-2xl font-bold active:bg-accent active:text-on-accent"
               >
                 <Icon aria-hidden size={40} stroke={1.75} />
                 {SIDE_NAMES[side]}
@@ -264,7 +265,9 @@ export default function Sounds() {
       <header className="flex flex-col gap-4">
         <div className="flex items-center gap-3">
           <BelugaMark size={64} className="size-14" />
-          <h1 className="text-3xl font-extrabold tracking-tight">beluga sounds</h1>
+          <h1 className={cn(DISPLAY, "text-4xl sm:text-5xl")}>
+            <Name /> sounds
+          </h1>
         </div>
         <p className="text-lg text-muted">
           Plays every warning sound through the earbuds, left, centre and right, and runs the blindfold test.{" "}
@@ -286,7 +289,7 @@ export default function Sounds() {
       ) : (
         <>
           <section className={cn(PANEL, "flex flex-col gap-3")}>
-            <h2 className="text-2xl font-bold">Ears</h2>
+            <h2 className={cn(DISPLAY, "text-2xl sm:text-3xl")}>Ears</h2>
             <label className="flex flex-col gap-2 text-lg">
               Far ear at full pan: how much quieter
               <select
@@ -313,7 +316,7 @@ export default function Sounds() {
           </section>
 
           <section className={cn(PANEL, "flex flex-col gap-3")}>
-            <h2 className="text-2xl font-bold">Blindfold test</h2>
+            <h2 className={cn(DISPLAY, "text-2xl sm:text-3xl")}>Blindfold test</h2>
             <p className="text-lg text-muted">
               {TEST_CUES} random cues from a pole {TEST_LATERAL_M} m left, ahead or {TEST_LATERAL_M} m right. The wearer
               taps the side. The plan asks for {PASS_MARK} of {TEST_CUES}.
@@ -329,19 +332,19 @@ export default function Sounds() {
           </section>
 
           <section className={cn(PANEL, "flex flex-col gap-3")}>
-            <h2 className="text-2xl font-bold">Walk up to it (simulated)</h2>
+            <h2 className={cn(DISPLAY, "text-2xl sm:text-3xl")}>Walk up to it (simulated)</h2>
             <p className="text-lg text-muted">
               A simulated hazard from 3.5 m to 0.3 m at walking pace, through the real warning rules.
             </p>
             {walking && (
-              <div className="flex items-center justify-between gap-2 rounded-2xl border border-sonar/30 bg-sonar/10 p-2 pl-4">
+              <div className="flex items-center justify-between gap-2 rounded-md border border-line-strong bg-abyss p-2 pl-4">
                 <p role="status" className="text-lg">
                   Playing: {walking}
                 </p>
                 <button
                   type="button"
                   onClick={stopWalk}
-                  className="flex min-h-12 items-center gap-2 rounded-xl bg-danger px-4 font-semibold text-white"
+                  className="flex min-h-12 items-center gap-2 rounded-md bg-danger px-4 font-semibold text-white"
                 >
                   <IconPlayerStopFilled aria-hidden size={18} />
                   Stop
@@ -367,7 +370,7 @@ export default function Sounds() {
           </section>
 
           <section className={cn(PANEL, "flex flex-col gap-3")}>
-            <h2 className="text-2xl font-bold">Each sound</h2>
+            <h2 className={cn(DISPLAY, "text-2xl sm:text-3xl")}>Each sound</h2>
             {library && (
               <p className="text-lg text-muted">
                 Numbered buttons play each ElevenLabs variant from the centre. To pick one, set its file in{" "}
@@ -378,7 +381,7 @@ export default function Sounds() {
               <div key={id} className="flex flex-col gap-1">
                 <div className="grid grid-cols-[minmax(0,1fr)_repeat(3,4.5rem)] items-center gap-2">
                   <span>
-                    <span className="font-mono">{id}</span>
+                    <span className="font-mono wrap-anywhere">{id}</span>
                     <br />
                     <span className="text-muted">{use}</span>
                   </span>
@@ -431,8 +434,8 @@ function Variants({
           data-side="ahead"
           onClick={() => onPlay(file)}
           className={cn(
-            "min-h-12 min-w-12 rounded-xl px-3",
-            chosen ? "bg-accent font-bold text-background" : "border border-line bg-white/5",
+            "min-h-12 min-w-12 rounded-md px-3",
+            chosen ? "bg-accent font-bold text-on-accent" : "border border-line-strong bg-surface",
           )}
         >
           {name}
@@ -476,20 +479,20 @@ const FADE = "transition-opacity duration-300 ease-water motion-reduce:transitio
 function HeadFromAbove() {
   return (
     <div aria-hidden className={cn("relative mx-auto h-40 w-64", DOT_AT)}>
-      <span className="absolute top-[70%] left-1/2 size-48 -translate-1/2 rounded-full border-2 border-dashed border-white/15 [clip-path:inset(0_0_50%_0)]" />
+      <span className="absolute top-[70%] left-1/2 size-48 -translate-1/2 rounded-full border-2 border-dashed border-line [clip-path:inset(0_0_50%_0)]" />
       {SPOTS.map((spot) => (
         <span key={spot.name}>
           <span
-            className="absolute size-6 -translate-1/2 rounded-full border-2 border-white/25"
+            className="absolute size-6 -translate-1/2 rounded-full border-2 border-line-strong"
             style={{ left: spot.x, top: spot.y }}
           />
           <span className={cn("absolute text-sm text-muted", spot.label)}>{spot.name}</span>
         </span>
       ))}
-      <span className="absolute top-[70%] left-[37.5%] h-7 w-3 -translate-1/2 rounded-full bg-white/25">
+      <span className="absolute top-[70%] left-[37.5%] h-7 w-3 -translate-1/2 rounded-full bg-line-strong">
         <span className={cn("absolute inset-0 rounded-full bg-sonar opacity-(--ear-l)", FADE)} />
       </span>
-      <span className="absolute top-[70%] left-[62.5%] h-7 w-3 -translate-1/2 rounded-full bg-white/25">
+      <span className="absolute top-[70%] left-[62.5%] h-7 w-3 -translate-1/2 rounded-full bg-line-strong">
         <span className={cn("absolute inset-0 rounded-full bg-sonar opacity-(--ear-r)", FADE)} />
       </span>
       <span className="absolute top-[46%] left-1/2 size-4 -translate-1/2 rotate-45 border-t-2 border-l-2 border-foreground/80 bg-background" />

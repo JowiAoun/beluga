@@ -168,7 +168,7 @@ export default function DebugOverlay({ view, session }: { view: DebugView | null
   return (
     <section
       aria-live="off"
-      className="flex flex-col gap-1 rounded-2xl border border-white/15 bg-abyss/85 p-3 text-sm text-foreground tabular-nums"
+      className="flex flex-col gap-1 border border-line bg-abyss/85 p-3 text-sm text-foreground tabular-nums"
     >
       <p className="font-mono text-xs tracking-[0.18em] text-sonar uppercase">Nearest in corridor</p>
       <p className="font-mono text-4xl font-medium">{nearestText}</p>
@@ -186,7 +186,7 @@ export default function DebugOverlay({ view, session }: { view: DebugView | null
       )}
       {view?.audio && <p>{describeSound(view.audio)}</p>}
       {view?.audio && (
-        <section aria-label="Recent warning sounds" className="mt-1 flex flex-col gap-1 border-t border-white/15 pt-2">
+        <section aria-label="Recent warning sounds" className="mt-1 flex flex-col gap-1 border-t border-line pt-2">
           <p className="font-mono text-xs tracking-[0.18em] text-sonar uppercase">Why it beeped</p>
           {view.audio.recentWarnings.length > 0 ? (
             <ul className="flex flex-col gap-1">
@@ -251,7 +251,7 @@ export default function DebugOverlay({ view, session }: { view: DebugView | null
           <canvas
             ref={previewRef}
             aria-label="Detector frame"
-            className="block w-full rounded-lg border border-white/30"
+            className="block w-full border border-line-strong"
           />
           {/* Boxes are fractions of the frame, so they line up at any size. */}
           {(view?.detect?.detections ?? []).map((d, i) => (
@@ -265,7 +265,7 @@ export default function DebugOverlay({ view, session }: { view: DebugView | null
                 height: `${(d.box.bottom - d.box.top) * 100}%`,
               }}
             >
-              <span className="absolute -top-4 left-0 bg-accent px-0.5 text-[10px] leading-4 text-background">
+              <span className="absolute -top-4 left-0 bg-accent px-0.5 text-[10px] leading-4 text-on-accent">
                 {d.label.replace("_", " ")} {Math.round(d.score * 100)}
               </span>
             </div>
@@ -275,7 +275,7 @@ export default function DebugOverlay({ view, session }: { view: DebugView | null
           <button
             type="button"
             onClick={testFrame}
-            className="min-h-12 rounded-xl border border-white/20 bg-white/10 px-3 font-semibold"
+            className="min-h-12 rounded-md border border-line-strong bg-surface px-3 font-semibold"
           >
             Test Ask frame
           </button>

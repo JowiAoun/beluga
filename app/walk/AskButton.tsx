@@ -11,9 +11,9 @@ export default function AskButton({ asking, onAsk }: { asking: boolean; onAsk: (
       onClick={onAsk}
       disabled={asking}
       aria-label={asking ? "Asking about what is in front of you" : "Ask what is in front of you"}
-      className="flex min-h-[40dvh] flex-1 flex-col items-center justify-center gap-3 rounded-2xl border-4 border-sonar bg-abyss/75 text-4xl font-bold text-foreground disabled:opacity-60"
+      className="flex min-h-[40dvh] flex-1 flex-col items-center justify-center gap-3 rounded-md border-4 border-accent bg-abyss/75 text-4xl font-bold text-foreground disabled:opacity-60"
     >
-      <IconEye aria-hidden size={48} stroke={1.75} className="text-sonar" />
+      <IconEye aria-hidden size={48} stroke={1.75} className="text-accent" />
       {asking ? "Asking" : "Ask"}
     </button>
   );

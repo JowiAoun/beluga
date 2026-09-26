@@ -46,7 +46,7 @@ export default function StopButton({ onStop }: { onStop: () => void }) {
       }}
       onKeyUp={cancel}
       onContextMenu={(e) => e.preventDefault()}
-      className="relative flex min-h-[33dvh] w-full touch-none items-center justify-center overflow-hidden rounded-2xl bg-danger text-3xl font-bold text-white select-none"
+      className="relative flex min-h-[33dvh] w-full touch-none items-center justify-center overflow-hidden rounded-md bg-danger text-3xl font-bold text-white select-none"
     >
       <span
         aria-hidden

@@ -1,6 +1,7 @@
 "use client";
 import { IconMicrophone } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
+import { DISPLAY } from "@/components/brand/Display";
 import { cn } from "@/lib/utils";
 import { PANEL, SECONDARY, SELECT } from "./styles";
 
@@ -27,7 +28,7 @@ export default function MicrophoneSetup({ value, onChange }: { value: string; on
     } finally { if (alive.current) setBusy(false); }
   };
   return <section className={cn(PANEL, "flex flex-col gap-3")}>
-    <h2 className="flex items-center gap-3 text-2xl font-bold"><IconMicrophone aria-hidden size={24} className="shrink-0 text-sonar" />Voice questions (optional)</h2>
+    <h2 className={cn(DISPLAY, "flex items-center gap-3 text-2xl sm:text-3xl")}><IconMicrophone aria-hidden size={24} className="shrink-0 text-sonar" />Voice questions (optional)</h2>
     <p className="text-lg text-muted">Ask sends your recorded question and one camera frame to ElevenLabs. beluga does not save them.</p>
     <p className="text-lg text-muted">Choose the phone microphone. A Bluetooth microphone can make warning sounds mono while recording. Stop walking to ask a question.</p>
     <button type="button" disabled={busy} onClick={() => void enable()} className={SECONDARY}>

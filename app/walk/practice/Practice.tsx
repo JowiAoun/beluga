@@ -6,6 +6,7 @@ import { AudioEngine } from "@/lib/audio/engine";
 import { decodeLibrary, fetchLibrary, type ClipId, type RawLibrary } from "@/lib/audio/library";
 import type { SoundId } from "@/lib/shared/enums";
 import { PRACTICE } from "@/lib/shared/params";
+import { DISPLAY, Name } from "@/components/brand/Display";
 import { BelugaMark } from "@/components/brand/Logo";
 import { cn } from "@/lib/utils";
 import { CHECKBOX, LINK_ROW, PANEL, SECONDARY } from "../styles";
@@ -80,8 +81,8 @@ export default function Practice() {
   };
 
   return <main className="mx-auto flex min-h-dvh max-w-2xl flex-col gap-5 px-4 pt-8 pb-12">
-    <div className="flex items-center gap-3"><BelugaMark size={64} className="size-14" /><h1 className="text-3xl font-extrabold tracking-tight">Learn beluga’s sounds</h1></div>
-    <p className="self-start rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-base font-semibold text-accent">Audio practice · Simulated examples</p>
+    <div className="flex items-center gap-3"><BelugaMark size={64} className="size-14" /><h1 className={cn(DISPLAY, "text-4xl sm:text-5xl")}>Learn <Name /><span className="normal-case">’s</span> sounds</h1></div>
+    <p className="self-start rounded-md bg-accent px-3 py-1 text-base font-bold text-on-accent">Audio practice · Simulated examples</p>
     <p className="text-xl text-muted">Practice while standing still. Listen through your earbuds. Left and right cues indicate the obstacle’s side. Faster repeats mean it is closer.</p>
     <p className="text-lg text-muted">No camera or microphone is used in practice. These examples do not detect anything around you.</p>
     <section className={PANEL}>
@@ -90,11 +91,11 @@ export default function Practice() {
         setSettings(updated); saveSettings(updated);
       }} />
     </section>
-    <p role="status" aria-atomic="true" className="rounded-2xl border border-sonar/30 bg-sonar/10 p-4 text-xl text-foreground">{message}</p>
+    <p role="status" aria-atomic="true" className="rounded-md border border-line-strong bg-surface p-4 text-xl text-foreground">{message}</p>
     <label className="flex min-h-16 items-center gap-4 text-lg"><input type="checkbox" checked={fast} onChange={(event) => setFast(event.target.checked)} className={CHECKBOX} />Practice faster repeats (closer obstacle)</label>
     <button type="button" onClick={() => { stop(); setMessage("Practice audio stopped."); }} className={SECONDARY}><IconPlayerStopFilled aria-hidden size={22} />Stop practice audio</button>
     {LESSONS.map((lesson) => <section key={lesson.sound} className={cn(PANEL, "flex flex-col gap-3")}>
-      <h2 className="text-2xl font-bold">{lesson.title}</h2><p className="text-lg text-muted">{lesson.explanation}</p>
+      <h2 className={cn(DISPLAY, "text-2xl sm:text-3xl")}>{lesson.title}</h2><p className="text-lg text-muted">{lesson.explanation}</p>
       <div className="grid grid-cols-3 gap-2">{SIDES.map((side) => { const Icon = SIDE_ICONS[side.word]; return <button key={side.word} type="button" disabled={!loaded} aria-label={`Play simulated ${lesson.title.toLowerCase()} on the ${side.name.toLowerCase()} side`} onClick={() => void play(lesson, side)} className={cn(SECONDARY, "gap-1.5 px-2 text-lg")}><Icon aria-hidden size={20} className="shrink-0 text-sonar" />{side.name}</button>; })}</div>
       {lesson.word && <button type="button" disabled={!loaded} onClick={() => void play(lesson, SIDES[1], true)} className={cn(SECONDARY, "border-dashed text-lg font-semibold")}>Hear spoken label: {lesson.word}</button>}
     </section>)}
