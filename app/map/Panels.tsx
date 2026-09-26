@@ -17,9 +17,9 @@ import { AnimatePresence, motion } from "motion/react";
 import { useRef } from "react";
 import { Button } from "@/components/brand/Button";
 import { CARD } from "@/components/brand/Card";
+import { DISPLAY, Eyebrow } from "@/components/brand/Display";
 import { useStill } from "@/components/brand/MotionPrefs";
 import { SonarRings } from "@/components/brand/SonarRings";
-import { BorderBeam } from "@/components/ui/border-beam";
 import type { CellRow, FeedRow, PerfSnapshot, QueueRow, UrgentRow } from "@/lib/shared/contracts";
 import type { Severity } from "@/lib/shared/enums";
 import { CATEGORY_RULES, RULES } from "@/lib/shared/reporting";
@@ -47,11 +47,11 @@ export function PanelHeading({
   return (
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="min-w-0">
-        <h2 id={id} className="flex items-center gap-2.5 text-xl font-bold sm:text-2xl">
+        <h2 id={id} className={cn(DISPLAY, "flex items-center gap-2.5 text-2xl sm:text-3xl")}>
           <Icon aria-hidden size={24} className={cn("shrink-0", tone === "sonar" ? "text-sonar" : "text-red-300")} />
           {title}
         </h2>
-        {note && <p className="mt-1 max-w-[65ch] text-base text-muted">{note}</p>}
+        {note && <p className="mt-2 max-w-[65ch] text-base text-muted">{note}</p>}
       </div>
       {children}
     </div>
@@ -61,7 +61,7 @@ export function PanelHeading({
 // What a panel shows before it has rows: loading, waiting for the database, or truly empty.
 export function Empty({ load, children }: { load: Load; children: React.ReactNode }) {
   return (
-    <div className="mt-4 flex items-center gap-4 rounded-2xl border border-dashed border-white/15 px-4 py-5 text-muted">
+    <div className="mt-4 flex items-center gap-4 border border-dashed border-line-strong px-4 py-5 text-muted">
       <span className="relative flex size-6 shrink-0 items-center justify-center">
         {load !== "ready" && <SonarRings className="-inset-2" count={2} duration={2.4} />}
         <span className={cn("size-2 rounded-full", load === "ready" ? "bg-muted" : "bg-sonar")} />
@@ -73,12 +73,12 @@ export function Empty({ load, children }: { load: Load; children: React.ReactNod
 
 export function SourceBadge({ source }: { source: "live" | "simulated" }) {
   return source === "live" ? (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/15 px-2.5 py-0.5 text-sm font-bold text-emerald-200 ring-1 ring-emerald-300/40">
-      <span aria-hidden className="size-1.5 rounded-full bg-emerald-300" />
+    <span className="inline-flex items-center gap-1.5 rounded-md border border-accent px-2 py-0.5 text-sm font-bold text-foreground">
+      <span aria-hidden className="size-1.5 rounded-full bg-accent" />
       Live
     </span>
   ) : (
-    <span className="inline-flex items-center rounded-full bg-accent px-2.5 py-0.5 text-sm font-bold text-background">
+    <span className="inline-flex items-center rounded-md border border-accent bg-accent px-2 py-0.5 text-sm font-bold text-on-accent">
       Simulated
     </span>
   );
@@ -89,8 +89,8 @@ export function SeverityChip({ severity }: { severity: Severity }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-2 rounded-full px-2.5 py-0.5 text-sm whitespace-nowrap ring-1",
-        severity === 4 ? "bg-red-500/15 text-red-100 ring-red-300/50" : "bg-white/5 text-foreground ring-line",
+        "inline-flex items-center gap-2 rounded-md px-2 py-0.5 text-sm whitespace-nowrap ring-1",
+        severity === 4 ? "bg-danger/40 text-red-100 ring-red-300/60" : "bg-surface text-foreground ring-line-strong",
       )}
     >
       <span aria-hidden className="flex items-end gap-0.5">
@@ -98,8 +98,8 @@ export function SeverityChip({ severity }: { severity: Severity }) {
           <span
             key={n}
             className={cn(
-              "w-1 rounded-full",
-              n <= severity ? (severity === 4 ? "bg-red-300" : "bg-sonar") : "bg-white/15",
+              "w-1",
+              n <= severity ? (severity === 4 ? "bg-red-300" : "bg-sonar") : "bg-line-strong",
             )}
             style={{ height: 4 + n * 2 }}
           />
@@ -136,13 +136,9 @@ export function CheckNow({
   return (
     <section
       aria-labelledby="check-now"
-      className={cn(CARD, "overflow-hidden border-red-300/35 bg-red-950/25 p-4 sm:p-6 contrast-more:border-red-300")}
+      className={cn(CARD, "border-2 border-danger p-4 pt-7 sm:p-6 sm:pt-9 contrast-more:border-red-300")}
     >
-      <BorderBeam size={140} duration={9} borderWidth={2} />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -top-20 -right-20 size-56 rounded-full bg-red-500/15 blur-3xl contrast-more:hidden"
-      />
+      <div aria-hidden className="absolute inset-x-0 top-0 h-2 bg-danger contrast-more:bg-red-300" />
       <PanelHeading
         id="check-now"
         icon={IconAlertOctagon}
@@ -161,8 +157,8 @@ export function CheckNow({
                 onClick={() => onSelect(r.cell)}
                 aria-pressed={selected === r.cell}
                 className={cn(
-                  "group flex min-h-11 w-full items-start gap-3 rounded-2xl border bg-abyss/70 p-3 text-left transition-colors duration-150 hover:border-red-200/70",
-                  selected === r.cell ? "border-red-200/80" : "border-red-300/25",
+                  "group flex min-h-11 w-full items-start gap-3 rounded-md border bg-abyss p-3 text-left transition-colors duration-300 ease-water hover:border-red-200",
+                  selected === r.cell ? "border-red-200 shadow-[inset_4px_0_0_var(--color-red-300)]" : "border-red-300/40",
                 )}
               >
                 <span className="flex min-w-0 flex-1 flex-col gap-1">
@@ -197,7 +193,7 @@ export function CheckNow({
 
 // Sticky cells need a solid fill so the rows scroll under them.
 const STICKY_BG = "bg-abyss";
-const SELECTED_BG = "bg-[color-mix(in_oklab,var(--sonar)_14%,var(--abyss))]";
+const SELECTED_BG = "bg-[color-mix(in_oklab,var(--accent)_10%,var(--abyss))]";
 
 export function QueueTable({
   rows,
@@ -213,7 +209,7 @@ export function QueueTable({
   className?: string;
 }) {
   const top = Math.max(1, ...rows.map((r) => r.score));
-  const th = "sticky top-0 z-10 border-b border-line bg-[#0d1726] px-3 py-3 text-sm font-semibold text-muted";
+  const th = "sticky top-0 z-10 border-b border-line-strong bg-abyss px-3 py-3 text-sm font-semibold text-muted";
   return (
     <section aria-labelledby="fix-first" className={cn(CARD, "p-4 sm:p-6", className)}>
       <PanelHeading
@@ -229,7 +225,7 @@ export function QueueTable({
           tabIndex={0}
           role="region"
           aria-label="Fix-first queue table, scrolls sideways"
-          className="mt-4 max-h-[36rem] overflow-auto lg:max-h-[44rem] overscroll-x-contain rounded-2xl border border-line bg-abyss"
+          className="mt-4 max-h-[36rem] overflow-auto overscroll-x-contain border border-line bg-abyss lg:max-h-[44rem]"
         >
           <table className="w-full min-w-[66rem] border-separate border-spacing-0 text-left text-base">
             <caption className="sr-only">
@@ -269,14 +265,14 @@ export function QueueTable({
             <tbody>
               {rows.map((r, i) => {
                 const on = selected === r.cell;
-                const td = cn("border-b border-line px-3 py-3 align-top", on && `${SELECTED_BG} border-sonar/40`);
+                const td = cn("border-b border-line px-3 py-3 align-top", on && `${SELECTED_BG} border-b-accent/50`);
                 return (
                   <tr key={`${r.cell}-${r.category}`}>
                     <td
                       className={cn(
                         td,
                         "sticky left-0 z-[5] text-center font-mono text-lg font-medium",
-                        on ? "text-sonar shadow-[inset_4px_0_0_var(--sonar)]" : cn(STICKY_BG, "text-foreground"),
+                        on ? "text-accent shadow-[inset_4px_0_0_var(--accent)]" : cn(STICKY_BG, "text-foreground"),
                       )}
                     >
                       {i + 1}
@@ -285,7 +281,7 @@ export function QueueTable({
                       scope="row"
                       className={cn(
                         td,
-                        "sticky left-14 z-[5] w-44 text-left font-normal shadow-[10px_0_12px_-10px_rgb(0_0_0/0.9)] sm:w-auto sm:min-w-72",
+                        "sticky left-14 z-[5] w-44 border-r border-r-line text-left font-normal sm:w-auto sm:min-w-72",
                         !on && STICKY_BG,
                       )}
                     >
@@ -294,12 +290,12 @@ export function QueueTable({
                           type="button"
                           onClick={() => onSelect(r.cell)}
                           aria-pressed={on}
-                          className="-mx-1 -my-1 flex min-h-11 items-start gap-1.5 rounded-lg px-1 py-1 text-left font-bold text-foreground decoration-sonar/60 decoration-2 underline-offset-4 hover:underline"
+                          className="-mx-1 -my-1 flex min-h-11 items-start gap-1.5 rounded-md px-1 py-1 text-left font-bold text-foreground decoration-accent decoration-2 underline-offset-4 hover:underline"
                         >
                           <IconMapPin
                             aria-hidden
                             size={20}
-                            className={cn("mt-0.5 shrink-0", on ? "text-sonar" : "text-muted")}
+                            className={cn("mt-0.5 shrink-0", on ? "text-accent" : "text-muted")}
                           />
                           <span>
                             <span className="sr-only">Show </span>
@@ -308,7 +304,7 @@ export function QueueTable({
                           </span>
                         </button>
                         {r.includesSimulated && (
-                          <span className="ml-6 inline-flex rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-background sm:ml-0">
+                          <span className="ml-6 inline-flex rounded-md bg-accent px-2 py-0.5 text-xs font-bold text-on-accent sm:ml-0">
                             Simulated
                           </span>
                         )}
@@ -330,9 +326,9 @@ export function QueueTable({
                         <span className="w-12 text-right font-mono text-lg font-medium tabular-nums">
                           {r.score.toFixed(1)}
                         </span>
-                        <span aria-hidden className="h-1.5 w-20 overflow-hidden rounded-full bg-white/10">
+                        <span aria-hidden className="h-2 w-20 overflow-hidden bg-line">
                           <span
-                            className="block h-full rounded-full bg-sonar"
+                            className="block h-full bg-accent"
                             style={{ width: `${Math.max(6, (r.score / top) * 100)}%` }}
                           />
                         </span>
@@ -368,8 +364,8 @@ export function CellCard({
   if (!cell) {
     return (
       <section ref={ref} tabIndex={-1} aria-labelledby="cell-card" className={cn(CARD, "p-4 outline-none sm:p-6")}>
-        <h2 id="cell-card" className="flex items-center gap-2.5 text-xl font-bold">
-          <IconPointer aria-hidden size={24} className="text-sonar" />
+        <h2 id="cell-card" className={cn(DISPLAY, "flex items-center gap-2.5 text-2xl sm:text-3xl")}>
+          <IconPointer aria-hidden size={24} className="shrink-0 text-sonar" />
           Pick a spot
         </h2>
         <p className="mt-2 text-muted">
@@ -387,13 +383,13 @@ export function CellCard({
       aria-labelledby="cell-card"
       className={cn(
         CARD,
-        "border-sonar/45 p-4 shadow-[0_0_60px_-18px_rgb(56_189_248/0.45)] outline-none sm:p-6 contrast-more:shadow-none",
+        "border-accent p-4 shadow-[inset_4px_0_0_var(--accent)] outline-none sm:p-6 sm:pl-7",
       )}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="font-mono text-sm font-medium tracking-[0.18em] text-sonar uppercase">Selected spot</p>
-          <h2 id="cell-card" className="mt-1 text-xl font-bold sm:text-2xl">
+          <Eyebrow>Selected spot</Eyebrow>
+          <h2 id="cell-card" className="mt-2 text-xl font-bold sm:text-2xl">
             {spots[0]?.placeLabel ?? `Cell ${cell}`}
           </h2>
         </div>
@@ -416,7 +412,7 @@ export function CellCard({
             ["Near-misses", row.nearMisses],
             ["Reports", row.reports],
           ].map(([label, value]) => (
-            <div key={label} className="flex flex-col-reverse rounded-2xl bg-abyss/70 px-3 py-2 ring-1 ring-line">
+            <div key={label} className="flex flex-col-reverse border border-line bg-abyss px-3 py-2">
               <dt className="text-sm text-muted">{label}</dt>
               <dd className="font-mono text-xl font-medium tabular-nums">{Number(value).toLocaleString("en-CA")}</dd>
             </div>
@@ -433,7 +429,7 @@ export function CellCard({
               <SeverityChip severity={s.worstSeverity} />
             </p>
             <p className="text-muted">{whyLine(s)}</p>
-            <p className="rounded-xl bg-abyss/70 px-3 py-2 font-mono text-sm text-foreground/90 ring-1 ring-line">
+            <p className="border border-line bg-abyss px-3 py-2 font-mono text-sm text-foreground/90">
               Score {s.score.toFixed(1)} = {s.parts.severityWeight} × {s.parts.reporters.toFixed(2)} ×{" "}
               {s.parts.nearMissPressure.toFixed(2)} × {s.parts.recency.toFixed(2)} × {s.parts.transit}
             </p>
@@ -463,7 +459,7 @@ export function MapLegend() {
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <span className="w-full sm:w-auto">Fix-first score</span>
         <span className="font-mono text-sm">low</span>
-        <span aria-hidden className="flex overflow-hidden rounded-full ring-1 ring-line">
+        <span aria-hidden className="flex ring-1 ring-line-strong">
           {SCORE_COLOURS.map((c) => (
             <span key={c} className="h-3 w-7" style={{ background: c }} />
           ))}
@@ -471,7 +467,7 @@ export function MapLegend() {
         <span className="font-mono text-sm">high</span>
       </div>
       <div className="flex items-center gap-2">
-        <span aria-hidden className="h-3 w-7 rounded-full" style={{ background: NO_REPORT_COLOUR }} />
+        <span aria-hidden className="h-3 w-7" style={{ background: NO_REPORT_COLOUR }} />
         <span>No reports yet (taller and lighter is busier)</span>
       </div>
       <div className="flex items-center gap-2">
@@ -525,15 +521,15 @@ export function Feed({
                     {isNew && <SonarRings className="-inset-3" count={2} duration={1.6} />}
                     <span
                       className={cn(
-                        "size-2.5 rounded-full ring-4 ring-background",
-                        isNew ? "bg-sonar" : "bg-slate-400/70",
+                        "size-2.5 rounded-full ring-4 ring-surface",
+                        isNew ? "bg-accent" : "bg-muted",
                       )}
                     />
                   </span>
                   <div
                     className={cn(
-                      "min-w-0 flex-1 rounded-2xl border p-3 transition-colors duration-1000",
-                      isNew ? "border-sonar/60 bg-sonar/10" : "border-line bg-abyss/50",
+                      "min-w-0 flex-1 border p-3 transition-colors duration-1000 ease-water",
+                      isNew ? "border-accent bg-accent/10" : "border-line bg-surface",
                     )}
                   >
                     <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -578,12 +574,9 @@ function TimingBar({ label, ms, max, strong }: { label: string; ms: number; max:
           {ms.toFixed(1)} <span className="text-base text-muted">ms</span>
         </span>
       </div>
-      <div aria-hidden className="mt-2 h-3 overflow-hidden rounded-full bg-white/5 ring-1 ring-line">
+      <div aria-hidden className="mt-2 h-3 overflow-hidden bg-abyss ring-1 ring-line">
         <motion.div
-          className={cn(
-            "h-full min-w-2 rounded-full",
-            strong ? "bg-sonar shadow-[0_0_16px_rgb(56_189_248/0.8)] contrast-more:shadow-none" : "bg-slate-400/60",
-          )}
+          className={cn("h-full min-w-2", strong ? "bg-accent" : "bg-line-strong")}
           initial={still ? false : { width: 0 }}
           animate={{ width }}
           transition={{ duration: 0.9, ease: EASE }}
@@ -623,20 +616,20 @@ export function PerfPanel({
           </div>
           <dl className="mt-6 grid grid-cols-2 gap-3">
             {perf.aggregateMs > 0 && (
-              <div className="col-span-2 flex flex-col-reverse rounded-2xl bg-sonar/10 px-4 py-3 ring-1 ring-sonar/30">
+              <div className="col-span-2 flex flex-col-reverse gap-1 border border-accent bg-accent/10 px-4 py-3">
                 <dt className="text-base text-muted">faster from the continuous aggregate</dt>
-                <dd className="font-mono text-4xl font-medium text-sonar tabular-nums">
+                <dd className="font-display text-5xl leading-none font-extrabold tracking-[-0.03em] text-sonar tabular-nums">
                   {(perf.rawMs / perf.aggregateMs).toFixed(1)}×
                 </dd>
               </div>
             )}
-            <div className="flex flex-col-reverse rounded-2xl bg-abyss/70 px-4 py-3 ring-1 ring-line">
+            <div className="flex flex-col-reverse border border-line bg-abyss px-4 py-3">
               <dt className="text-sm text-muted">Compressed chunks</dt>
               <dd className="font-mono text-xl font-medium tabular-nums">
                 {perf.compressionRatio === null ? "none yet" : `${perf.compressionRatio.toFixed(1)}× smaller`}
               </dd>
             </div>
-            <div className="flex flex-col-reverse rounded-2xl bg-abyss/70 px-4 py-3 ring-1 ring-line">
+            <div className="flex flex-col-reverse border border-line bg-abyss px-4 py-3">
               <dt className="text-sm text-muted">Rows</dt>
               <dd className="font-mono text-xl font-medium tabular-nums">{perf.totalRows.toLocaleString("en-CA")}</dd>
             </div>

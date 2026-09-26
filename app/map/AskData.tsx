@@ -112,7 +112,7 @@ export default function AskData({ className }: { className?: string }) {
           onChange={(e) => setQuestion(e.target.value)}
           maxLength={200}
           placeholder="Which station had the most near-misses this week?"
-          className="h-13 min-w-0 flex-1 rounded-2xl border border-line bg-abyss px-4 text-lg text-foreground transition-colors duration-150 placeholder:text-muted hover:border-white/30"
+          className="h-13 min-w-0 rounded-md border border-line-strong bg-abyss px-4 text-lg text-foreground transition-colors duration-300 ease-water placeholder:text-muted hover:border-foreground sm:flex-1"
         />
         <Button type="submit" disabled={busy || question.trim().length < 3} className="h-13">
           <IconSend aria-hidden size={20} />
@@ -126,7 +126,7 @@ export default function AskData({ className }: { className?: string }) {
             type="button"
             disabled={busy}
             onClick={() => void ask(s)}
-            className="inline-flex min-h-11 items-center gap-2 rounded-full border border-line bg-abyss/50 px-4 text-left text-base text-foreground/90 transition-colors duration-150 hover:border-sonar/60 hover:text-foreground disabled:opacity-50"
+            className="inline-flex min-h-11 items-center gap-2 rounded-md border border-line-strong bg-abyss/50 px-4 text-left text-base text-foreground/90 transition-colors duration-300 ease-water hover:border-accent hover:text-foreground disabled:opacity-50"
           >
             <IconSparkles aria-hidden size={18} className="shrink-0 text-sonar" />
             {s}
@@ -135,7 +135,7 @@ export default function AskData({ className }: { className?: string }) {
       </div>
       <div aria-live="polite" className="flex flex-col gap-2">
         {busy && (
-          <p className="flex items-center gap-4 rounded-2xl border border-line bg-abyss/50 px-4 py-4 text-muted">
+          <p className="flex items-center gap-4 border border-line bg-abyss/50 px-4 py-4 text-muted">
             <span className="relative flex size-6 shrink-0 items-center justify-center">
               <SonarRings className="-inset-2" count={2} duration={2.4} />
               <span className="size-2 rounded-full bg-sonar" />
@@ -144,13 +144,13 @@ export default function AskData({ className }: { className?: string }) {
           </p>
         )}
         {error && (
-          <p className="flex items-start gap-2 rounded-2xl border border-red-300/40 bg-red-950/30 px-4 py-3 text-red-100">
+          <p className="flex items-start gap-2 border border-red-300/50 bg-danger/20 px-4 py-3 text-red-100">
             <IconAlertTriangle aria-hidden size={22} className="mt-0.5 shrink-0 text-red-300" />
             {error}
           </p>
         )}
         {result && !busy && (
-          <div className="rounded-2xl border border-sonar/40 bg-sonar/[0.07] px-4 py-4 shadow-[inset_4px_0_0_var(--sonar)]">
+          <div className="border border-accent/60 bg-accent/5 py-4 pr-4 pl-6 shadow-[inset_4px_0_0_var(--accent)]">
             <p className="text-lg">{result.answer}</p>
             <p className="mt-2 text-base text-muted">
               {result.lookups.length > 0

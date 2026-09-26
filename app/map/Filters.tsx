@@ -45,7 +45,7 @@ function Select<T extends string>({
           id={id}
           value={value}
           onChange={(e) => onChange(e.target.value as T)}
-          className="h-13 w-full cursor-pointer appearance-none rounded-2xl border border-line bg-abyss pr-12 pl-4 text-base font-semibold text-foreground [color-scheme:dark] transition-colors duration-150 hover:border-white/30 sm:min-w-52"
+          className="h-13 w-full cursor-pointer appearance-none rounded-md border border-line-strong bg-abyss pr-12 pl-4 text-base font-semibold text-foreground [color-scheme:dark] transition-colors duration-300 ease-water hover:border-foreground sm:min-w-52"
         >
           {options.map((o) => (
             <option key={o.value} value={o.value}>
@@ -82,10 +82,7 @@ export function Filters({
     <div
       role="group"
       aria-label="Filters"
-      className={cn(
-        CARD,
-        "flex flex-wrap items-end gap-4 p-4 shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_24px_60px_-30px_rgb(0_0_0/0.8)] sm:p-5",
-      )}
+      className={cn(CARD, "flex flex-wrap items-end gap-4 p-4 sm:p-5")}
     >
       <Select
         id="filter-window"
@@ -111,20 +108,20 @@ export function Filters({
           <IconDatabase aria-hidden size={20} className="text-sonar" />
           Data
         </legend>
-        <div className="flex h-13 rounded-2xl bg-abyss p-1 ring-1 ring-line ring-inset">
+        <div className="flex h-13 rounded-md bg-abyss p-1 ring-1 ring-line-strong ring-inset">
           {(Object.keys(SOURCE_NAMES) as SourceFilter[]).map((s) => (
             <label
               key={s}
               className={cn(
-                "relative flex min-h-11 cursor-pointer items-center rounded-xl px-4 font-semibold transition-colors duration-150 has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent",
-                source === s ? "text-foreground" : "text-muted hover:text-foreground",
+                "relative flex min-h-11 cursor-pointer items-center rounded-md px-4 font-semibold transition-colors duration-300 ease-water has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-(--focus)",
+                source === s ? "text-on-accent" : "text-muted hover:text-foreground",
               )}
             >
               {source === s && (
                 <motion.span
                   layoutId="source-pill"
                   aria-hidden
-                  className="absolute inset-0 rounded-xl bg-sonar/15 ring-1 ring-sonar/70 contrast-more:bg-transparent contrast-more:ring-2 contrast-more:ring-foreground"
+                  className="absolute inset-0 rounded-md bg-accent"
                   transition={{ duration: 0.3, ease: EASE }}
                 />
               )}

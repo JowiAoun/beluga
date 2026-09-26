@@ -21,8 +21,12 @@ import { cn } from "@/lib/utils";
 import { Empty, PanelHeading } from "./Panels";
 import type { Load } from "./usePoll";
 
-const SONAR = "#38bdf8";
-const MUTED = "#94a3b8";
+// The accent, muted, line and line-strong colours from app/globals.css. Recharts draws SVG, so it
+// takes plain values.
+const SONAR = "#29b8ff";
+const MUTED = "#afbec8";
+const LINE = "#434c57";
+const LINE_STRONG = "#6b7784";
 const DRAW_MS = 900;
 
 const hours = (h: number) => `${h}:00 to ${h + 1}:00`;
@@ -31,7 +35,7 @@ function HourTooltip({ active, payload, label }: TooltipContentProps) {
   const value = payload?.[0]?.value;
   if (!active || typeof value !== "number") return null;
   return (
-    <div className="rounded-2xl border border-line bg-abyss/95 px-4 py-3 shadow-[0_16px_40px_-12px_rgb(0_0_0/0.8)]">
+    <div className="border border-line-strong bg-abyss px-4 py-3">
       <p className="font-mono text-sm text-muted">{hours(Number(label))}</p>
       <p className="mt-0.5 flex items-baseline gap-2">
         <span className="font-mono text-2xl font-medium text-sonar">{value.toLocaleString("en-CA")}</span>
@@ -85,10 +89,10 @@ export default function StationPanels({
                 onClick={() => onSelect(s.stationId)}
                 aria-pressed={on}
                 className={cn(
-                  "flex min-h-11 flex-col rounded-2xl border p-3 text-left transition-colors duration-150",
+                  "flex min-h-11 flex-col rounded-md border p-3 text-left transition-colors duration-300 ease-water",
                   on
-                    ? "border-sonar/70 bg-sonar/10 shadow-[0_0_32px_-12px_rgb(56_189_248/0.6)] contrast-more:shadow-none"
-                    : "border-line bg-abyss/50 hover:border-white/25",
+                    ? "border-accent bg-accent/10 shadow-[inset_4px_0_0_var(--accent)]"
+                    : "border-line-strong bg-abyss/50 hover:border-foreground",
                 )}
               >
                 <span className="font-bold">{s.name}</span>
@@ -103,18 +107,13 @@ export default function StationPanels({
                       margin={{ top: 2, right: 0, bottom: 0, left: 0 }}
                       accessibilityLayer={false}
                     >
-                      <defs>
-                        <linearGradient id={`spark-${s.stationId}`} x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0" stopColor={SONAR} stopOpacity={on ? 0.55 : 0.35} />
-                          <stop offset="1" stopColor={SONAR} stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
                       <Area
                         type="monotone"
                         dataKey="nearMisses"
                         stroke={on ? SONAR : MUTED}
                         strokeWidth={1.5}
-                        fill={`url(#spark-${s.stationId})`}
+                        fill={on ? SONAR : MUTED}
+                        fillOpacity={on ? 0.3 : 0.12}
                         dot={false}
                         isAnimationActive={animate}
                         animationDuration={DRAW_MS}
@@ -144,19 +143,13 @@ export default function StationPanels({
                 margin={{ top: 8, right: 4, bottom: 0, left: -8 }}
                 accessibilityLayer={false}
               >
-                <defs>
-                  <linearGradient id="hour-fill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0" stopColor={SONAR} stopOpacity={0.95} />
-                    <stop offset="1" stopColor={SONAR} stopOpacity={0.15} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.08)" />
+                <CartesianGrid vertical={false} stroke={LINE} />
                 <XAxis
                   dataKey="hour"
                   stroke={MUTED}
                   tick={{ fill: MUTED, fontSize: 14 }}
                   tickLine={false}
-                  axisLine={{ stroke: "rgba(255,255,255,0.15)" }}
+                  axisLine={{ stroke: LINE_STRONG }}
                   tickFormatter={(h: number) => `${h}h`}
                   interval="preserveStartEnd"
                   minTickGap={12}
@@ -168,12 +161,12 @@ export default function StationPanels({
                   axisLine={false}
                   width={48}
                 />
-                <Tooltip content={HourTooltip} cursor={{ fill: "rgba(56,189,248,0.08)" }} />
+                <Tooltip content={HourTooltip} cursor={{ fill: "rgba(41, 184, 255, 0.1)" }} />
                 <Bar
                   dataKey="nearMisses"
                   name="Near-misses"
-                  fill="url(#hour-fill)"
-                  radius={[6, 6, 0, 0]}
+                  fill={SONAR}
+                  radius={0}
                   isAnimationActive={animate}
                   animationDuration={DRAW_MS}
                   onAnimationEnd={() => setDrawn(true)}
@@ -182,12 +175,12 @@ export default function StationPanels({
             </ResponsiveContainer>
           </div>
           <details className="group mt-3">
-            <summary className="flex min-h-11 w-fit cursor-pointer items-center gap-2 rounded-xl px-2 font-semibold text-sonar hover:bg-white/5">
+            <summary className="flex min-h-11 w-fit cursor-pointer items-center gap-2 rounded-md px-2 font-semibold text-sonar transition-colors duration-300 ease-water hover:bg-foreground/10">
               <IconTable aria-hidden size={20} />
               Show the hours as a table
             </summary>
             <div
-              className="mt-2 max-h-80 overflow-y-auto rounded-2xl border border-line"
+              className="mt-2 max-h-80 overflow-y-auto border border-line"
               tabIndex={0}
               role="region"
               aria-label={`${name} hours table`}
@@ -196,12 +189,12 @@ export default function StationPanels({
                 <caption className="sr-only">{name}: near-misses by hour of day, Ottawa time</caption>
                 <thead>
                   <tr>
-                    <th scope="col" className="sticky top-0 bg-[#0d1726] px-3 py-2 text-sm font-semibold text-muted">
+                    <th scope="col" className="sticky top-0 bg-abyss px-3 py-2 text-sm font-semibold text-muted">
                       Hour
                     </th>
                     <th
                       scope="col"
-                      className="sticky top-0 bg-[#0d1726] px-3 py-2 text-right text-sm font-semibold text-muted"
+                      className="sticky top-0 bg-abyss px-3 py-2 text-right text-sm font-semibold text-muted"
                     >
                       Near-misses
                     </th>

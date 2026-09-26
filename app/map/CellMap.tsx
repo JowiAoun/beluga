@@ -39,13 +39,13 @@ const COLOUR: ExpressionSpecification = [
   "case",
   ["get", "scored"],
   ["get", "colour"],
-  ["interpolate", ["linear"], ["get", "busy"], 0, "#334155", 1, NO_REPORT_COLOUR],
+  ["interpolate", ["linear"], ["get", "busy"], 0, "#353a40", 1, NO_REPORT_COLOUR],
 ];
 
 // MapLibre's own CSS isn't in a layer, so these need `!` to win.
 const CHROME = cn(
-  "[&_.maplibregl-ctrl-group]:overflow-hidden [&_.maplibregl-ctrl-group]:rounded-2xl! [&_.maplibregl-ctrl-group]:border! [&_.maplibregl-ctrl-group]:border-line! [&_.maplibregl-ctrl-group]:bg-abyss/85! [&_.maplibregl-ctrl-group]:shadow-none!",
-  "[&_.maplibregl-ctrl-group_button]:size-11! [&_.maplibregl-ctrl-group_button+button]:border-line! [&_.maplibregl-ctrl-group_button:hover]:bg-white/10! [&_.maplibregl-ctrl-icon]:invert",
+  "[&_.maplibregl-ctrl-group]:overflow-hidden [&_.maplibregl-ctrl-group]:rounded-md! [&_.maplibregl-ctrl-group]:border! [&_.maplibregl-ctrl-group]:border-line-strong! [&_.maplibregl-ctrl-group]:bg-abyss/85! [&_.maplibregl-ctrl-group]:shadow-none!",
+  "[&_.maplibregl-ctrl-group_button]:size-11! [&_.maplibregl-ctrl-group_button+button]:border-line! [&_.maplibregl-ctrl-group_button:hover]:bg-surface! [&_.maplibregl-ctrl-icon]:invert",
   "[&_.maplibregl-ctrl-attrib]:bg-abyss/80! [&_.maplibregl-ctrl-attrib]:text-muted! [&_.maplibregl-ctrl-attrib_a]:text-muted!",
   "[&_.maplibregl-canvas:focus-visible]:outline-none!",
 );
@@ -90,9 +90,9 @@ function features(cells: CellRow[]) {
 function stationPin(name: string) {
   const pin = document.createElement("div");
   pin.className =
-    "flex items-center gap-1.5 rounded-full border border-sonar/60 bg-abyss/90 px-2.5 py-1 text-sm font-bold text-foreground shadow-[0_0_24px_rgb(56_189_248/0.35)]";
+    "flex items-center gap-1.5 rounded-md border border-accent bg-abyss px-2.5 py-1 text-sm font-bold text-foreground";
   const dot = document.createElement("span");
-  dot.className = "size-1.5 rounded-full bg-sonar";
+  dot.className = "size-1.5 rounded-full bg-accent";
   pin.append(dot, name);
   return pin;
 }
@@ -156,15 +156,15 @@ export default function CellMap({
       }
       map.on("load", () => {
         if (!map) return;
-        map.setPaintProperty("background", "background-color", "#060b14");
-        if (map.getLayer("water")) map.setPaintProperty("water", "fill-color", "#0b1d2e");
-        if (map.getLayer("waterway")) map.setPaintProperty("waterway", "line-color", "#0b1d2e");
+        map.setPaintProperty("background", "background-color", "#0f141a");
+        if (map.getLayer("water")) map.setPaintProperty("water", "fill-color", "#16283a");
+        if (map.getLayer("waterway")) map.setPaintProperty("waterway", "line-color", "#16283a");
         map.addSource("cells", { type: "geojson", data: features(cellsRef.current) });
         map.addLayer({
           id: "cell-floors",
           type: "line",
           source: "cells",
-          paint: { "line-color": "rgba(148, 163, 184, 0.3)", "line-width": 1 },
+          paint: { "line-color": "rgba(175, 190, 200, 0.25)", "line-width": 1 },
         });
         map.addLayer({
           id: "cells",
@@ -182,16 +182,16 @@ export default function CellMap({
           type: "line",
           source: "cells",
           filter: ["==", ["get", "cell"], ""],
-          paint: { "line-color": "#38bdf8", "line-width": 4, "line-blur": 1 },
+          paint: { "line-color": "#29b8ff", "line-width": 4 },
         });
-        // A white lid on the selected bar, so it stands out from any colour.
+        // A light lid on the selected bar, so it stands out from any colour.
         map.addLayer({
           id: "cell-selected",
           type: "fill-extrusion",
           source: "cells",
           filter: ["==", ["get", "cell"], ""],
           paint: {
-            "fill-extrusion-color": "#f2f5f7",
+            "fill-extrusion-color": "#eef3f6",
             "fill-extrusion-base": ["get", "height"],
             "fill-extrusion-height": ["+", ["get", "height"], 20],
             "fill-extrusion-opacity": 1,
@@ -250,7 +250,7 @@ export default function CellMap({
       root.render(
         <>
           <SonarRings className="inset-0" count={3} duration={2} />
-          <span className="absolute top-1/2 left-1/2 size-3 -translate-1/2 rounded-full bg-sonar shadow-[0_0_18px_6px_rgb(56_189_248/0.7)]" />
+          <span className="absolute top-1/2 left-1/2 size-3 -translate-1/2 rounded-full bg-accent" />
         </>,
       );
       const c = cellCentre(cell);
@@ -278,26 +278,22 @@ export default function CellMap({
   };
 
   return (
-    // The focus ring goes on this wrapper, since the vignette would dim one drawn on the canvas.
-    <div className="relative isolate h-[60svh] min-h-80 w-full overflow-hidden rounded-2xl bg-abyss ring-1 ring-line has-[.maplibregl-canvas:focus-visible]:outline-3 has-[.maplibregl-canvas:focus-visible]:outline-offset-3 has-[.maplibregl-canvas:focus-visible]:outline-accent lg:h-[36rem]">
+    // The focus ring goes on this wrapper, since it clips anything drawn around the canvas.
+    <div className="relative isolate h-[60svh] min-h-80 w-full overflow-hidden bg-abyss ring-1 ring-line has-[.maplibregl-canvas:focus-visible]:outline-3 has-[.maplibregl-canvas:focus-visible]:outline-offset-3 has-[.maplibregl-canvas:focus-visible]:outline-(--focus) lg:h-[36rem]">
       <div ref={containerRef} className={cn("size-full", CHROME)} />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 z-[1] rounded-[inherit] shadow-[inset_0_0_80px_24px_rgb(6_11_20/0.85)] contrast-more:hidden"
-      />
       <p id={hintId} className="sr-only">
         Arrow keys move the map, and plus and minus zoom. Every spot on the map is also in the fix-first queue table.
       </p>
       <Button
         variant="secondary"
         onClick={showAll}
-        className="absolute top-3 left-3 z-[2] min-h-11 bg-abyss/85 px-4 text-sm md:backdrop-blur-md"
+        className="absolute top-3 left-3 z-[2] min-h-11 bg-abyss/85 px-4 text-sm"
       >
         <IconFocusCentered aria-hidden size={20} />
         All stations
       </Button>
       {emptyNote && (
-        <p className="absolute inset-x-3 bottom-12 z-[2] mx-auto w-fit max-w-[calc(100%-1.5rem)] rounded-2xl border border-line bg-abyss/90 px-4 py-2 text-center text-base text-muted md:backdrop-blur-md">
+        <p className="absolute inset-x-3 bottom-12 z-[2] mx-auto w-fit max-w-[calc(100%-1.5rem)] rounded-md border border-line-strong bg-abyss px-4 py-2 text-center text-base text-muted">
           {emptyNote}
         </p>
       )}

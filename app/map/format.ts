@@ -49,10 +49,11 @@ export function whyLine(row: QueueRow): string {
   return parts.join(" × ");
 }
 
-// Viridis, low to high: one sequential scale that stays readable with colour blindness. It runs dark to
-// bright, so the worst spots glow on the dark map.
-export const SCORE_COLOURS = ["#440154", "#3b528b", "#21918c", "#5ec962", "#fde725"];
-export const NO_REPORT_COLOUR = "#9ca3af";
+// A blue ramp, low to high. It runs dark to light, so the worst spots stand out on the dark map.
+// Each step is at least 1.6:1 from the next, so people who can't tell colours apart still see the
+// order by lightness.
+export const SCORE_COLOURS = ["#1c3c6b", "#1e65aa", "#1494df", "#5cc5f7", "#c4f0ff"];
+export const NO_REPORT_COLOUR = "#6b7178";
 
 // Which of the five steps a score falls in, against the top score on screen.
 export function scoreStep(score: number, top: number): number {

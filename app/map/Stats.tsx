@@ -2,7 +2,7 @@
 
 import { IconAlertTriangle, IconMessageReport, IconStack2, IconUsers, type Icon } from "@tabler/icons-react";
 import { CARD } from "@/components/brand/Card";
-import { GlowingEffect } from "@/components/ui/glowing-effect";
+import { Eyebrow } from "@/components/brand/Display";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import type { CellRow, PerfSnapshot, QueueRow } from "@/lib/shared/contracts";
 import { cn } from "@/lib/utils";
@@ -81,29 +81,27 @@ export function Stats({
       </h2>
       <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {stats.map((s) => (
-          <li key={s.label} className="relative rounded-3xl">
-            <GlowingEffect />
-            <div
-              className={cn(
-                CARD,
-                "flex h-full flex-col gap-2 p-4 transition-colors duration-150 hover:border-white/20 sm:p-6",
+          // A container, so the big number shrinks with its card and 7 digits still fit. In a
+          // narrow card the icon goes, so the label stays on one line.
+          <li key={s.label} className={cn(CARD, "@container flex h-full flex-col gap-3 p-4 sm:p-6")}>
+            <Eyebrow icon={<s.icon aria-hidden size={20} className="shrink-0 @max-[10rem]:hidden" />}>
+              {s.label}
+            </Eyebrow>
+            <p className="text-[clamp(2rem,26cqi,3.75rem)] leading-none">
+              {s.value !== null ? (
+                <NumberTicker
+                  value={s.value}
+                  decimalPlaces={s.decimals ?? 0}
+                  suffix={s.suffix}
+                  className="font-display font-extrabold tracking-[-0.03em]"
+                />
+              ) : (
+                <span className="text-2xl font-semibold text-muted sm:text-3xl">
+                  {s.load === "ready" ? (s.none ?? "None") : s.load === "offline" ? "No data" : "Loading"}
+                </span>
               )}
-            >
-              <p className="flex items-center gap-2 text-base font-semibold text-muted">
-                <s.icon aria-hidden size={24} className="shrink-0 text-sonar" />
-                {s.label}
-              </p>
-              <p className="font-mono text-3xl leading-tight font-medium sm:text-5xl">
-                {s.value !== null ? (
-                  <NumberTicker value={s.value} decimalPlaces={s.decimals ?? 0} suffix={s.suffix} />
-                ) : (
-                  <span className="text-2xl text-muted sm:text-3xl">
-                    {s.load === "ready" ? (s.none ?? "None") : s.load === "offline" ? "No data" : "Loading"}
-                  </span>
-                )}
-              </p>
-              <p className="text-sm text-muted sm:text-base">{s.note}</p>
-            </div>
+            </p>
+            <p className="mt-auto text-sm text-muted sm:text-base">{s.note}</p>
           </li>
         ))}
       </ul>

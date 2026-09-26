@@ -4,6 +4,8 @@ import { IconBuildingCommunity, IconDatabaseOff, IconFlask, IconMap2 } from "@ta
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { CARD } from "@/components/brand/Card";
+import { Contours } from "@/components/brand/Contours";
+import { DISPLAY, Eyebrow, Name, Serif } from "@/components/brand/Display";
 import { SonarRings } from "@/components/brand/SonarRings";
 import type {
   CellsResponse,
@@ -26,8 +28,8 @@ import { loadOf, usePoll } from "./usePoll";
 
 function MapLoading() {
   return (
-    <div className="relative flex h-[60svh] min-h-80 w-full items-center justify-center overflow-hidden rounded-2xl bg-abyss ring-1 ring-line lg:h-[36rem]">
-      <div aria-hidden className="absolute inset-0 bg-grid mask-fade opacity-60" />
+    <div className="relative isolate flex h-[60svh] min-h-80 w-full items-center justify-center overflow-hidden bg-abyss ring-1 ring-line lg:h-[36rem]">
+      <Contours variant="b" />
       <span className="relative flex size-20 items-center justify-center">
         <SonarRings className="inset-0" count={3} />
         <span className="size-2.5 rounded-full bg-sonar" />
@@ -113,27 +115,21 @@ export default function Dashboard() {
 
   return (
     <main id="main" tabIndex={-1} className="relative isolate overflow-x-clip outline-none">
-      <div aria-hidden className="absolute inset-x-0 top-0 -z-10 h-[44rem] bg-abyss">
-        <div className="absolute inset-0 bg-dots mask-fade opacity-70" />
-        <div className="absolute top-10 left-1/2 h-80 w-[min(56rem,100%)] -translate-x-1/2 rounded-full bg-sonar/15 blur-3xl contrast-more:hidden" />
-        <div className="absolute inset-x-0 bottom-0 h-2/3 bg-linear-to-b from-transparent to-background" />
-      </div>
-
-      <div className="mx-auto flex max-w-[90rem] flex-col gap-6 px-4 pt-28 pb-24 sm:px-6 md:pt-32">
-        <header className="flex flex-col gap-6">
+      <div className="tone-dark relative isolate border-b border-line">
+        <Contours variant="a" />
+        <header className="relative mx-auto flex max-w-[90rem] flex-col gap-6 px-4 pt-28 pb-10 sm:px-6 md:pt-32 md:pb-12">
           <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
-            <div className="max-w-3xl">
-              <p className="flex items-center gap-2 font-mono text-sm font-medium tracking-[0.18em] text-sonar uppercase">
-                <IconBuildingCommunity aria-hidden size={20} />
-                For the city
-              </p>
-              <h1 className="mt-3 text-section text-balance">beluga for cities</h1>
-              <p className="mt-4 max-w-[65ch] text-lg text-muted">
+            <div className="max-w-4xl">
+              <Eyebrow icon={<IconBuildingCommunity aria-hidden size={20} />}>For the city</Eyebrow>
+              <h1 className={cn(DISPLAY, "mt-4 text-section")}>
+                <Name /> for <Serif>cities</Serif>
+              </h1>
+              <p className="mt-5 max-w-[65ch] text-lg text-muted">
                 What to fix first around Ottawa&apos;s O-Train stations, from anonymous reports by blind and low-vision
                 pedestrians.
               </p>
             </div>
-            <p className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-4 py-2 text-base font-semibold text-muted">
+            <p className="inline-flex items-center gap-2 rounded-md border border-line-strong bg-background px-4 py-2 text-base font-semibold text-muted">
               <span className="relative flex size-2.5" aria-hidden>
                 {!error && cellsLoad === "ready" && (
                   <span className="absolute inline-flex size-full rounded-full bg-sonar opacity-75 motion-safe:animate-ping" />
@@ -156,18 +152,15 @@ export default function Dashboard() {
           {simulated && (
             <p
               role="note"
-              className="flex items-start gap-3 rounded-2xl bg-accent px-4 py-3 text-lg font-semibold text-background"
+              className="flex items-start gap-3 rounded-md bg-accent px-4 py-3 text-lg font-semibold text-on-accent"
             >
               <IconFlask aria-hidden size={24} className="mt-0.5 shrink-0" />
               Demo data: simulated events for illustration, not real incidents.
             </p>
           )}
           {error && (
-            <div
-              role="alert"
-              className="flex items-start gap-4 rounded-3xl border border-sonar/30 bg-sonar/[0.06] p-4 sm:p-5"
-            >
-              <span className="relative mt-1 flex size-12 shrink-0 items-center justify-center rounded-full bg-abyss ring-1 ring-sonar/40">
+            <div role="alert" className="flex items-start gap-4 border border-line-strong bg-surface p-4 sm:p-5">
+              <span className="relative mt-1 flex size-12 shrink-0 items-center justify-center rounded-full border border-line-strong bg-abyss">
                 <SonarRings className="-inset-4" count={3} />
                 <IconDatabaseOff aria-hidden size={24} className="text-sonar" />
               </span>
@@ -183,7 +176,9 @@ export default function Dashboard() {
             </div>
           )}
         </header>
+      </div>
 
+      <div className="mx-auto flex max-w-[90rem] flex-col gap-6 px-4 pt-8 pb-24 sm:px-6 md:pt-10">
         <Stats
           cells={cells.data?.rows ?? null}
           queue={queue.data?.rows ?? null}
