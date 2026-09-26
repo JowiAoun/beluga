@@ -1,4 +1,4 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "ignoreCommand": "files=$(git diff --name-only HEAD^ HEAD) || exit 1; [ -n \"$files\" ] || exit 1; ! printf '%s\\n' \"$files\" | grep -qvE '^(docs/|LICENSE$)|\\.md$'"
+  "ignoreCommand": "[ -n \"$VERCEL_GIT_PREVIOUS_SHA\" ] || exit 1; files=$(git diff --name-only \"$VERCEL_GIT_PREVIOUS_SHA\" HEAD) || exit 1; [ -n \"$files\" ] || exit 1; ! printf '%s\\n' \"$files\" | grep -qvE '^(docs/|LICENSE$)|\\.md$'"
 }
