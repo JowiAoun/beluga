@@ -4,11 +4,27 @@
 // stays beside the steps on wide screens and changes with the step in the middle of the screen.
 // On phones each step shows its own picture above its text.
 
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { CARD } from "@/components/brand/Card";
+import { usePaused } from "@/components/brand/MotionPrefs";
 import { Reveal, RevealHeading } from "@/components/brand/Reveal";
+import { SceneSlot } from "@/components/three/SceneSlot";
 import { cn } from "@/lib/utils";
-import { SCENES } from "./StepScenes";
+import { DepthScene, SCENES } from "./StepScenes";
+
+const PhoneScene = dynamic(() => import("@/components/three/PhoneScene"), { ssr: false });
+
+// Step 1 in 3D: the phone and the corridor from its camera. The drawing shows first, and stays
+// with reduced motion or no WebGL2. The scene only draws while its step is showing.
+function DepthStep({ id, active }: { id: string; active: boolean }) {
+  const paused = usePaused();
+  return (
+    <SceneSlot poster={<DepthScene id={id} />} className="size-full">
+      {(controls) => <PhoneScene still={paused} active={active} {...controls} />}
+    </SceneSlot>
+  );
+}
 
 const STEPS = [
   {
@@ -71,7 +87,7 @@ export function HowItWorks() {
                   className="flex flex-col gap-6 lg:min-h-[70vh] lg:justify-center"
                 >
                   <div className={cn(CARD, "aspect-square w-full max-w-sm p-4 lg:hidden")}>
-                    <Scene id={`step-${i}-inline`} />
+                    {i === 0 ? <DepthStep id="step-0-inline" active /> : <Scene id={`step-${i}-inline`} />}
                   </div>
                   <div
                     className={cn(
@@ -108,7 +124,7 @@ export function HowItWorks() {
                     active === i ? "scale-100 opacity-100" : "pointer-events-none scale-95 opacity-0",
                   )}
                 >
-                  <Scene id={`step-${i}-sticky`} />
+                  {i === 0 ? <DepthStep id="step-0-sticky" active={active === 0} /> : <Scene id={`step-${i}-sticky`} />}
                 </div>
               ))}
             </div>
