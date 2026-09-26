@@ -52,7 +52,9 @@ export function Footer() {
               <Eyebrow className="mb-3">Pages</Eyebrow>
               {PAGES.map((page) => (
                 <Link key={page.href} href={page.href} className={LINK}>
-                  <Roll>{page.name === "Walk with beluga" ? <>Walk with <Name /></> : page.name}</Roll>
+                  <Roll>
+                    <span>{page.name === "Walk with beluga" ? <>Walk with <Name /></> : page.name}</span>
+                  </Roll>
                 </Link>
               ))}
               <a href={SOURCE} className={LINK}>

@@ -26,9 +26,9 @@ function MenuLabel({ name }: { name: string }) {
   const words = name.split(" ");
   const last = words.pop();
   return (
-    <>
+    <span>
       {words.join(" ")} <Serif>{last === "beluga" ? <Name /> : last}</Serif>
-    </>
+    </span>
   );
 }
 

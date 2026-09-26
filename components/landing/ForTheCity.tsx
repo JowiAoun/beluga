@@ -3,10 +3,9 @@
 import { IconArrowRight } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import { ButtonLink } from "@/components/brand/Button";
-import { CARD } from "@/components/brand/Card";
+import { Serif } from "@/components/brand/Display";
 import { Reveal } from "@/components/brand/Reveal";
 import { Section } from "@/components/brand/Section";
-import { GlowingEffect } from "@/components/ui/glowing-effect";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import type { PerfResponse } from "@/lib/shared/contracts";
 import { cn } from "@/lib/utils";
@@ -49,35 +48,39 @@ export function ForTheCity() {
     <Section
       id="city"
       eyebrow="For the city"
-      title={["A fix-first list, ranked in SQL"]}
+      title={["A fix-first list,", <Serif key="s">ranked in SQL</Serif>]}
       intro="Anonymous reports land in Tiger Data. Continuous aggregates keep the ranking fast, so the city sees which spots to fix first around the O-Train stations."
+      tone="ink"
     >
-      <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-16 grid border-t border-line sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s, i) => (
-          <Reveal key={s.label} delay={0.08 * i} className={cn(CARD, "relative flex flex-col gap-2 p-6")}>
-            <GlowingEffect />
+          <Reveal
+            key={s.label}
+            delay={0.08 * i}
+            className="flex flex-col gap-3 border-b border-line py-8 sm:px-6 sm:[&:nth-child(odd)]:pl-0 lg:border-b-0 lg:[&:not(:first-child)]:border-l lg:[&:nth-child(odd)]:pl-6 lg:first:pl-0"
+          >
             <NumberTicker
               value={s.value}
               suffix={s.suffix}
               decimalPlaces={Number.isInteger(s.value) ? 0 : 1}
-              className="text-4xl font-medium text-foreground sm:text-5xl"
+              className="font-display text-5xl font-extrabold tracking-[-0.04em] sm:text-6xl"
             />
-            <span className="text-muted">{s.label}</span>
+            <span className="max-w-[26ch] text-lg text-muted">{s.label}</span>
           </Reveal>
         ))}
       </div>
 
-      <Reveal delay={0.2} className={cn(CARD, "mt-4 flex flex-col gap-4 p-6 sm:p-8")}>
-        <p className="font-semibold">The same 7-day question</p>
+      <Reveal delay={0.2} className="mt-10 flex flex-col gap-5 border border-line p-6 sm:p-8">
+        <p className="font-display text-xl font-extrabold tracking-[-0.01em] uppercase">The same 7-day question</p>
         {[
-          { name: "Raw table", ms: n.rawMs, colour: "bg-muted/60" },
-          { name: "Continuous aggregate", ms: n.aggregateMs, colour: "bg-sonar" },
+          { name: "Raw table", ms: n.rawMs, colour: "bg-line-strong" },
+          { name: "Continuous aggregate", ms: n.aggregateMs, colour: "bg-accent" },
         ].map((bar) => (
           <div key={bar.name} className="grid grid-cols-[9rem_1fr] items-center gap-4 sm:grid-cols-[12rem_1fr]">
             <span className="text-muted">{bar.name}</span>
             <div className="flex items-center gap-3">
               <div
-                className={cn("h-3 rounded-full", bar.colour)}
+                className={cn("h-4", bar.colour)}
                 style={{ width: `${Math.max(4, (bar.ms / Math.max(n.rawMs, n.aggregateMs)) * 80)}%` }}
               />
               <span className="font-mono whitespace-nowrap tabular-nums">{bar.ms} ms</span>
@@ -87,19 +90,17 @@ export function ForTheCity() {
       </Reveal>
 
       <div className="mt-8 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className="inline-flex flex-wrap items-center gap-x-2 rounded-2xl border border-accent/40 bg-accent/10 px-4 py-1.5 text-sm font-semibold text-accent">
-          Simulated data
-          <span className="font-normal text-foreground/90">
+        <p className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="rounded-md bg-accent px-3 py-1 font-display text-sm font-bold tracking-[0.04em] text-on-accent uppercase">
+            Simulated data
+          </span>
+          <span className="text-muted">
             {live ? "Live from the database" : "Measured locally, the live numbers didn't load"}
           </span>
         </p>
         <ButtonLink href="/map" size="lg">
           Open the city dashboard
-          <IconArrowRight
-            aria-hidden
-            size={22}
-            className="transition-transform duration-150 group-hover:translate-x-1"
-          />
+          <IconArrowRight aria-hidden size={22} />
         </ButtonLink>
       </div>
     </Section>

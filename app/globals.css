@@ -39,7 +39,7 @@
   --font-display: var(--font-mona), "Arial Black", system-ui, sans-serif;
   --font-serif: var(--font-instrument), Georgia, "Times New Roman", serif;
 
-  --text-hero: clamp(2.75rem, 11vw, 9rem);
+  --text-hero: clamp(2.75rem, 7.4vw, 7rem);
   --text-hero--line-height: 0.88;
   --text-hero--letter-spacing: -0.035em;
   --text-hero--font-weight: 800;

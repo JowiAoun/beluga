@@ -14,6 +14,7 @@ import {
 } from "@tabler/icons-react";
 import { useRef } from "react";
 import { CARD } from "@/components/brand/Card";
+import { Serif } from "@/components/brand/Display";
 import { Reveal } from "@/components/brand/Reveal";
 import { Section } from "@/components/brand/Section";
 import { AnimatedBeam } from "@/components/ui/animated-beam";
@@ -64,13 +65,13 @@ function Node({
       <div
         ref={nodeRef}
         className={cn(
-          "flex size-12 items-center justify-center rounded-2xl border bg-abyss sm:size-16",
-          lit ? "border-accent text-accent" : "border-sonar/50 text-sonar",
+          "flex size-12 items-center justify-center border sm:size-16",
+          lit ? "border-accent bg-accent text-on-accent" : "border-line-strong bg-background text-sonar",
         )}
       >
         <Icon aria-hidden className="size-6 sm:size-8" />
       </div>
-      <span className="text-sm font-semibold sm:text-base">{name}</span>
+      <span className="font-display text-xs font-bold tracking-[0.04em] uppercase sm:text-sm">{name}</span>
     </li>
   );
 }
@@ -90,11 +91,13 @@ export function TwoSpeeds() {
     <Section
       id="speeds"
       eyebrow="Two speeds"
-      title={["Fast where it keeps you safe"]}
+      title={["Fast where it", <Serif key="s">keeps you safe</Serif>]}
+      tone="dark"
+      contours="a"
       intro="Warnings never wait for the network. The slower parts, Ask and reports, only run when you ask for them."
     >
       <Reveal delay={0.1} className={cn(CARD, "mt-12 overflow-hidden p-5 sm:p-10")}>
-        <p className="mx-auto w-fit rounded-full border border-sonar/40 bg-sonar/10 px-4 py-1.5 text-center font-mono text-sm text-sonar">
+        <p className="mx-auto w-fit rounded-md bg-accent px-4 py-1.5 text-center font-display text-sm font-bold tracking-[0.04em] text-on-accent uppercase">
           On the phone, no network, 10 times a second
         </p>
         <div ref={container} className="relative mt-10">
@@ -111,10 +114,10 @@ export function TwoSpeeds() {
               toRef={refs[i + 1]}
               duration={2.4}
               delay={i * 0.3}
-              pathColor="#38bdf8"
-              pathOpacity={0.25}
-              gradientStartColor="#38bdf8"
-              gradientStopColor="#fde047"
+              pathColor="#6b7784"
+              pathOpacity={0.6}
+              gradientStartColor="#29b8ff"
+              gradientStopColor="#eef3f6"
             />
           ))}
         </div>
@@ -123,12 +126,12 @@ export function TwoSpeeds() {
       <div className="mt-6 grid gap-6 md:grid-cols-2">
         {SLOW.map((slow, i) => (
           <Reveal key={slow.title} delay={0.15 + i * 0.1} className={cn(CARD, "p-6 sm:p-8")}>
-            <h3 className="text-xl font-bold sm:text-2xl">{slow.title}</h3>
-            <p className="mt-2 text-muted">{slow.text}</p>
+            <h3 className="font-display text-2xl leading-none font-extrabold tracking-[-0.02em] uppercase sm:text-3xl">{slow.title}</h3>
+            <p className="mt-4 text-lg text-muted">{slow.text}</p>
             <ol className="mt-6 flex flex-col gap-3">
               {slow.path.map((step, j) => (
                 <li key={step.name} className="flex items-center gap-3">
-                  <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-line bg-abyss text-sonar">
+                  <span className="flex size-10 shrink-0 items-center justify-center border border-line-strong text-sonar">
                     <step.Icon aria-hidden size={22} />
                   </span>
                   <span className="font-semibold">{step.name}</span>

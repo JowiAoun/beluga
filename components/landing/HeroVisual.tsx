@@ -15,8 +15,7 @@ export function HeroVisual({ poster }: { poster: React.ReactNode }) {
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
   const paused = usePaused();
   return (
-    <div ref={ref} className="relative mx-auto aspect-[5/4] w-full max-w-80 sm:max-w-md lg:max-w-none">
-      <div aria-hidden className="absolute inset-[18%] rounded-full bg-sonar/25 blur-3xl contrast-more:hidden" />
+    <div ref={ref} className="relative mx-auto aspect-[5/4] w-full max-w-sm sm:max-w-lg lg:max-w-none">
       <SceneSlot poster={poster} className="absolute -inset-[10%]">
         {(controls) => <BelugaScene still={paused} progress={scrollYProgress} {...controls} />}
       </SceneSlot>

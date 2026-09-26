@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/brand/Button";
-import { CARD } from "@/components/brand/Card";
+import { DISPLAY, Eyebrow, Serif } from "@/components/brand/Display";
 import { usePaused } from "@/components/brand/MotionPrefs";
 import { Reveal, RevealHeading } from "@/components/brand/Reveal";
 import { SonarRings } from "@/components/brand/SonarRings";
@@ -68,7 +68,7 @@ function EarbudsPoster({ side }: { side: Side | null }) {
           key={pad}
           aria-hidden
           className={cn(
-            "absolute size-[9%] -translate-1/2 rounded-full bg-sonar/80 shadow-[0_0_40px_12px_rgb(56_189_248/0.6)] transition-opacity duration-300",
+            "absolute size-[7%] -translate-1/2 rounded-full bg-accent ring-8 ring-accent/30 transition-opacity duration-300",
             side === pad || side === "ahead" ? "opacity-100" : "opacity-0",
           )}
           style={{ left: PAD_SPOTS[pad][0], top: PAD_SPOTS[pad][1] }}
@@ -171,62 +171,68 @@ export function HearWarning() {
       ref={section}
       id="hear"
       aria-labelledby="hear-title"
-      className="relative overflow-hidden px-4 py-24 sm:px-6 md:py-32"
+      className="tone-paper relative isolate overflow-hidden px-4 pb-24 sm:px-6 md:pb-36"
     >
-      <div aria-hidden className="absolute inset-0 -z-10 bg-grid mask-fade opacity-60" />
-      <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2">
-        <div>
-          <p className="font-mono text-sm font-medium tracking-[0.18em] text-sonar uppercase">Hear it</p>
-          <RevealHeading id="hear-title" lines={["Hear a warning"]} className="mt-3 text-section" />
-          <Reveal delay={0.1}>
-            <p className="mt-5 max-w-[60ch] text-lg text-muted">
-              Put your headphones on. beluga plays three warnings, one from each side, the way the bone-conduction
-              earbuds would. Each sound repeats faster as the obstacle gets closer, then says what it is.
-            </p>
-          </Reveal>
+      <div className="relative mx-auto max-w-7xl border-t border-line pt-20 md:pt-28">
+        <div className="grid items-center gap-12 lg:grid-cols-2">
+          <div>
+            <Eyebrow>Hear it</Eyebrow>
+            <RevealHeading id="hear-title" lines={["Hear a", <Serif key="w">warning</Serif>]} className="mt-5 text-section" />
+            <Reveal delay={0.1}>
+              <p className="mt-6 max-w-[60ch] text-lg text-muted">
+                Put your headphones on. beluga plays three warnings, one from each side, the way the bone-conduction
+                earbuds would. Each sound repeats faster as the obstacle gets closer, then says what it is.
+              </p>
+            </Reveal>
 
-          <Reveal delay={0.2} className="mt-8 flex flex-wrap items-center gap-3">
-            {/* One button for both, so keyboard focus stays on it. */}
-            <Button
-              size="lg"
-              variant={playing ? "secondary" : "primary"}
-              onClick={playing ? stop : play}
-              className="w-full text-base sm:w-auto sm:text-lg"
-            >
-              {playing ? <IconPlayerStopFilled aria-hidden size={22} /> : <IconHeadphones aria-hidden size={24} />}
-              {playing ? "Stop" : "Hear a warning (headphones on)"}
-            </Button>
-          </Reveal>
-
-          <p aria-live="polite" className="mt-4 min-h-7 font-mono text-lg text-foreground">
-            {caption}
-          </p>
-
-          <ol className="mt-6 grid gap-3 sm:grid-cols-3">
-            {WARNINGS.map((w, i) => (
-              <li
-                key={w.side}
-                className={cn(
-                  CARD,
-                  "flex flex-col gap-2 overflow-hidden p-4 transition-[border-color,background-color] duration-300",
-                  active === i && "border-sonar/70 bg-sonar/10",
-                )}
+            <Reveal delay={0.2} className="mt-8 flex flex-wrap items-center gap-3">
+              {/* One button for both, so keyboard focus stays on it. */}
+              <Button
+                size="lg"
+                variant={playing ? "secondary" : "primary"}
+                onClick={playing ? stop : play}
+                className="w-full sm:w-auto"
               >
-                {active === i && !paused && <SonarRings className="-top-8 -left-8 size-24" count={2} duration={1.2} />}
-                <w.Icon aria-hidden className={active === i ? "text-sonar" : "text-muted"} size={24} />
-                <span className="font-semibold">{w.caption.split(":")[0]}</span>
-                <span className="text-muted">{w.caption.split(": ")[1]}</span>
-              </li>
-            ))}
-          </ol>
-        </div>
+                {playing ? <IconPlayerStopFilled aria-hidden size={22} /> : <IconHeadphones aria-hidden size={24} />}
+                {playing ? "Stop" : "Hear a warning (headphones on)"}
+              </Button>
+            </Reveal>
 
-        <div className="relative">
-          <div aria-hidden className="absolute inset-[12%] rounded-full bg-sonar/10 blur-3xl contrast-more:hidden" />
+            <p aria-live="polite" className="mt-4 min-h-7 font-mono text-lg">
+              {caption}
+            </p>
+          </div>
+
           <SceneSlot poster={<EarbudsPoster side={side} />} className="mx-auto aspect-square w-full max-w-xl">
             {(controls) => <EarbudsScene side={side} progress={scrollYProgress} still={paused} {...controls} />}
           </SceneSlot>
         </div>
+
+        {/* The side that is playing fills blue, and its word says which side it is. */}
+        <ol className="mt-14 grid border-t border-line sm:grid-cols-3">
+          {WARNINGS.map((w, i) => (
+            <li
+              key={w.side}
+              className={cn(
+                "relative flex flex-col gap-3 overflow-hidden border-b border-line px-5 py-8 transition-colors duration-300 ease-water sm:border-b-0 sm:px-6 sm:[&:not(:first-child)]:border-l",
+                active === i && "bg-accent text-on-accent",
+              )}
+            >
+              {active === i && !paused && (
+                <SonarRings className="-top-10 -right-10 size-32" count={2} duration={1.2} colour="var(--on-accent)" />
+              )}
+              <span className="flex items-start justify-between gap-3">
+                <span className={cn(DISPLAY, "text-[clamp(3rem,6.5vw,6rem)] leading-[0.85] tracking-[-0.04em]")}>
+                  {w.caption.split(":")[0]}
+                </span>
+                <w.Icon aria-hidden size={40} className={active === i ? "text-on-accent" : "text-sonar"} />
+              </span>
+              <span className={cn("text-lg", active === i ? "text-on-accent" : "text-muted")}>
+                {w.caption.split(": ")[1]}
+              </span>
+            </li>
+          ))}
+        </ol>
       </div>
     </section>
   );
