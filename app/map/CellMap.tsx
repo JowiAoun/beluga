@@ -1,34 +1,74 @@
 "use client";
 
-// The dashboard map: MapLibre with OpenFreeMap's no-key style, and each grid cell drawn as a square
-// from its geohash bounds, so the squares match the queue exactly. Loaded only in the browser.
+// The dashboard map: MapLibre with OpenFreeMap's dark style (no key). Each grid cell is a bar raised
+// from its geohash square, so the bars match the queue exactly. Loaded only in the browser.
 
 import "maplibre-gl/dist/maplibre-gl.css";
-import type { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
-import { useEffect, useRef } from "react";
+import { IconFocusCentered } from "@tabler/icons-react";
+import type { ExpressionSpecification, GeoJSONSource, LngLatBoundsLike, Map as MapLibreMap } from "maplibre-gl";
+import { useEffect, useId, useRef, useState } from "react";
+import { createRoot } from "react-dom/client";
+import { Button } from "@/components/brand/Button";
+import { useStill } from "@/components/brand/MotionPrefs";
+import { SonarRings } from "@/components/brand/SonarRings";
 import type { CellRow } from "@/lib/shared/contracts";
-import { cellBounds } from "@/lib/shared/geo";
+import { cellBounds, cellCentre } from "@/lib/shared/geo";
 import { STATIONS } from "@/lib/shared/stations";
+import { cn } from "@/lib/utils";
 import { NO_REPORT_COLOUR, SCORE_COLOURS, scoreStep } from "./format";
 
-const STYLE = "https://tiles.openfreemap.org/styles/liberty";
-const CENTRE: [number, number] = [-75.688, 45.4205];
+type MapLibre = typeof import("maplibre-gl");
 
-function features(cells: CellRow[], flashing: ReadonlySet<string>) {
+const STYLE = "https://tiles.openfreemap.org/styles/dark";
+const PITCH = 50;
+const BEARING = -20;
+const LONS = STATIONS.map((s) => s.lon);
+const LATS = STATIONS.map((s) => s.lat);
+// Opens on all five stations, Hurdman included, with room for the cells around them.
+const STATION_BOUNDS: LngLatBoundsLike = [
+  [Math.min(...LONS) - 0.0025, Math.min(...LATS) - 0.0015],
+  [Math.max(...LONS) + 0.0025, Math.max(...LATS) + 0.0015],
+];
+// Bar heights in metres. A cell with reports always stands taller than one without.
+const SCORED_FLOOR = 40;
+const SCORED_RANGE = 320;
+const QUIET_FLOOR = 3;
+const QUIET_RANGE = 27;
+// Cells with no reports can't fade per cell (fill-extrusion-opacity is one value), so busier ones get lighter.
+const COLOUR: ExpressionSpecification = [
+  "case",
+  ["get", "scored"],
+  ["get", "colour"],
+  ["interpolate", ["linear"], ["get", "busy"], 0, "#334155", 1, NO_REPORT_COLOUR],
+];
+
+// MapLibre's own CSS isn't in a layer, so these need `!` to win.
+const CHROME = cn(
+  "[&_.maplibregl-ctrl-group]:overflow-hidden [&_.maplibregl-ctrl-group]:rounded-2xl! [&_.maplibregl-ctrl-group]:border! [&_.maplibregl-ctrl-group]:border-line! [&_.maplibregl-ctrl-group]:bg-abyss/85! [&_.maplibregl-ctrl-group]:shadow-none!",
+  "[&_.maplibregl-ctrl-group_button]:size-11! [&_.maplibregl-ctrl-group_button+button]:border-line! [&_.maplibregl-ctrl-group_button:hover]:bg-white/10! [&_.maplibregl-ctrl-icon]:invert",
+  "[&_.maplibregl-ctrl-attrib]:bg-abyss/80! [&_.maplibregl-ctrl-attrib]:text-muted! [&_.maplibregl-ctrl-attrib_a]:text-muted!",
+  "[&_.maplibregl-canvas:focus-visible]:outline-offset-[-4px]!",
+);
+
+function features(cells: CellRow[]) {
   const top = Math.max(0, ...cells.map((c) => c.score ?? 0));
   const busiest = Math.max(1, ...cells.map((c) => c.events));
   return {
     type: "FeatureCollection" as const,
     features: cells.map((c) => {
       const b = cellBounds(c.cell);
+      const busy = c.events / busiest;
       return {
         type: "Feature" as const,
         properties: {
           cell: c.cell,
+          scored: c.score !== null,
           colour: c.score === null ? NO_REPORT_COLOUR : SCORE_COLOURS[scoreStep(c.score, top)],
-          // Cells with no reports fade by how busy they are.
-          opacity: c.score === null ? 0.15 + 0.35 * (c.events / busiest) : 0.7,
-          flash: flashing.has(c.cell) ? 1 : 0,
+          busy,
+          height:
+            c.score === null
+              ? QUIET_FLOOR + QUIET_RANGE * busy
+              : SCORED_FLOOR + SCORED_RANGE * (top > 0 ? c.score / top : 0),
         },
         geometry: {
           type: "Polygon" as const,
@@ -47,82 +87,115 @@ function features(cells: CellRow[], flashing: ReadonlySet<string>) {
   };
 }
 
+function stationPin(name: string) {
+  const pin = document.createElement("div");
+  pin.className =
+    "flex items-center gap-1.5 rounded-full border border-sonar/60 bg-abyss/90 px-2.5 py-1 text-sm font-bold text-foreground shadow-[0_0_24px_rgb(56_189_248/0.35)]";
+  const dot = document.createElement("span");
+  dot.className = "size-1.5 rounded-full bg-sonar";
+  pin.append(dot, name);
+  return pin;
+}
+
 export default function CellMap({
   cells,
   selected,
   flashing,
   onSelect,
+  emptyNote,
 }: {
   cells: CellRow[];
   selected: string | null;
   flashing: ReadonlySet<string>;
   onSelect: (cell: string) => void;
+  // Shown over the map while there are no cells to draw.
+  emptyNote: string | null;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
-  const readyRef = useRef(false);
+  const libRef = useRef<MapLibre | null>(null);
   const onSelectRef = useRef(onSelect);
-  const dataRef = useRef({ cells, flashing });
+  const cellsRef = useRef(cells);
+  const still = useStill();
+  const stillRef = useRef(still);
+  const [ready, setReady] = useState(false);
+  const hintId = useId();
 
   useEffect(() => {
     onSelectRef.current = onSelect;
-    dataRef.current = { cells, flashing };
-    const source = mapRef.current?.getSource("cells") as GeoJSONSource | undefined;
-    if (readyRef.current && source) source.setData(features(cells, flashing));
-  }, [cells, flashing, onSelect]);
+    cellsRef.current = cells;
+    stillRef.current = still;
+  });
 
   useEffect(() => {
     let cancelled = false;
     let map: MapLibreMap | null = null;
-    void import("maplibre-gl").then(({ Map, Marker, NavigationControl, setWorkerUrl }) => {
+    void import("maplibre-gl").then((lib) => {
       if (cancelled || !containerRef.current) return;
+      libRef.current = lib;
       // A bundle moves MapLibre away from its worker; scripts/assets.ts serves a copy here.
-      setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
-      // Opens on all five stations, Hurdman included.
-      const lons = STATIONS.map((st) => st.lon);
-      const lats = STATIONS.map((st) => st.lat);
-      map = new Map({
+      lib.setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
+      map = new lib.Map({
         container: containerRef.current,
         style: STYLE,
-        center: CENTRE,
-        bounds: [
-          [Math.min(...lons), Math.min(...lats)],
-          [Math.max(...lons), Math.max(...lats)],
-        ],
-        fitBoundsOptions: { padding: 50 },
+        bounds: STATION_BOUNDS,
+        fitBoundsOptions: { padding: 40, pitch: PITCH, bearing: BEARING },
+        pitch: PITCH,
+        bearing: BEARING,
+        maxPitch: 65,
+        // One finger and the plain scroll wheel move the page, so the map never traps anyone.
+        cooperativeGestures: true,
+        attributionControl: { compact: false },
+        locale: { "Map.Title": "Hazard map" },
       });
       mapRef.current = map;
-      map.addControl(new NavigationControl({ showCompass: false }));
+      map.getCanvas().setAttribute("aria-describedby", hintId);
+      map.addControl(new lib.NavigationControl({ visualizePitch: true }), "top-right");
       for (const s of STATIONS) {
-        const pin = document.createElement("div");
-        pin.className = "rounded bg-black px-1.5 py-0.5 text-xs font-semibold text-white ring-2 ring-white";
-        pin.textContent = s.name;
-        new Marker({ element: pin }).setLngLat([s.lon, s.lat]).addTo(map);
+        new lib.Marker({ element: stationPin(s.name) }).setLngLat([s.lon, s.lat]).addTo(map);
       }
       map.on("load", () => {
         if (!map) return;
-        map.addSource("cells", { type: "geojson", data: features(dataRef.current.cells, dataRef.current.flashing) });
+        map.setPaintProperty("background", "background-color", "#060b14");
+        if (map.getLayer("water")) map.setPaintProperty("water", "fill-color", "#0b1d2e");
+        if (map.getLayer("waterway")) map.setPaintProperty("waterway", "line-color", "#0b1d2e");
+        map.addSource("cells", { type: "geojson", data: features(cellsRef.current) });
         map.addLayer({
-          id: "cells",
-          type: "fill",
-          source: "cells",
-          paint: { "fill-color": ["get", "colour"], "fill-opacity": ["get", "opacity"] },
-        });
-        map.addLayer({
-          id: "cell-edges",
+          id: "cell-floors",
           type: "line",
           source: "cells",
+          paint: { "line-color": "rgba(148, 163, 184, 0.3)", "line-width": 1 },
+        });
+        map.addLayer({
+          id: "cells",
+          type: "fill-extrusion",
+          source: "cells",
           paint: {
-            "line-color": ["case", ["==", ["get", "flash"], 1], "#fde047", "#111827"],
-            "line-width": ["case", ["==", ["get", "flash"], 1], 4, 0.5],
+            "fill-extrusion-color": COLOUR,
+            "fill-extrusion-height": ["get", "height"],
+            "fill-extrusion-base": 0,
+            "fill-extrusion-opacity": 0.92,
           },
         });
         map.addLayer({
-          id: "cell-selected",
+          id: "cell-selected-floor",
           type: "line",
           source: "cells",
           filter: ["==", ["get", "cell"], ""],
-          paint: { "line-color": "#ffffff", "line-width": 3 },
+          paint: { "line-color": "#38bdf8", "line-width": 4, "line-blur": 1 },
+        });
+        // A white lid on the selected bar, so it stands out from any colour.
+        map.addLayer({
+          id: "cell-selected",
+          type: "fill-extrusion",
+          source: "cells",
+          filter: ["==", ["get", "cell"], ""],
+          paint: {
+            "fill-extrusion-color": "#f2f5f7",
+            "fill-extrusion-base": ["get", "height"],
+            "fill-extrusion-height": ["+", ["get", "height"], 20],
+            "fill-extrusion-opacity": 1,
+          },
         });
         map.on("click", "cells", (e) => {
           const cell = e.features?.[0]?.properties?.cell;
@@ -130,33 +203,103 @@ export default function CellMap({
         });
         map.on("mouseenter", "cells", () => map && (map.getCanvas().style.cursor = "pointer"));
         map.on("mouseleave", "cells", () => map && (map.getCanvas().style.cursor = ""));
-        readyRef.current = true;
+        setReady(true);
       });
     });
     return () => {
       cancelled = true;
-      readyRef.current = false;
       map?.remove();
       mapRef.current = null;
     };
-  }, []);
+  }, [hintId]);
 
-  // Fly to the selected cell and outline it.
+  useEffect(() => {
+    const source = mapRef.current?.getSource("cells") as GeoJSONSource | undefined;
+    if (ready && source) source.setData(features(cells));
+  }, [cells, ready]);
+
+  // Fly to the selected cell and put a lid on its bar.
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !readyRef.current) return;
-    map.setFilter("cell-selected", ["==", ["get", "cell"], selected ?? ""]);
+    if (!map || !ready) return;
+    const filter: ExpressionSpecification = ["==", ["get", "cell"], selected ?? ""];
+    map.setFilter("cell-selected", filter);
+    map.setFilter("cell-selected-floor", filter);
     if (!selected) return;
-    const b = cellBounds(selected);
-    map.flyTo({ center: [(b.west + b.east) / 2, (b.south + b.north) / 2], zoom: 15.5 });
-  }, [selected]);
+    const c = cellCentre(selected);
+    // Below the centre, so the bar rising from it stays in view.
+    const camera = {
+      center: [c.lon, c.lat] as [number, number],
+      zoom: 14.9,
+      pitch: PITCH,
+      offset: [0, 70] as [number, number],
+    };
+    if (stillRef.current) map.easeTo({ ...camera, duration: 0 });
+    else map.flyTo({ ...camera, duration: 1600 });
+  }, [selected, ready]);
+
+  // A sonar ring on the ground where each new report lands.
+  useEffect(() => {
+    const map = mapRef.current;
+    const lib = libRef.current;
+    if (!map || !lib || !ready || flashing.size === 0) return;
+    const rings = [...flashing].map((cell) => {
+      const el = document.createElement("div");
+      el.className = "pointer-events-none size-40";
+      const root = createRoot(el);
+      root.render(
+        <>
+          <SonarRings className="inset-0" count={3} duration={2} />
+          <span className="absolute top-1/2 left-1/2 size-3 -translate-1/2 rounded-full bg-sonar shadow-[0_0_18px_6px_rgb(56_189_248/0.7)]" />
+        </>,
+      );
+      const c = cellCentre(cell);
+      const marker = new lib.Marker({ element: el, pitchAlignment: "map", rotationAlignment: "map" })
+        .setLngLat([c.lon, c.lat])
+        .addTo(map);
+      return { marker, root };
+    });
+    return () => {
+      for (const { marker, root } of rings) {
+        marker.remove();
+        // React can't unmount one root while it is committing another.
+        setTimeout(() => root.unmount(), 0);
+      }
+    };
+  }, [flashing, ready]);
+
+  const showAll = () => {
+    mapRef.current?.fitBounds(STATION_BOUNDS, {
+      padding: 40,
+      pitch: PITCH,
+      bearing: BEARING,
+      duration: stillRef.current ? 0 : 1400,
+    });
+  };
 
   return (
-    <div
-      ref={containerRef}
-      role="region"
-      aria-label="Map of hazard cells around the five stations"
-      className="h-[28rem] w-full overflow-hidden rounded-lg"
-    />
+    <div className="relative isolate h-[60svh] min-h-80 w-full overflow-hidden rounded-2xl bg-abyss ring-1 ring-line lg:h-[36rem]">
+      <div ref={containerRef} className={cn("size-full", CHROME)} />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 z-[1] rounded-[inherit] shadow-[inset_0_0_80px_24px_rgb(6_11_20/0.85)] contrast-more:hidden"
+      />
+      <p id={hintId} className="sr-only">
+        Arrow keys move the map, and plus and minus zoom. Every spot on the map is also in the fix-first queue table.
+      </p>
+      <Button
+        variant="secondary"
+        onClick={showAll}
+        className="absolute top-3 left-3 z-[2] min-h-11 bg-abyss/85 px-4 text-sm md:backdrop-blur-md"
+      >
+        <IconFocusCentered aria-hidden size={20} />
+        All stations
+      </Button>
+      {emptyNote && (
+        <p className="absolute inset-x-3 bottom-12 z-[2] mx-auto w-fit max-w-[calc(100%-1.5rem)] rounded-2xl border border-line bg-abyss/90 px-4 py-2 text-center text-base text-muted md:backdrop-blur-md">
+          {emptyNote}
+        </p>
+      )}
+    </div>
   );
 }

@@ -1,7 +1,7 @@
 // Words and colours the dashboard shares.
 
 import type { QueueRow } from "@/lib/shared/contracts";
-import type { CivicCategory } from "@/lib/shared/enums";
+import type { CivicCategory, DashboardWindow, Severity } from "@/lib/shared/enums";
 
 export const CATEGORY_NAMES: Record<CivicCategory, string> = {
   sidewalk_obstruction: "Sidewalk obstruction",
@@ -12,6 +12,16 @@ export const CATEGORY_NAMES: Record<CivicCategory, string> = {
   tactile_strip_issue: "Tactile strip issue",
   snow_ice: "Snow or ice",
   other_fixed: "Other fixed hazard",
+};
+
+// The words for each severity, from "Severity" in docs/PLAN.md.
+export const SEVERITY_NAMES: Record<Severity, string> = { 1: "minor", 2: "detour", 3: "collision", 4: "fall" };
+
+export const WINDOW_NAMES: Record<DashboardWindow, string> = {
+  "1h": "1 hour",
+  "24h": "24 hours",
+  "7d": "7 days",
+  "14d": "14 days",
 };
 
 // Days ago in Ottawa time, as words.
@@ -39,8 +49,9 @@ export function whyLine(row: QueueRow): string {
   return parts.join(" × ");
 }
 
-// Viridis, low to high: one sequential scale that stays readable with colour blindness.
-export const SCORE_COLOURS = ["#fde725", "#5ec962", "#21918c", "#3b528b", "#440154"];
+// Viridis, low to high: one sequential scale that stays readable with colour blindness. It runs dark to
+// bright, so the worst spots glow on the dark map.
+export const SCORE_COLOURS = ["#440154", "#3b528b", "#21918c", "#5ec962", "#fde725"];
 export const NO_REPORT_COLOUR = "#9ca3af";
 
 // Which of the five steps a score falls in, against the top score on screen.

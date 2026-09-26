@@ -34,3 +34,11 @@ export function usePoll<T>(url: string | null, everyMs: number | null, refresh =
   }, [url, everyMs, refresh]);
   return state;
 }
+
+export type Load = "loading" | "offline" | "ready";
+
+// Whether a poll has answered yet, and whether its last try failed with nothing to show.
+export function loadOf(poll: Polled<unknown>): Load {
+  if (poll.data) return "ready";
+  return poll.error ? "offline" : "loading";
+}
