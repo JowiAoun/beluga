@@ -150,7 +150,7 @@ export const AGENTS: Record<AgentKey, AgentSpec> = {
     key: "triage",
     name: "beluga triage",
     idEnv: "ELEVENLABS_TRIAGE_AGENT_ID",
-    llm: "gpt-4.1-mini",
+    llm: "gemini-3.5-flash-lite",
     prompt: TRIAGE_PROMPT,
     seesPhotos: true,
     tool: {
