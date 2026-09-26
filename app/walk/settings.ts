@@ -20,6 +20,8 @@ export interface Settings {
   cameraOnly: boolean;
   // The earbuds' play/pause button asks too (Phase 9 stretch).
   headsetAsk: boolean;
+  // A wide safety-yellow band low in the camera view warns like an edge (Phase 10 stretch).
+  yellowStrip: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -31,6 +33,7 @@ export const DEFAULT_SETTINGS: Settings = {
   firstRunDone: false,
   cameraOnly: false,
   headsetAsk: true,
+  yellowStrip: true,
 };
 
 export const HEIGHT_RANGE_M = { min: 1.2, max: 2.1 } as const;
@@ -66,6 +69,7 @@ export function readSettings(): Settings {
     firstRunDone: saved.firstRunDone === true,
     cameraOnly: saved.cameraOnly === true,
     headsetAsk: typeof saved.headsetAsk === "boolean" ? saved.headsetAsk : DEFAULT_SETTINGS.headsetAsk,
+    yellowStrip: typeof saved.yellowStrip === "boolean" ? saved.yellowStrip : DEFAULT_SETTINGS.yellowStrip,
   };
 }
 

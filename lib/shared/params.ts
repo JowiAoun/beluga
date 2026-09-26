@@ -322,3 +322,19 @@ export const CAMERA_ONLY_HEIGHTS_M: Readonly<Partial<Record<DetectorClass, numbe
   potted_plant: 0.8,
   suitcase: 0.7,
 };
+
+// Yellow edge strips (Phase 10 stretch): a wide safety-yellow band low in the camera frame.
+export const TACTILE = {
+  hueDeg: { min: 40, max: 70 },
+  minSaturation: 0.45,
+  minValue: 0.45,
+  // Share of the frame's lower third that must be yellow.
+  minShare: 0.08,
+  // A row is part of the band when yellow covers this share of it.
+  minRowShare: 0.3,
+  // The band must reach across this share of the frame's width.
+  minWidth: 0.5,
+  framesInARow: 3,
+  // Depth's own drop-off within this distance of the strip plays instead.
+  depthCoversM: 0.75,
+} as const;

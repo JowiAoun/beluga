@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AudioEngine } from "@/lib/audio/engine";
 import { decodeLibrary, fetchLibrary, type RawLibrary } from "@/lib/audio/library";
 import { DetectPipeline } from "@/lib/detect/pipeline";
+import { withStrip } from "@/lib/detect/strip";
 import { CameraOnlyEngine } from "@/lib/hazard/cameraOnly";
 import { nearestAhead } from "@/lib/hazard/corridor";
 import { HazardEngine, type HazardEvent } from "@/lib/hazard/engine";
@@ -241,8 +242,10 @@ export default function Walk() {
       : engineRef.current?.update(update, labelFor);
     if (!result) return;
     const reporting = reportingRef.current;
-    // While tracking is lost the list is empty, so every warning goes quiet.
-    soundRef.current?.update(result.hazards, update, reporting?.blocked);
+    // A yellow edge strip plays like a drop-off, but only the sounds hear it: it never reaches the
+    // frame gate or the events. While tracking is lost the list is empty, so every warning goes quiet.
+    const heard = update.tracking ? withStrip(result.hazards, detect?.stripFor(update) ?? null) : result.hazards;
+    soundRef.current?.update(heard, update, reporting?.blocked);
     const gate = detect?.check(update, result.hazards, latest.fix);
     const session = sessionRef.current;
     if (reporting) {
@@ -259,7 +262,7 @@ export default function Walk() {
         );
       }
     }
-    latest.hazards = result.hazards;
+    latest.hazards = heard;
     if (result.floor) latest.floorSlope = result.floor.slope;
     if (result.events.length > 0) latest.events = [...result.events.reverse(), ...latest.events].slice(0, RECENT_EVENTS);
   }, []);
@@ -347,7 +350,10 @@ export default function Walk() {
     cameraOnlyRef.current = settingsRef.current.cameraOnly;
     setCameraOnly(cameraOnlyRef.current);
     const detect = detectRef.current;
-    if (detect) cleanupRef.current.push(detect.attach(started));
+    if (detect) {
+      detect.setStrip(settingsRef.current.yellowStrip);
+      cleanupRef.current.push(detect.attach(started));
+    }
     const reporting = reportingRef.current;
     if (reporting) {
       reporting.setStation(settingsRef.current.station);

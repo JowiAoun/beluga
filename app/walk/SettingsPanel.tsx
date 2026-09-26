@@ -104,12 +104,23 @@ export default function SettingsPanel({
         <label className="flex min-h-16 items-center gap-3 text-lg">
           <input
             type="checkbox"
+            checked={settings.yellowStrip}
+            onChange={(e) => set({ yellowStrip: e.target.checked })}
+            className="h-6 w-6"
+          />
+          Warn about yellow edge strips on the floor, like a platform edge or a taped line. It goes by colour
+          alone, so it adds to the depth warnings and never replaces them.
+        </label>
+
+        <label className="flex min-h-16 items-center gap-3 text-lg">
+          <input
+            type="checkbox"
             checked={settings.cameraOnly}
             onChange={(e) => set({ cameraOnly: e.target.checked })}
             className="h-6 w-6"
           />
           Camera-only mode, for a phone without depth: warns about things it can name, like people, bikes and
-          chairs, with no edge or step warnings. It turns on by itself when depth is missing.
+          chairs, and yellow edge strips, with no step warnings. It turns on by itself when depth is missing.
         </label>
 
         <button type="button" onClick={onRunSetup} className="min-h-16 rounded-lg border-2 border-neutral-500 text-lg">

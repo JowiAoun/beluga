@@ -15,6 +15,7 @@ import { Detector, type Delegate } from "./detector";
 import { FrameGate, TurnMeter, type GateResult } from "./gate";
 import { LabelMatcher } from "./match";
 import type { WorkerReply, WorkerRequest } from "./messages";
+import { findStrip, StripTracker, stripHazard, type StripSighting } from "./strip";
 
 export type DetectorState = "loading" | "ready" | "failed";
 
@@ -31,6 +32,8 @@ export interface DetectStats {
   framesPerSecond: number;
   brightness: number | null;
   detections: Detection[];
+  // The yellow edge strip check: frames in a row that saw one, and the latest sighting.
+  strip: { on: boolean; streak: number; last: StripSighting | null };
   gate: {
     // Frames the gate let through this session. They go to triage only with reporting on.
     sent: number;
@@ -41,6 +44,8 @@ export interface DetectStats {
 
 // Weight of the newest frame in the running averages.
 const AVERAGE = 0.2;
+// A strip seen in a frame older than this no longer warns: the camera frames have stopped.
+const STRIP_STALE_MS = 1000;
 
 function errorText(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
@@ -69,6 +74,9 @@ export class DetectPipeline {
   private sent = 0;
   private last: DetectStats["gate"]["last"] = null;
   private lastSkip: DetectStats["gate"]["lastSkip"] = null;
+  private readonly strip = new StripTracker();
+  private stripOn = true;
+  private stripSince: number | null = null;
 
   // Loads the model once, ahead of the first walk: in a worker, or on the page if that fails.
   // Safe to call again. `prefer` CPU skips the GPU, which ARCore and the camera also use.
@@ -155,6 +163,8 @@ export class DetectPipeline {
     this.detections = [];
     this.brightness = null;
     this.lastFrameAt = null;
+    this.strip.reset();
+    this.stripSince = null;
     return session.onDetectorFrame((image, t) => this.onFrame(image, t));
   }
 
@@ -194,6 +204,23 @@ export class DetectPipeline {
     return result;
   }
 
+  // Turns the yellow edge strip check on or off (a setting). It reads the same small frames.
+  setStrip(on: boolean): void {
+    this.stripOn = on;
+    if (!on) {
+      this.strip.reset();
+      this.stripSince = null;
+    }
+  }
+
+  // The yellow strip as an "edge" hazard in this update's view, or null.
+  stripFor(update: SensingUpdate) {
+    const sighting = this.strip.active();
+    if (!sighting || this.stripSince === null || this.lastFrameAt === null) return null;
+    if (update.t - this.lastFrameAt > STRIP_STALE_MS) return null;
+    return stripHazard(sighting, update, this.stripSince);
+  }
+
   // The latest boxes, for the replay recorder. A new array each time the detector answers.
   latestDetections(): Detection[] {
     return this.detections;
@@ -210,12 +237,18 @@ export class DetectPipeline {
       framesPerSecond: this.framesPerSecond,
       brightness: this.brightness,
       detections: this.detections,
+      strip: { on: this.stripOn, ...this.strip.stats() },
       gate: { sent: this.sent, last: this.last, lastSkip: this.lastSkip },
     };
   }
 
   private onFrame(image: SmallImage, t: number): void {
     this.brightness = meanBrightness(image);
+    // Colour only, so it runs here even when the detector is off or still loading.
+    if (this.stripOn) {
+      this.strip.update(findStrip(image));
+      this.stripSince = this.strip.active() ? (this.stripSince ?? t) : null;
+    }
     if (this.lastFrameAt !== null && t > this.lastFrameAt) {
       this.framesPerSecond += AVERAGE * (1000 / (t - this.lastFrameAt) - this.framesPerSecond);
     }

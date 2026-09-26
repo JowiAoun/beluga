@@ -60,11 +60,18 @@ function describeWarning(warning: WarningSoundLog): string {
 }
 
 function describeDetector(detect: DetectStats): string {
-  if (detect.state === "loading") return "Detector loading";
-  if (detect.state === "failed") return `Detector off: ${detect.error ?? "failed to load"}`;
+  const { strip } = detect;
+  // The strip check reads colour, so it runs even with the detector off.
+  const yellow = !strip.on
+    ? "yellow strip check off"
+    : strip.last
+      ? `yellow strip ${Math.round(strip.last.share * 100)}% of the floor view, ${strip.streak} frames`
+      : "no yellow strip";
+  if (detect.state === "loading") return `Detector loading, ${yellow}`;
+  if (detect.state === "failed") return `Detector off: ${detect.error ?? "failed to load"}. ${yellow}`;
   const light = detect.brightness === null ? "no frames" : `brightness ${Math.round(detect.brightness)}`;
   const why = detect.runsOn === "page" && detect.workerError ? ` (worker: ${detect.workerError})` : "";
-  return `Detector on ${detect.delegate} in the ${detect.runsOn}, ${detect.msPerFrame.toFixed(0)} ms per frame, ${detect.framesPerSecond.toFixed(1)} frames/s, ${light}${why}`;
+  return `Detector on ${detect.delegate} in the ${detect.runsOn}, ${detect.msPerFrame.toFixed(0)} ms per frame, ${detect.framesPerSecond.toFixed(1)} frames/s, ${light}, ${yellow}${why}`;
 }
 
 // With reporting off nothing is sent, so this says what the gate would have sent.
