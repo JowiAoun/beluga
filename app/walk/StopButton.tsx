@@ -1,5 +1,6 @@
 "use client";
 
+import { IconHandStop } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 import { CONTROLS } from "@/lib/shared/params";
 
@@ -45,17 +46,20 @@ export default function StopButton({ onStop }: { onStop: () => void }) {
       }}
       onKeyUp={cancel}
       onContextMenu={(e) => e.preventDefault()}
-      className="relative min-h-[33dvh] w-full touch-none overflow-hidden rounded-lg bg-red-800 text-3xl font-bold text-white select-none"
+      className="relative flex min-h-[33dvh] w-full touch-none items-center justify-center overflow-hidden rounded-2xl bg-danger text-3xl font-bold text-white select-none"
     >
       <span
         aria-hidden
-        className="absolute inset-y-0 left-0 bg-red-500"
+        className="absolute inset-y-0 left-0 bg-red-600"
         style={{
           width: holding ? "100%" : "0%",
           transition: holding ? `width ${CONTROLS.stopLongPressMs}ms linear` : "none",
         }}
       />
-      <span className="relative">Hold to stop</span>
+      <span className="relative flex items-center gap-3">
+        <IconHandStop aria-hidden size={40} stroke={1.75} />
+        Hold to stop
+      </span>
     </button>
   );
 }
