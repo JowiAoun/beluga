@@ -5,7 +5,7 @@
 // else goes to the network first and falls back to the cache: a package update keeps file names
 // like vision_wasm_internal.wasm, and a stale copy would break the detector. /api is never cached.
 
-const VERSION = "beluga-v1";
+const VERSION = "beluga-v2";
 
 const PRECACHE = [
   "/walk",

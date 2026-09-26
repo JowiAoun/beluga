@@ -1,101 +1,254 @@
 {
-  "generatedAt": "2026-09-26T19:58:51.795Z",
-  "sounds": {},
+  "generatedAt": "2026-09-26T20:15:25.331Z",
+  "sounds": {
+    "edge_pulse": {
+      "file": "edge_pulse-1.wav",
+      "variants": [
+        "edge_pulse-1.wav",
+        "edge_pulse-2.wav",
+        "edge_pulse-3.wav"
+      ],
+      "loop": "edge_pulse-loop-1.wav",
+      "loopVariants": [
+        "edge_pulse-loop-1.wav",
+        "edge_pulse-loop-2.wav"
+      ],
+      "gainDb": 0,
+      "prompt": "Short soft tone sliding down in pitch, like a falling whistle, mid range, clean, no reverb"
+    },
+    "head_chime": {
+      "file": "head_chime-1.wav",
+      "variants": [
+        "head_chime-1.wav",
+        "head_chime-2.wav",
+        "head_chime-3.wav"
+      ],
+      "loop": "head_chime-loop-1.wav",
+      "loopVariants": [
+        "head_chime-loop-1.wav",
+        "head_chime-loop-2.wav"
+      ],
+      "gainDb": 0,
+      "prompt": "Two quick bright glass chime notes, the second higher, short and clean"
+    },
+    "tick": {
+      "file": "tick-1.wav",
+      "variants": [
+        "tick-1.wav",
+        "tick-2.wav",
+        "tick-3.wav"
+      ],
+      "loop": "tick-loop-1.wav",
+      "loopVariants": [
+        "tick-loop-1.wav",
+        "tick-loop-2.wav"
+      ],
+      "gainDb": 0,
+      "prompt": "Short dry wooden block tick, percussive, no reverb"
+    },
+    "ping": {
+      "file": "ping-1.wav",
+      "variants": [
+        "ping-1.wav",
+        "ping-2.wav",
+        "ping-3.wav"
+      ],
+      "loop": null,
+      "loopVariants": [],
+      "gainDb": 0,
+      "prompt": "Single tiny metallic ping, like tapping a thin steel pole, very short and dry"
+    },
+    "bell": {
+      "file": "bell-1.wav",
+      "variants": [
+        "bell-1.wav",
+        "bell-2.wav",
+        "bell-3.wav"
+      ],
+      "loop": null,
+      "loopVariants": [],
+      "gainDb": 0,
+      "prompt": "Quick tiny double bicycle bell ring, crisp and dry"
+    },
+    "marimba": {
+      "file": "marimba-1.wav",
+      "variants": [
+        "marimba-1.wav",
+        "marimba-2.wav",
+        "marimba-3.wav"
+      ],
+      "loop": null,
+      "loopVariants": [],
+      "gainDb": 0,
+      "prompt": "Soft muted marimba note in the middle register, warm, short decay"
+    },
+    "buzz": {
+      "file": "buzz-1.wav",
+      "variants": [
+        "buzz-1.wav",
+        "buzz-2.wav",
+        "buzz-3.wav"
+      ],
+      "loop": null,
+      "loopVariants": [],
+      "gainDb": 0,
+      "prompt": "Very short gentle car horn beep, mid pitch, not alarming, no reverb"
+    },
+    "taps": {
+      "file": "taps-1.wav",
+      "variants": [
+        "taps-1.wav",
+        "taps-2.wav",
+        "taps-3.wav"
+      ],
+      "loop": null,
+      "loopVariants": [],
+      "gainDb": 0,
+      "prompt": "Three rapid soft taps on hollow plastic"
+    },
+    "listening": {
+      "file": "listening-1.wav",
+      "variants": [
+        "listening-1.wav",
+        "listening-2.wav",
+        "listening-3.wav"
+      ],
+      "loop": null,
+      "loopVariants": [],
+      "gainDb": 0,
+      "prompt": "Gentle rising two-tone chime, friendly"
+    },
+    "ready": {
+      "file": "ready-1.wav",
+      "variants": [
+        "ready-1.wav",
+        "ready-2.wav",
+        "ready-3.wav"
+      ],
+      "loop": null,
+      "loopVariants": [],
+      "gainDb": 0,
+      "prompt": "Warm soft three-note rising chime"
+    },
+    "reported": {
+      "file": "reported-1.wav",
+      "variants": [
+        "reported-1.wav",
+        "reported-2.wav",
+        "reported-3.wav"
+      ],
+      "loop": null,
+      "loopVariants": [],
+      "gainDb": 0,
+      "prompt": "Soft single water-drop blip"
+    },
+    "centre_tick": {
+      "file": "centre_tick-2.wav",
+      "variants": [
+        "centre_tick-2.wav",
+        "centre_tick-3.wav"
+      ],
+      "loop": null,
+      "loopVariants": [],
+      "gainDb": 0,
+      "prompt": "Very short soft click"
+    }
+  },
   "clips": {
     "edge": {
-      "file": "voice/edge.wav",
+      "file": "voice/edge.mp3",
       "text": "edge"
     },
     "step_down": {
-      "file": "voice/step_down.wav",
+      "file": "voice/step_down.mp3",
       "text": "step down"
     },
     "head": {
-      "file": "voice/head.wav",
+      "file": "voice/head.mp3",
       "text": "head"
     },
     "pole": {
-      "file": "voice/pole.wav",
+      "file": "voice/pole.mp3",
       "text": "pole"
     },
     "bike": {
-      "file": "voice/bike.wav",
+      "file": "voice/bike.mp3",
       "text": "bike"
     },
     "scooter": {
-      "file": "voice/scooter.wav",
+      "file": "voice/scooter.mp3",
       "text": "scooter"
     },
     "car": {
-      "file": "voice/car.wav",
+      "file": "voice/car.mp3",
       "text": "car"
     },
     "person": {
-      "file": "voice/person.wav",
+      "file": "voice/person.mp3",
       "text": "person"
     },
     "blocked": {
-      "file": "voice/blocked.wav",
+      "file": "voice/blocked.mp3",
       "text": "blocked"
     },
     "stairs": {
-      "file": "voice/stairs.wav",
+      "file": "voice/stairs.mp3",
       "text": "stairs"
     },
     "left": {
-      "file": "voice/left.wav",
+      "file": "voice/left.mp3",
       "text": "left"
     },
     "right": {
-      "file": "voice/right.wav",
+      "file": "voice/right.mp3",
       "text": "right"
     },
     "ahead": {
-      "file": "voice/ahead.wav",
+      "file": "voice/ahead.mp3",
       "text": "ahead"
     },
     "ready": {
-      "file": "voice/ready.wav",
+      "file": "voice/ready.mp3",
       "text": "beluga ready, tap to start"
     },
     "take_steps": {
-      "file": "voice/take_steps.wav",
+      "file": "voice/take_steps.mp3",
       "text": "take three slow steps"
     },
     "calibrated": {
-      "file": "voice/calibrated.wav",
+      "file": "voice/calibrated.mp3",
       "text": "calibrated"
     },
     "hold_steady": {
-      "file": "voice/hold_steady.wav",
+      "file": "voice/hold_steady.mp3",
       "text": "hold steady"
     },
     "stopped": {
-      "file": "voice/stopped.wav",
+      "file": "voice/stopped.mp3",
       "text": "beluga stopped"
     },
     "reported": {
-      "file": "voice/reported.wav",
+      "file": "voice/reported.mp3",
       "text": "reported"
     },
     "reporting_on": {
-      "file": "voice/reporting_on.wav",
+      "file": "voice/reporting_on.mp3",
       "text": "reporting on"
     },
     "reporting_off": {
-      "file": "voice/reporting_off.wav",
+      "file": "voice/reporting_off.mp3",
       "text": "reporting off"
     },
     "ask_offline": {
-      "file": "voice/ask_offline.wav",
+      "file": "voice/ask_offline.mp3",
       "text": "Ask is offline. Obstacle alerts still on."
     },
     "sorry": {
-      "file": "voice/sorry.wav",
+      "file": "voice/sorry.mp3",
       "text": "Sorry, I couldn't see that."
     },
     "alongside": {
-      "file": "voice/alongside.wav",
+      "file": "voice/alongside.mp3",
       "text": "beluga works alongside your cane or guide dog. It can miss things."
     }
   }

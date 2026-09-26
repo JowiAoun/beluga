@@ -31,10 +31,14 @@ export function durationS(file: string): number {
 const HIGH_PASS = `highpass=f=${AUDIO.highPassHz}`;
 const TRIM_START = `silenceremove=start_periods=1:start_threshold=${SILENCE_DB}dB`;
 
-// Peak normalising: loudness can't be measured on clips shorter than 0.4 s.
+// Peak normalising: loudness can't be measured on clips shorter than 0.4 s. The temporary file goes
+// either way, so a take that trims to nothing doesn't leave one in public/sounds.
 function normalisePeak(tmp: string, out: string, codec: string[]): void {
-  ffmpeg("-i", tmp, "-af", `volume=${(AUDIO.effectPeakDbfs - peakDb(tmp)).toFixed(2)}dB`, ...codec, out);
-  rmSync(tmp);
+  try {
+    ffmpeg("-i", tmp, "-af", `volume=${(AUDIO.effectPeakDbfs - peakDb(tmp)).toFixed(2)}dB`, ...codec, out);
+  } finally {
+    rmSync(tmp, { force: true });
+  }
 }
 
 const WAV = ["-c:a", "pcm_s16le"];

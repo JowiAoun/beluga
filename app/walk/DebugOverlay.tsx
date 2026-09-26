@@ -45,7 +45,8 @@ function describeSound(audio: AudioStats): string {
     return `${v.sound.replace("_", " ")} at ${v.distance.toFixed(2)} m, ${rhythm}, ${v.gainDb} dB, pan ${v.pan.toFixed(2)}`;
   });
   const lead = `looks ${audio.leadMs} ms ahead (Chrome says ${audio.outputLatencyMs} ms output latency)`;
-  return `Sound ${audio.state}: ${voices.length > 0 ? voices.join("; ") : "silent"}. ${lead}`;
+  const from = audio.source === "library" ? "ElevenLabs sounds" : "built-in tones";
+  return `Sound ${audio.state}, ${from}: ${voices.length > 0 ? voices.join("; ") : "silent"}. ${lead}`;
 }
 
 function describeWarning(warning: WarningSoundLog): string {
