@@ -139,6 +139,16 @@ export default function Walk() {
       setSettings(saved);
     };
     void check();
+    // After this visit, a walk starts and warns with no network (Phase 9). Production only: in
+    // development it would serve stale code from its cache.
+    if (process.env.NODE_ENV === "production" && "serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+      // This page's code loaded before the worker could see it; hand it the list to keep.
+      void navigator.serviceWorker.ready.then((registration) => {
+        const urls = performance.getEntriesByType("resource").map((entry) => entry.name);
+        registration.active?.postMessage({ type: "cache", urls });
+      });
+    }
     // The recorded sounds download now, so the walk itself needs no network.
     void fetchLibrary().then((raw) => {
       libraryRef.current = raw;
