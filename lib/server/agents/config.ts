@@ -119,7 +119,7 @@ export const AGENTS: Record<AgentKey, AgentSpec> = {
     key: "ask",
     name: "beluga ask",
     idEnv: "ELEVENLABS_ASK_AGENT_ID",
-    llm: "gpt-4.1",
+    llm: "gemini-3.5-flash-lite",
     prompt: ASK_PROMPT,
     tool: {
       name: "ask_answer",

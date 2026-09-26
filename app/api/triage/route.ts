@@ -12,7 +12,9 @@ import { TriageRequestSchema, type TriageResponse } from "@/lib/shared/contracts
 import { decideReport, measuredFrom } from "@/lib/shared/reporting";
 import { NETWORK } from "@/lib/shared/params";
 
-export const maxDuration = 15;
+// The answer comes back within the route's timeout; the rest is for deleting the conversation after
+// ElevenLabs has saved it, which can take 10 s.
+export const maxDuration = 30;
 
 // Nothing reported: what the phone gets when triage can't give an answer.
 function noReport(budgetRemaining: number, latencyMs: number): TriageResponse {
@@ -34,8 +36,8 @@ function noReport(budgetRemaining: number, latencyMs: number): TriageResponse {
   };
 }
 
-function log(outcome: string, latencyMs: number, category: string | null = null): void {
-  console.info(JSON.stringify({ route: "triage", agent: AGENTS.triage.name, latencyMs, outcome, category }));
+function log(outcome: string, latencyMs: number, category: string | null = null, detail?: string): void {
+  console.info(JSON.stringify({ route: "triage", agent: AGENTS.triage.name, latencyMs, outcome, category, detail }));
 }
 
 export async function POST(request: Request): Promise<Response> {
@@ -59,7 +61,7 @@ export async function POST(request: Request): Promise<Response> {
     TriageAnswerSchema,
   );
   if (!asked.ok) {
-    log(asked.reason, Date.now() - began);
+    log(asked.reason, Date.now() - began, null, asked.detail);
     return Response.json(noReport(budgetRemaining, Date.now() - began), { status: 502 });
   }
   const answer = asked.answer;

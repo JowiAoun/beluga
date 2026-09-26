@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { askAgent } from "./ask";
 import { AGENTS } from "./config";
-import { deleteConversation, runAgentTurn, type SocketLike, type TurnDeps } from "./turn";
+import { deleteConversation, runAgentTurn, sweepConversations, type SocketLike, type TurnDeps } from "./turn";
 
 // Plays the ElevenLabs side of the WebSocket from the test.
 class FakeSocket implements SocketLike {
@@ -108,7 +108,7 @@ describe("runAgentTurn", () => {
     ]);
   });
 
-  it("sends the frame again when the conversation wasn't ready for it, and gives up after that", async () => {
+  it("sends the frame again while the conversation isn't ready for it, three times at most", async () => {
     const once = fake([408]);
     const result = runAgentTurn({ ...TURN, deadline: Date.now() + 5000 }, once.deps);
     await tick();
@@ -122,7 +122,7 @@ describe("runAgentTurn", () => {
     });
     await expect(result).resolves.toMatchObject({ conversationId: "conv-1" });
 
-    const twice = fake([408, 408]);
+    const twice = fake([404, 408, 408]);
     const failed = expect(runAgentTurn({ ...TURN, deadline: Date.now() + 5000 }, twice.deps)).rejects.toThrow(
       "frame upload: 408",
     );
@@ -152,12 +152,52 @@ describe("runAgentTurn", () => {
     await expect(errored).rejects.toThrow("llm_error");
   });
 
-  it("deletes a conversation, and treats one already gone as deleted", async () => {
-    const f = fake();
-    await expect(deleteConversation("conv-1", f.deps)).resolves.toBe(true);
-    expect(f.calls).toEqual(["DELETE /convai/conversations/conv-1"]);
-    const gone = { fetch: async () => new Response(null, { status: 404 }) } as unknown as TurnDeps;
-    await expect(deleteConversation("conv-2", gone)).resolves.toBe(true);
+  it("waits for ElevenLabs to save a conversation before deleting it, then checks it stays gone", async () => {
+    const calls: string[] = [];
+    const states = ["processing", "done"];
+    let gone = false;
+    const deps = {
+      now: () => Date.now(),
+      sleep: () => Promise.resolve(),
+      fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+        calls.push(`${init?.method ?? "GET"}`);
+        if (init?.method === "DELETE") {
+          gone = true;
+          return new Response(null, { status: 204 });
+        }
+        if (gone) return new Response(null, { status: 404 });
+        return Response.json({ status: states.shift() ?? "done" });
+      },
+    } as unknown as TurnDeps;
+    await expect(deleteConversation("conv-1", deps)).resolves.toBe(true);
+    expect(calls).toEqual(["GET", "GET", "DELETE", "GET"]);
+  });
+
+  it("sweeps an agent's finished conversations and leaves a live one", async () => {
+    process.env.ELEVENLABS_ASK_AGENT_ID = "agent-ask";
+    const deleted: string[] = [];
+    const deps = {
+      now: () => Date.now(),
+      sleep: () => Promise.resolve(),
+      fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (init?.method === "DELETE") {
+          deleted.push(url.split("/").at(-1)!);
+          return new Response(null, { status: 204 });
+        }
+        expect(url).toContain("agent_id=agent-ask");
+        return Response.json({
+          conversations: [
+            { conversation_id: "a", status: "done" },
+            { conversation_id: "b", status: "in-progress" },
+            { conversation_id: "c", status: "failed" },
+          ],
+        });
+      },
+    } as unknown as TurnDeps;
+    await expect(sweepConversations(AGENTS.ask, deps)).resolves.toBe(2);
+    expect(deleted).toEqual(["a", "c"]);
+    delete process.env.ELEVENLABS_ASK_AGENT_ID;
   });
 });
 

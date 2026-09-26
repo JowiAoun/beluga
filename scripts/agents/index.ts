@@ -4,10 +4,11 @@
 // Run `npm run agents`, then copy the printed ids into .env.local and Vercel.
 // Run `npm run agents -- --check photo.jpg` for the Phase 5 image check: one triage turn on the
 // photo, its answer and time, then the conversation deleted and checked gone.
+// Run `npm run agents -- --sweep` to delete every finished conversation both agents still have.
 
 import { readFileSync } from "node:fs";
 import { AGENTS, triageNote, type AgentSpec } from "@/lib/server/agents/config";
-import { deleteConversation, runAgentTurn } from "@/lib/server/agents/turn";
+import { deleteConversation, runAgentTurn, sweepConversations } from "@/lib/server/agents/turn";
 
 const API = "https://api.elevenlabs.io/v1";
 // The shortest the API allows. A turn takes a few seconds and the conversation is deleted after.
@@ -105,8 +106,8 @@ function agentBody(agent: AgentSpec, toolId: string) {
         text_only: true,
         max_duration_seconds: LONGEST_CONVERSATION_S,
         client_events: CLIENT_EVENTS,
-        // Two, in case an upload that was cut short and sent again lands both times.
-        file_input: { enabled: true, max_files_in_memory: 1, max_files_per_conversation: 2 },
+        // Three, in case an upload that was cut short and sent again lands every time.
+        file_input: { enabled: true, max_files_in_memory: 1, max_files_per_conversation: 3 },
       },
     },
     platform_settings: {
@@ -158,8 +159,13 @@ async function check(photo: string): Promise<void> {
   } finally {
     if (conversationId) {
       const deleted = await deleteConversation(conversationId);
-      const gone = await fetch(`${API}/convai/conversations/${conversationId}`, { headers: { "xi-api-key": key } });
-      console.info(`Conversation ${deleted ? "deleted" : "NOT deleted"}; reading it back gives ${gone.status}.`);
+      const read = async () =>
+        (await fetch(`${API}/convai/conversations/${conversationId}`, { headers: { "xi-api-key": key } })).status;
+      const now = await read();
+      // A delete that came too early shows up here: the conversation is saved again a few seconds on.
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+      const later = await read();
+      console.info(`Conversation ${deleted ? "deleted" : "NOT deleted"}; reading it back gives ${now}, and ${later} 5 s on.`);
     }
   }
 }
@@ -171,6 +177,12 @@ async function main(): Promise<void> {
       "ELEVENLABS_API_KEY doesn't start with sk_: that looks like the key's ID. " +
         "Create a key in ElevenLabs (Developers, API keys) and paste the secret it shows once.",
     );
+  }
+  if (process.argv.includes("--sweep")) {
+    for (const agent of Object.values(AGENTS)) {
+      console.info(`${agent.name}: deleted ${await sweepConversations(agent)} finished conversations`);
+    }
+    return;
   }
   const photoAt = process.argv.indexOf("--check");
   if (photoAt !== -1) {

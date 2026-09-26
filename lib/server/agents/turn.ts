@@ -9,11 +9,14 @@ import type { AgentSpec } from "./config";
 
 const API = "https://api.elevenlabs.io/v1";
 // The server takes a moment to register a new conversation. An upload sent the instant it says the
-// conversation started hangs for 5 s and comes back 408, "not active"; 300 ms later it goes through.
+// conversation started comes back 404, "not found", or hangs 5 s and comes back 408, "not active".
+// 400 ms later it mostly goes through; when it doesn't, it is sent again after a short wait.
 const UPLOAD_WAIT_MS = 400;
-// An upload takes about a second. A slower one is cut short and sent once more.
-const UPLOAD_ATTEMPT_MS = 2500;
-const UPLOAD_ATTEMPTS = 2;
+const UPLOAD_RETRY_WAIT_MS = 300;
+// An upload takes about a second. One stuck for longer is cut short and sent again.
+const UPLOAD_ATTEMPT_MS = 3000;
+const UPLOAD_ATTEMPTS = 3;
+const NOT_READY = new Set([404, 408]);
 
 export class AgentError extends Error {}
 
@@ -69,6 +72,7 @@ function timeLeft(deadline: number, deps: TurnDeps): number {
 async function uploadFrame(conversationId: string, jpeg: Uint8Array, key: string, deadline: number, deps: TurnDeps) {
   await deps.sleep(UPLOAD_WAIT_MS);
   for (let attempt = 1; ; attempt++) {
+    if (attempt > 1) await deps.sleep(UPLOAD_RETRY_WAIT_MS);
     const last = attempt === UPLOAD_ATTEMPTS;
     const form = new FormData();
     form.append("file", new Blob([jpeg as Uint8Array<ArrayBuffer>], { type: "image/jpeg" }), "frame.jpg");
@@ -89,7 +93,7 @@ async function uploadFrame(conversationId: string, jpeg: Uint8Array, key: string
       if (!fileId) throw new AgentError("frame upload: no file id");
       return fileId;
     }
-    if (response && (last || response.status !== 408)) {
+    if (response && (last || !NOT_READY.has(response.status))) {
       const detail = await response.text().catch(() => "");
       throw new AgentError(`frame upload: ${response.status} ${detail.slice(0, 200)}`.trim());
     }
@@ -186,20 +190,57 @@ export async function runAgentTurn(turn: AgentTurn, deps: TurnDeps = LIVE): Prom
   }
 }
 
-// Rule 5: the conversation holds the frame, so it goes as soon as the answer is in.
-export async function deleteConversation(
-  conversationId: string,
-  deps: Pick<TurnDeps, "fetch"> = LIVE,
-): Promise<boolean> {
+// Rule 5: the conversation holds the frame, so it goes as soon as the answer is in. ElevenLabs saves
+// a conversation a few seconds after it ends ("processing", then "done"), and that save brings back
+// one deleted before it. So the delete waits for "done", then checks the conversation stays gone.
+const DELETE_POLL_MS = 1000;
+const DELETE_WITHIN_MS = 20_000;
+const FINISHED = new Set(["done", "failed"]);
+
+type CleanupDeps = Pick<TurnDeps, "fetch" | "now" | "sleep">;
+
+export async function deleteConversation(conversationId: string, deps: CleanupDeps = LIVE): Promise<boolean> {
   const { ELEVENLABS_API_KEY: key } = env("ELEVENLABS_API_KEY");
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const response = await deps
-      .fetch(`${API}/convai/conversations/${conversationId}`, { method: "DELETE", headers: { "xi-api-key": key } })
-      .catch(() => null);
-    if (response && (response.ok || response.status === 404)) return true;
-    // A conversation that just closed may still be processing.
-    await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+  const url = `${API}/convai/conversations/${conversationId}`;
+  const headers = { "xi-api-key": key };
+  const until = deps.now() + DELETE_WITHIN_MS;
+  let deleted = false;
+  while (deps.now() < until) {
+    const got = await deps.fetch(url, { headers }).catch(() => null);
+    if (got?.status === 404 && deleted) return true;
+    const { status } = got?.ok ? ((await got.json().catch(() => ({}))) as { status?: string }) : {};
+    if (status && FINISHED.has(status)) {
+      const response = await deps.fetch(url, { method: "DELETE", headers }).catch(() => null);
+      deleted = Boolean(response && (response.ok || response.status === 404));
+      if (deleted) continue;
+    }
+    await deps.sleep(DELETE_POLL_MS);
   }
-  console.error(JSON.stringify({ route: "agents", outcome: "delete_failed", conversationId }));
+  // Out of time: delete anyway. The sweep and the agents' 1-day retention catch it if it comes back.
+  await deps.fetch(url, { method: "DELETE", headers }).catch(() => null);
+  console.error(JSON.stringify({ route: "agents", outcome: "delete_unconfirmed", conversationId }));
   return false;
+}
+
+// Deletes every finished conversation an agent still has: one left by a function that stopped
+// before its delete, or one saved again after it. Returns how many went.
+export async function sweepConversations(agent: AgentSpec, deps: CleanupDeps = LIVE): Promise<number> {
+  const { ELEVENLABS_API_KEY: key, [agent.idEnv]: agentId } = env("ELEVENLABS_API_KEY", agent.idEnv);
+  const headers = { "xi-api-key": key };
+  const list = await deps
+    .fetch(`${API}/convai/conversations?agent_id=${encodeURIComponent(agentId)}&page_size=100`, { headers })
+    .catch(() => null);
+  if (!list?.ok) return 0;
+  const { conversations = [] } = (await list.json()) as {
+    conversations?: Array<{ conversation_id: string; status?: string }>;
+  };
+  let swept = 0;
+  for (const conversation of conversations) {
+    if (!FINISHED.has(conversation.status ?? "")) continue;
+    const response = await deps
+      .fetch(`${API}/convai/conversations/${conversation.conversation_id}`, { method: "DELETE", headers })
+      .catch(() => null);
+    if (response && (response.ok || response.status === 404)) swept++;
+  }
+  return swept;
 }

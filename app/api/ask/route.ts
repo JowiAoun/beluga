@@ -9,12 +9,14 @@ import { withoutCrossingAdvice } from "@/lib/server/safety";
 import { ASK_META_HEADER, AskRequestSchema, encodeAskMeta, type AskMeta } from "@/lib/shared/contracts";
 import { FRAMES, NETWORK, VOICE_ASK } from "@/lib/shared/params";
 
-export const maxDuration = 15;
+// The answer comes back within the route's timeout; the rest is for deleting the conversation after
+// ElevenLabs has saved it, which can take 10 s.
+export const maxDuration = 30;
 
 const VOICE_RESERVE_MS = 1500;
 
-function log(outcome: string, began: number): void {
-  console.info(JSON.stringify({ route: "ask", agent: AGENTS.ask.name, latencyMs: Date.now() - began, outcome }));
+function log(outcome: string, began: number, detail?: string): void {
+  console.info(JSON.stringify({ route: "ask", agent: AGENTS.ask.name, latencyMs: Date.now() - began, outcome, detail }));
 }
 
 function sorry(status: number): Response {
@@ -56,7 +58,7 @@ export async function POST(request: Request): Promise<Response> {
       AskAnswerSchema,
     );
     if (!asked.ok) {
-      log(asked.reason, began);
+      log(asked.reason, began, asked.detail);
       return sorry(502);
     }
 

@@ -728,9 +728,9 @@ MCP suits apps and agents that find their tools at runtime. The backend knows ex
 | Setting | Triage agent | Ask agent |
 | --- | --- | --- |
 | Mode | text-only | text-only (design B below needs voice) |
-| LLM | `gemini-3.5-flash-lite` | `gemini-3.5-flash` |
+| LLM | `gemini-3.5-flash-lite` | `gemini-3.5-flash-lite` (Flash took 4 to 7 s a turn, mostly a slower upload; Flash-Lite takes about 2.5 s) |
 | Temperature | 1.0 | 1.0 |
-| File input | on, 1 file (2 per conversation, for an upload sent twice) | same |
+| File input | on, 1 file (3 per conversation, for an upload sent again) | same |
 | Client tool | `triage_answer`, fields below | `ask_answer`: answer, target label (nullable), box (nullable) |
 | Longest conversation | 60 s, the API's minimum | 60 s |
 | Privacy | no audio recording, transcripts kept 1 day at most, private (signed URLs only). Not Zero Retention Mode: ElevenLabs turns off file uploads with it on | same |
@@ -743,10 +743,10 @@ One helper in `lib/server/agents` does this and closes:
 
 1. Get a signed URL for the agent (`GET /v1/convai/conversation/get-signed-url`) with the API key.
 2. Open the WebSocket with Node's built-in `WebSocket`. Wait for `conversation_initiation_metadata`, which carries the conversation id. Answer every `ping` with a `pong`.
-3. Wait 400 ms, then upload the JPEG (`POST /v1/convai/conversations/{id}/files`) and keep the `file_id`. The server needs a moment to register a new conversation: an upload sent the instant the id arrives hangs 5 s and fails with 408. An upload slower than 2.5 s is sent once more.
+3. Wait 400 ms, then upload the JPEG (`POST /v1/convai/conversations/{id}/files`) and keep the `file_id`. The server needs a moment to register a new conversation: an upload sent the instant the id arrives comes back 404, or hangs 5 s and comes back 408. A 404, a 408 or an upload stuck past 3 s is sent again after 300 ms, three tries at most.
 4. Send a `multimodal_message` with the phone's note as text and the `file_id`.
 5. Wait for the `client_tool_call`. Check its `parameters` with the zod schema from `lib/shared/contracts`, reply with a `client_tool_result`, then close.
-6. Delete the conversation (`DELETE /v1/convai/conversations/{id}`), also after a failure or timeout.
+6. Delete the conversation (`DELETE /v1/convai/conversations/{id}`), also after a failure or timeout. ElevenLabs saves a conversation a few seconds after it ends, and that save brings back one deleted earlier, so the delete runs after the response (`after()`), waits for the status "done", deletes, and checks it stays gone. Each call then sweeps any finished conversation the agent still has, and `npm run agents -- --sweep` does the same by hand. Schedule the delete from the route's own code, never from a socket callback: there `after()` can run in an earlier request's context and delete the conversation before the frame is up.
 
 ### Shared rules for both routes
 
