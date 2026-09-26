@@ -144,10 +144,9 @@ To deploy, import the repository into Vercel and set the same variables there.
 
 ## Credits
 
-- [Aceternity UI](https://ui.aceternity.com): the spotlight, encrypted text, glowing card border, and the ideas behind the navbar, bento grid and sticky steps. Free components, which can't be resold as a component library.
-- [Magic UI](https://magicui.design) (MIT): the number ticker, the animated beam and the border beam.
-- [React Bits](https://reactbits.dev) (MIT with Commons Clause): the idea behind the headings that come in word by word.
-- [Atkinson Hyperlegible](https://www.brailleinstitute.org/freefont/) by the Braille Institute: every word on the site.
+- [Magic UI](https://magicui.design) (MIT): the number ticker and the animated beam.
+- [Mona Sans](https://github.com/github/mona-sans) by GitHub and [Instrument Serif](https://github.com/Instrument/instrument-serif) (both SIL Open Font License): the headings.
+- [Atkinson Hyperlegible](https://www.brailleinstitute.org/freefont/) by the Braille Institute: the body text and every word on the walking screen.
 - [Tabler Icons](https://tabler.io/icons) (MIT): the icons.
 
 ## License
