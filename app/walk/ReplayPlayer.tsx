@@ -7,6 +7,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { AudioEngine } from "@/lib/audio/engine";
+import { decodeLibrary, fetchLibrary, type RawLibrary } from "@/lib/audio/library";
 import { LabelMatcher } from "@/lib/detect/match";
 import { CameraOnlyEngine } from "@/lib/hazard/cameraOnly";
 import { nearestAhead } from "@/lib/hazard/corridor";
@@ -23,11 +24,19 @@ const RECENT_EVENTS = 5;
 export default function ReplayPlayer({ src }: { src: string }) {
   const ctxRef = useRef<AudioContext | null>(null);
   const stopRef = useRef<(() => void) | null>(null);
+  // The ElevenLabs sounds, so a replay sounds like the walk. Tones play until they arrive.
+  const libraryRef = useRef<RawLibrary | null>(null);
   const [clip, setClip] = useState<ReplayClip | null>(null);
   const [status, setStatus] = useState(src ? "Loading the clip" : "Pick a clip to play");
   const [playing, setPlaying] = useState(false);
   const [loop, setLoop] = useState(true);
   const [view, setView] = useState<DebugView | null>(null);
+
+  useEffect(() => {
+    void fetchLibrary().then((raw) => {
+      libraryRef.current = raw;
+    });
+  }, []);
 
   useEffect(() => {
     if (!src) return;
@@ -69,6 +78,8 @@ export default function ReplayPlayer({ src }: { src: string }) {
     const settings = readSettings();
     sound.start();
     sound.setVolume(settings.volumeDb);
+    const raw = libraryRef.current;
+    if (raw) void decodeLibrary(ctx, raw).then((library) => sound.useLibrary(library));
     const engine = new HazardEngine(settings.heightM);
     const matcher = new LabelMatcher();
     // With camera-only mode on in the settings, the clip's boxes play without its depth.
