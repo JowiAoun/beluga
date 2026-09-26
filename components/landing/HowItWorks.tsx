@@ -68,7 +68,7 @@ export function HowItWorks() {
       <div aria-hidden className="absolute inset-0 bg-dots mask-fade opacity-50" />
       <div className="relative mx-auto max-w-6xl">
         <p className="font-mono text-sm font-medium tracking-[0.18em] text-sonar uppercase">How it works</p>
-        <RevealHeading id="how-title" text="From the sidewalk to the city" className="mt-3 max-w-3xl text-section" />
+        <RevealHeading id="how-title" lines={["From the sidewalk to the city"]} className="mt-3 max-w-3xl text-section" />
         <Reveal delay={0.1}>
           <p className="mt-5 max-w-[65ch] text-lg text-muted">
             The phone sits on a chest mount with the camera facing forward. Everything that keeps you safe runs on the

@@ -90,7 +90,7 @@ export function TwoSpeeds() {
     <Section
       id="speeds"
       eyebrow="Two speeds"
-      title="Fast where it keeps you safe"
+      title={["Fast where it keeps you safe"]}
       intro="Warnings never wait for the network. The slower parts, Ask and reports, only run when you ask for them."
     >
       <Reveal delay={0.1} className={cn(CARD, "mt-12 overflow-hidden p-5 sm:p-10")}>

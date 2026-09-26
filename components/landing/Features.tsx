@@ -95,7 +95,7 @@ export function Features() {
     <Section
       id="features"
       eyebrow="Features"
-      title="Built for walking with a cane or a guide dog"
+      title={["Built for walking with a cane or a guide dog"]}
       intro="Each part answers one question: what do you need to hear, and what should stay out of your way?"
     >
       <ul className="mt-12 grid gap-4 md:auto-rows-[16rem] md:grid-cols-3">

@@ -10,7 +10,7 @@ export function BelugaMark({ className, title, size = 64 }: { className?: string
 
 export function Logo({ className }: { className?: string }) {
   return (
-    <span className={cn("inline-flex items-center gap-2 text-xl font-extrabold tracking-tight", className)}>
+    <span className={cn("inline-flex items-center gap-2.5 font-display text-2xl font-extrabold tracking-[-0.03em]", className)}>
       <BelugaMark size={40} className="size-10" />
       beluga
     </span>

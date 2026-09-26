@@ -12,7 +12,9 @@ export function MotionPrefs({ children }: { children: React.ReactNode }) {
   return <MotionConfig reducedMotion="user">{children}</MotionConfig>;
 }
 
-export function PauseMotion({ className }: { className?: string }) {
+// Stops everything that moves by itself (WCAG 2.2.2). `compact` shows only the icon below the md
+// breakpoint; the name stays for screen readers.
+export function PauseMotion({ className, compact = false }: { className?: string; compact?: boolean }) {
   const paused = usePaused();
   const toggle = useCallback(() => setPaused(!paused), [paused]);
   const Icon = paused ? IconPlayerPlayFilled : IconPlayerPauseFilled;
@@ -23,13 +25,13 @@ export function PauseMotion({ className }: { className?: string }) {
       aria-checked={paused}
       onClick={toggle}
       className={cn(
-        "inline-flex min-h-11 items-center gap-2 rounded-full border border-line px-3 text-sm font-semibold text-foreground transition-colors duration-150 hover:bg-white/10",
-        paused && "border-accent/60 text-accent",
+        "inline-flex min-h-12 min-w-12 items-center justify-center gap-2 rounded-md border border-line-strong px-3 font-display text-sm font-bold tracking-[0.02em] text-foreground uppercase transition-colors duration-300 ease-water hover:border-foreground",
+        paused && "border-accent bg-accent text-on-accent hover:border-accent",
         className,
       )}
     >
       <Icon aria-hidden size={18} />
-      Pause motion
+      <span className={cn(compact && "sr-only md:not-sr-only")}>Pause motion</span>
     </button>
   );
 }

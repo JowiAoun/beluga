@@ -177,7 +177,7 @@ export function HearWarning() {
       <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2">
         <div>
           <p className="font-mono text-sm font-medium tracking-[0.18em] text-sonar uppercase">Hear it</p>
-          <RevealHeading id="hear-title" text="Hear a warning" className="mt-3 text-section" />
+          <RevealHeading id="hear-title" lines={["Hear a warning"]} className="mt-3 text-section" />
           <Reveal delay={0.1}>
             <p className="mt-5 max-w-[60ch] text-lg text-muted">
               Put your headphones on. beluga plays three warnings, one from each side, the way the bone-conduction

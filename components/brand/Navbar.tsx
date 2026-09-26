@@ -1,13 +1,17 @@
 "use client";
 
-// Based on Aceternity UI's Resizable Navbar: full width at the top, a floating pill once you scroll.
+// The landonorris.com layout: the logo on the left; Pause motion, Try beluga and a Menu button on
+// the right. Menu opens a full-screen native <dialog>, which traps focus, closes on Escape and
+// hands focus back to the Menu button by itself.
 
+import Image from "next/image";
 import Link from "next/link";
-import { motion, useMotionValueEvent, useScroll } from "motion/react";
-import { useEffect, useId, useState } from "react";
-import { IconMenu2, IconX } from "@tabler/icons-react";
+import { useEffect, useId, useRef, useState } from "react";
+import { IconArrowUpRight, IconWalk, IconX } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
-import { ButtonLink } from "./Button";
+import { ButtonLink, Roll } from "./Button";
+import { Contours } from "./Contours";
+import { DISPLAY, Name, Serif } from "./Display";
 import { Logo } from "./Logo";
 import { PauseMotion } from "./MotionPrefs";
 
@@ -17,103 +21,142 @@ export const NAV_LINKS = [
   { name: "City dashboard", href: "/map" },
 ];
 
+// The last word of a menu link is set in the serif, and "beluga" stays lowercase.
+function MenuLabel({ name }: { name: string }) {
+  const words = name.split(" ");
+  const last = words.pop();
+  return (
+    <>
+      {words.join(" ")} <Serif>{last === "beluga" ? <Name /> : last}</Serif>
+    </>
+  );
+}
+
+function MenuIcon() {
+  return (
+    <svg aria-hidden viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M4 9h16M4 15h10" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function Navbar({ links = NAV_LINKS }: { links?: typeof NAV_LINKS }) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
-  const [hovered, setHovered] = useState<number | null>(null);
+  const dialog = useRef<HTMLDialogElement>(null);
+  const close = useRef<HTMLButtonElement>(null);
   const menuId = useId();
-  const { scrollY } = useScroll();
-
-  useMotionValueEvent(scrollY, "change", (y) => setScrolled(y > 40));
+  const titleId = useId();
 
   useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const show = () => {
+    dialog.current?.showModal();
+    close.current?.focus();
+    setOpen(true);
+  };
+  const hide = () => dialog.current?.close();
+
+  const all = [...links, { name: "Try beluga", href: "/walk" }];
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 px-3 pt-3">
-      <nav
-        aria-label="Main"
-        className={cn(
-          "mx-auto flex items-center justify-between gap-3 rounded-full border py-2 pr-2 pl-4 transition-[max-width,background-color,border-color,box-shadow] duration-500 ease-water motion-reduce:transition-none",
-          scrolled || open
-            ? "max-w-4xl border-line bg-abyss/85 shadow-[0_16px_48px_-12px_rgb(0_0_0/0.6)] md:backdrop-blur-lg"
-            : "max-w-6xl border-transparent bg-transparent",
-        )}
-      >
-        <Link href="/" className="rounded-full px-1 py-1" aria-label="beluga home">
+    <header
+      className={cn(
+        "fixed inset-x-0 top-0 z-50 border-b transition-colors duration-300 ease-water motion-reduce:transition-none",
+        scrolled ? "tone-dark border-line" : "border-transparent bg-transparent",
+      )}
+    >
+      <nav aria-label="Main" className="mx-auto flex h-18 max-w-[90rem] items-center justify-between gap-3 px-4 sm:px-6">
+        <Link href="/" className="rounded-md" aria-label="beluga home">
           <Logo />
         </Link>
 
-        <ul className="hidden items-center lg:flex" onMouseLeave={() => setHovered(null)}>
-          {links.map((link, i) => (
-            <li key={link.href}>
-              <Link
-                href={link.href}
-                onMouseEnter={() => setHovered(i)}
-                className="relative flex min-h-11 items-center rounded-full px-4 text-sm font-semibold text-foreground/85 transition-colors hover:text-foreground"
-              >
-                {hovered === i && (
-                  <motion.span
-                    layoutId="nav-hover"
-                    className="absolute inset-0 rounded-full bg-white/10"
-                    transition={{ type: "spring", stiffness: 400, damping: 36 }}
-                  />
-                )}
-                <span className="relative">{link.name}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-
         <div className="flex items-center gap-2">
-          <PauseMotion className="hidden lg:inline-flex" />
-          <ButtonLink href="/walk" className="hidden min-h-11 rounded-full px-5 text-sm sm:inline-flex">
-            Try beluga
+          <PauseMotion compact />
+          <ButtonLink href="/walk" className="hidden sm:inline-flex">
+            <IconWalk aria-hidden size={20} />
+            Try <Name />
           </ButtonLink>
           <button
             type="button"
-            className="inline-flex size-11 items-center justify-center rounded-full border border-line text-foreground lg:hidden"
+            aria-haspopup="dialog"
             aria-expanded={open}
             aria-controls={menuId}
-            aria-label={open ? "Close menu" : "Open menu"}
-            onClick={() => setOpen((v) => !v)}
+            onClick={show}
+            className="inline-flex size-12 items-center justify-center rounded-md border border-line-strong bg-background text-foreground transition-colors duration-300 ease-water hover:border-foreground"
           >
-            {open ? <IconX aria-hidden size={22} /> : <IconMenu2 aria-hidden size={22} />}
+            <MenuIcon />
+            <span className="sr-only">Menu</span>
           </button>
         </div>
       </nav>
 
-      <div
+      <dialog
+        ref={dialog}
         id={menuId}
-        hidden={!open}
-        className="mx-auto mt-2 max-w-4xl rounded-3xl border border-line bg-abyss/95 p-3 shadow-2xl md:backdrop-blur-lg lg:hidden"
+        aria-labelledby={titleId}
+        onClose={() => setOpen(false)}
+        className="menu-dialog tone-ink fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none overflow-y-auto overscroll-contain p-0"
       >
-        <ul className="flex flex-col">
-          {links.map((link) => (
-            <li key={link.href}>
-              <Link
-                href={link.href}
-                onClick={() => setOpen(false)}
-                className="flex min-h-12 items-center rounded-2xl px-4 text-lg font-semibold hover:bg-white/10"
-              >
-                {link.name}
-              </Link>
-            </li>
-          ))}
-        </ul>
-        <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-line px-1 pt-3">
-          <ButtonLink href="/walk" onClick={() => setOpen(false)} className="flex-1 sm:hidden">
-            Try beluga
-          </ButtonLink>
-          <PauseMotion />
+        <Contours variant="b" />
+        <div className="relative mx-auto flex min-h-full max-w-[90rem] flex-col px-4 sm:px-6">
+          <div className="flex h-18 shrink-0 items-center justify-between">
+            <Logo />
+            <h2 id={titleId} className="sr-only">
+              Menu
+            </h2>
+            <button
+              ref={close}
+              type="button"
+              onClick={hide}
+              className="inline-flex size-12 items-center justify-center rounded-md border border-line-strong text-foreground transition-colors duration-300 ease-water hover:border-foreground"
+            >
+              <IconX aria-hidden size={24} />
+              <span className="sr-only">Close menu</span>
+            </button>
+          </div>
+
+          <div className="grid flex-1 items-center gap-10 py-10 lg:grid-cols-[1fr_minmax(0,30rem)]">
+            <ul className="flex flex-col gap-2">
+              {all.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    onClick={hide}
+                    className={cn(DISPLAY, "group inline-flex items-center gap-4 rounded-md text-section")}
+                  >
+                    <Roll>
+                      <MenuLabel name={link.name} />
+                    </Roll>
+                    <IconArrowUpRight
+                      aria-hidden
+                      className="size-[0.6em] shrink-0 text-accent transition-transform duration-600 ease-out-expo motion-safe:group-hover:translate-x-1 motion-safe:group-hover:-translate-y-1"
+                    />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <Image
+              src="/3d/beluga.webp"
+              alt=""
+              width={960}
+              height={767}
+              unoptimized
+              className="hidden h-auto w-full lg:block"
+            />
+          </div>
+
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-t border-line py-5">
+            <PauseMotion />
+            <p className="text-muted">Research prototype. Not a medical device.</p>
+          </div>
         </div>
-      </div>
+      </dialog>
     </header>
   );
 }

@@ -12,7 +12,7 @@ import * as THREE from "three";
 import type { Side } from "@/lib/audio/placement";
 
 const MODEL = "/3d/trekz-air.glb";
-const SONAR = new THREE.Color("#38bdf8");
+const SONAR = new THREE.Color("#29b8ff");
 
 type PartName =
   | "TrekzAir_button"
@@ -191,7 +191,7 @@ export default function EarbudsScene({
         <Camera />
         <ambientLight intensity={0.7} />
         <directionalLight position={[0.4, 0.6, -0.5]} intensity={2.4} />
-        <directionalLight position={[-0.5, 0.2, 0.4]} intensity={1.1} color="#38bdf8" />
+        <directionalLight position={[-0.5, 0.2, 0.4]} intensity={1.1} color="#29b8ff" />
         <Suspense fallback={null}>
           <Earbuds side={side} progress={progress} still={still} onReady={onReady} />
         </Suspense>

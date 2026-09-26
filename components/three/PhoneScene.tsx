@@ -10,7 +10,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 
 const MODEL = "/3d/phone.glb";
-const SONAR = new THREE.Color("#38bdf8");
+const SONAR = new THREE.Color("#29b8ff");
 const PHONE_SCALE = 4;
 const PHONE_AT = new THREE.Vector3(0, 1.05, 0);
 // The wide lens on the back of the phone, in the model's metres.
@@ -119,7 +119,7 @@ function Scene({ still, onReady }: { still: boolean; onReady: () => void }) {
         <meshBasicMaterial color={SONAR} transparent opacity={0} depthWrite={false} />
       </mesh>
 
-      <gridHelper args={[12, 24, "#1e2b40", "#141d2c"]} position={[0, 0, -1.5]} />
+      <gridHelper args={[12, 24, "#2a3542", "#1d2631"]} position={[0, 0, -1.5]} />
     </>
   );
 }
@@ -156,7 +156,7 @@ export default function PhoneScene({
         <Camera />
         <hemisphereLight args={["#dff4ff", "#0b1320", 1.2]} />
         <directionalLight position={[2, 4, 3]} intensity={2} />
-        <directionalLight position={[-3, 2, -2]} intensity={1.2} color="#38bdf8" />
+        <directionalLight position={[-3, 2, -2]} intensity={1.2} color="#29b8ff" />
         <Suspense fallback={null}>
           <Scene still={still} onReady={onReady} />
         </Suspense>

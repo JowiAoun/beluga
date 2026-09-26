@@ -49,7 +49,7 @@ export function ForTheCity() {
     <Section
       id="city"
       eyebrow="For the city"
-      title="A fix-first list, ranked in SQL"
+      title={["A fix-first list, ranked in SQL"]}
       intro="Anonymous reports land in Tiger Data. Continuous aggregates keep the ranking fast, so the city sees which spots to fix first around the O-Train stations."
     >
       <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

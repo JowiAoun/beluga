@@ -3,15 +3,21 @@
 /* Pause motion in the navbar sets data-motion="paused" on <html>. */
 @custom-variant paused (&:where([data-motion="paused"], [data-motion="paused"] *));
 
+/* The dark tone. Sections switch to another set with the tone-* utilities below, and every
+   token class inside them follows, since the theme tokens read these variables. */
 :root {
-  --background: #0b1320;
-  --foreground: #f2f5f7;
-  --accent: #fde047;
-  --abyss: #060b14;
-  --muted: #94a3b8;
-  --sonar: #38bdf8;
-  --surface: rgb(255 255 255 / 0.05);
-  --line: rgb(255 255 255 / 0.1);
+  --background: #1b232c;
+  --foreground: #eef3f6;
+  --muted: #afbec8;
+  --accent: #29b8ff;
+  --on-accent: #0f141a;
+  --sonar: #75c7f0;
+  --focus: #29b8ff;
+  --abyss: #0f141a;
+  --paper: #eef3f6;
+  --surface: #222b35;
+  --line: #434c57;
+  --line-strong: #6b7784;
   --danger: #991b1b;
 }
 
@@ -19,33 +25,45 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
   --color-abyss: var(--abyss);
+  --color-paper: var(--paper);
   --color-muted: var(--muted);
   --color-sonar: var(--sonar);
   --color-surface: var(--surface);
   --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
   --color-danger: var(--danger);
   --font-sans: var(--font-atkinson), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: var(--font-atkinson-mono), ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --font-display: var(--font-mona), "Arial Black", system-ui, sans-serif;
+  --font-serif: var(--font-instrument), Georgia, "Times New Roman", serif;
 
-  --text-hero: clamp(2.75rem, 8vw, 6rem);
-  --text-hero--line-height: 1;
-  --text-hero--letter-spacing: -0.02em;
+  --text-hero: clamp(2.75rem, 11vw, 9rem);
+  --text-hero--line-height: 0.88;
+  --text-hero--letter-spacing: -0.035em;
   --text-hero--font-weight: 800;
-  --text-section: clamp(2rem, 5vw, 3.5rem);
-  --text-section--line-height: 1.1;
-  --text-section--letter-spacing: -0.01em;
-  --text-section--font-weight: 700;
+  --text-section: clamp(2.25rem, 7vw, 5.5rem);
+  --text-section--line-height: 0.9;
+  --text-section--letter-spacing: -0.03em;
+  --text-section--font-weight: 800;
+  --text-statement: clamp(2rem, 4.4vw, 4.25rem);
+  --text-statement--line-height: 0.95;
+  --text-statement--letter-spacing: -0.025em;
+  --text-statement--font-weight: 800;
+  --text-impact: clamp(4rem, 10vw, 10rem);
+  --text-impact--line-height: 0.9;
+  --text-impact--letter-spacing: -0.04em;
+  --text-impact--font-weight: 800;
 
-  --ease-water: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Slow start, fast finish: the curve landonorris.com uses for almost everything. */
+  --ease-water: cubic-bezier(0.65, 0.05, 0, 1);
+  --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
 
-  --animate-ring: ring 3.6s var(--ease-water) infinite;
-  --animate-float: float 7s ease-in-out infinite;
-  --animate-rise: rise 0.9s var(--ease-water) both;
-  --animate-shimmer: shimmer 6s linear infinite;
+  --animate-ring: ring 3.6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
   --animate-drift: drift 20s linear infinite;
-  --animate-pulse-ring: pulse-ring 2.4s var(--ease-water) infinite;
-  --animate-scan: scan 2.8s var(--ease-water) infinite;
+  --animate-pulse-ring: pulse-ring 2.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  --animate-scan: scan 2.8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
   --animate-eq: eq 1.1s ease-in-out infinite;
 
   /* A sonar ring: grows out of its centre and fades. */
@@ -60,25 +78,6 @@
     100% {
       transform: translate(-50%, -50%) scale(1);
       opacity: 0;
-    }
-  }
-  @keyframes float {
-    0%,
-    100% {
-      transform: translateY(0) rotate(-1deg);
-    }
-    50% {
-      transform: translateY(-14px) rotate(1deg);
-    }
-  }
-  @keyframes rise {
-    from {
-      opacity: 0;
-      transform: translateY(24px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
     }
   }
   /* The same ring for SVG shapes, which scale around their own centre. */
@@ -116,19 +115,65 @@
       transform: scaleY(1);
     }
   }
+  /* Two copies side by side slide half their width, so the loop has no seam. */
   @keyframes drift {
     to {
       transform: translateX(-50%);
     }
   }
-  @keyframes shimmer {
-    from {
-      background-position: 0% 50%;
-    }
-    to {
-      background-position: 200% 50%;
-    }
-  }
+}
+
+@utility tone-dark {
+  --background: #1b232c;
+  --foreground: #eef3f6;
+  --muted: #afbec8;
+  --sonar: #75c7f0;
+  --focus: #29b8ff;
+  --surface: #222b35;
+  --line: #434c57;
+  --line-strong: #6b7784;
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+@utility tone-ink {
+  --background: #0f141a;
+  --foreground: #eef3f6;
+  --muted: #afbec8;
+  --sonar: #75c7f0;
+  --focus: #29b8ff;
+  --surface: #161c23;
+  --line: #363e48;
+  --line-strong: #626e7b;
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+/* Light sections. Blue text here is the darker #005e99: the bright blue is only 2:1 on white. */
+@utility tone-paper {
+  --background: #eef3f6;
+  --foreground: #1b232c;
+  --muted: #424e57;
+  --sonar: #005e99;
+  --focus: #005e99;
+  --surface: #e2e9ee;
+  --line: #b9c4cc;
+  --line-strong: #7a8793;
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+@utility tone-accent {
+  --background: #29b8ff;
+  --foreground: #0f141a;
+  --muted: #0f141a;
+  --sonar: #0f141a;
+  --focus: #0f141a;
+  --surface: #52c6ff;
+  --line: #0f141a;
+  --line-strong: #0f141a;
+  background-color: var(--background);
+  color: var(--foreground);
 }
 
 @utility bg-dots {
@@ -152,6 +197,11 @@ html {
   scroll-padding-top: 6rem;
 }
 
+/* The full-screen menu is open: the page behind it stays put. */
+html:has(dialog[open]) {
+  overflow: hidden;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
@@ -159,8 +209,33 @@ body {
 }
 
 :focus-visible {
-  outline: 3px solid var(--accent);
+  outline: 3px solid var(--focus);
   outline-offset: 3px;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+/* The menu wipes down from the top when it opens and back up when it closes. */
+.menu-dialog {
+  clip-path: inset(0 0 100% 0);
+  transition:
+    clip-path 0.75s var(--ease-water),
+    display 0.75s allow-discrete,
+    overlay 0.75s allow-discrete;
+}
+.menu-dialog[open] {
+  clip-path: inset(0);
+}
+@starting-style {
+  .menu-dialog[open] {
+    clip-path: inset(0 0 100% 0);
+  }
+}
+.menu-dialog::backdrop {
+  background: transparent;
 }
 
 /* Pause motion stops every CSS animation where it is (WCAG 2.2.2). */
@@ -173,5 +248,8 @@ body {
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
+  }
+  .menu-dialog {
+    transition: none;
   }
 }

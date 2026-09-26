@@ -10,7 +10,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
 const MODEL = "/3d/beluga.glb";
-const SONAR = new THREE.Color("#38bdf8");
+const SONAR = new THREE.Color("#29b8ff");
 // The model faces +x. Turned so its face and sunglasses come toward the camera.
 const TURN = -0.95;
 // The melon, just above and behind the sunglasses.
@@ -200,7 +200,7 @@ export default function BelugaScene({
       <PerformanceMonitor onDecline={() => setDpr(1)} onFallback={onFallback} flipflops={3}>
         <hemisphereLight args={["#dff4ff", "#0b1320", 1.1]} />
         <directionalLight position={[6, 10, 8]} intensity={2.2} />
-        <directionalLight position={[-8, 3, -4]} intensity={1.6} color="#38bdf8" />
+        <directionalLight position={[-8, 3, -4]} intensity={1.6} color="#29b8ff" />
         <Suspense fallback={null}>
           <Beluga still={still} progress={progress} onReady={onReady} />
         </Suspense>

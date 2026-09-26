@@ -13,7 +13,7 @@ export function Privacy() {
     <Section
       id="privacy"
       eyebrow="Privacy"
-      title="What leaves your phone"
+      title={["What leaves your phone"]}
       intro="Reporting is off until you turn it on. Even then, only these few facts go to the city's database."
       className="bg-abyss"
     >

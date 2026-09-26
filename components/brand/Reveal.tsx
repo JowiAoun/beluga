@@ -2,8 +2,10 @@
 
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
+import { DISPLAY } from "./Display";
 
-const EASE = [0.22, 1, 0.36, 1] as const;
+const EASE = [0.65, 0.05, 0, 1] as const;
+const VIEW = { once: true, margin: "0px 0px -10% 0px" } as const;
 
 // Fades and lifts its children in the first time they scroll into view, then stays.
 export function Reveal({
@@ -21,48 +23,46 @@ export function Reveal({
   return (
     <Tag
       className={className}
-      initial={{ opacity: 0, y: 24 }}
+      initial={{ opacity: 0, y: 16 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "0px 0px -10% 0px" }}
-      transition={{ duration: 0.8, delay, ease: EASE }}
+      viewport={VIEW}
+      transition={{ duration: 0.75, delay, ease: EASE }}
     >
       {children}
     </Tag>
   );
 }
 
-// A heading whose words come in one after another, blurred to sharp. Screen readers get the
-// whole heading from the hidden copy.
+const LINE = {
+  hidden: { y: "105%" },
+  shown: (i: number) => ({ y: "0%", transition: { duration: 0.9, delay: i * 0.08, ease: EASE } }),
+};
+
+// An uppercase heading whose lines slide up out of a mask, one after another. The text is real
+// text in reading order, so screen readers need no copy. With reduced motion the lines are
+// just there.
 export function RevealHeading({
   id,
-  text,
+  lines,
   className,
   as = "h2",
 }: {
   id?: string;
-  text: string;
+  lines: React.ReactNode[];
   className?: string;
   as?: "h1" | "h2" | "h3";
 }) {
-  const Tag = as;
-  const words = text.split(" ");
+  const Tag = motion[as];
   return (
-    <Tag id={id} className={cn("text-balance", className)}>
-      <span className="sr-only">{text}</span>
-      <span aria-hidden>
-        {words.map((word, i) => (
-          <motion.span
-            key={i}
-            className="inline-block whitespace-pre"
-            initial={{ opacity: 0, y: 18, filter: "blur(8px)" }}
-            whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            viewport={{ once: true, margin: "0px 0px -10% 0px" }}
-            transition={{ duration: 0.7, delay: i * 0.06, ease: EASE }}
-          >
-            {i < words.length - 1 ? `${word} ` : word}
+    <Tag id={id} className={cn(DISPLAY, className)} initial="hidden" whileInView="shown" viewport={VIEW}>
+      {lines.map((line, i) => (
+        <span key={i} className="-mb-[0.1em] block overflow-hidden pb-[0.1em]">
+          <motion.span className="block" variants={LINE} custom={i}>
+            {line}
           </motion.span>
-        ))}
-      </span>
+          {i < lines.length - 1 && " "}
+        </span>
+      ))}
     </Tag>
   );
 }

@@ -5,19 +5,19 @@ type Variant = "primary" | "secondary" | "ghost" | "danger";
 type Size = "md" | "lg";
 
 const BASE =
-  "group relative inline-flex items-center justify-center gap-2 rounded-2xl font-bold transition-[transform,background-color,box-shadow,border-color] duration-150 ease-water active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50";
+  "group relative inline-flex items-center justify-center gap-2 rounded-md font-display font-extrabold tracking-[0.01em] uppercase transition-[background-color,border-color,color] duration-300 ease-water disabled:pointer-events-none disabled:opacity-50";
 
 const VARIANTS: Record<Variant, string> = {
-  primary:
-    "bg-accent text-background shadow-[0_0_0_0_rgb(253_224_71/0)] hover:shadow-[0_0_40px_-4px_rgb(253_224_71/0.55)] contrast-more:shadow-none",
-  secondary: "border border-line bg-surface text-foreground hover:border-white/30 hover:bg-white/10",
-  ghost: "text-foreground hover:bg-white/10",
+  primary: "bg-accent text-on-accent hover:bg-foreground hover:text-background",
+  secondary:
+    "border border-line-strong text-foreground hover:border-foreground hover:bg-foreground hover:text-background",
+  ghost: "text-foreground hover:bg-foreground/10",
   danger: "bg-danger text-white hover:bg-red-700",
 };
 
 const SIZES: Record<Size, string> = {
-  md: "min-h-12 px-5 text-base",
-  lg: "min-h-14 px-7 text-lg",
+  md: "min-h-12 px-5 text-[0.9375rem]",
+  lg: "min-h-14 px-7 text-base",
 };
 
 export function buttonClass({
@@ -28,28 +28,73 @@ export function buttonClass({
   return cn(BASE, VARIANTS[variant], SIZES[size], className);
 }
 
-type LinkProps = React.ComponentProps<typeof Link> & { variant?: Variant; size?: Size };
+// The label rolls up and a copy rolls in from below on hover or keyboard focus. The copy is
+// hidden from screen readers, and with reduced motion nothing rolls.
+export function Roll({ children, className }: { children: React.ReactNode; className?: string }) {
+  const move =
+    "transition-transform duration-600 ease-out-expo motion-reduce:transition-none";
+  return (
+    <span className={cn("relative inline-flex overflow-hidden", className)}>
+      <span
+        className={cn(
+          "inline-flex items-center gap-[inherit] motion-safe:group-hover:-translate-y-full motion-safe:group-focus-visible:-translate-y-full",
+          move,
+        )}
+      >
+        {children}
+      </span>
+      <span
+        aria-hidden
+        className={cn(
+          "absolute inset-0 inline-flex translate-y-full items-center gap-[inherit] motion-safe:group-hover:translate-y-0 motion-safe:group-focus-visible:translate-y-0 motion-reduce:hidden",
+          move,
+        )}
+      >
+        {children}
+      </span>
+    </span>
+  );
+}
+
+type Own = { variant?: Variant; size?: Size; roll?: boolean };
+type LinkProps = React.ComponentProps<typeof Link> & Own;
 
 // Internal links go through next/link. Pass `external` for other sites.
-export function ButtonLink({ variant, size, className, ...props }: LinkProps) {
-  return <Link className={buttonClass({ variant, size, className })} {...props} />;
+export function ButtonLink({ variant, size, roll = true, className, children, ...props }: LinkProps) {
+  return (
+    <Link className={buttonClass({ variant, size, className })} {...props}>
+      {roll ? <Roll className="gap-2">{children}</Roll> : children}
+    </Link>
+  );
 }
 
 export function ButtonAnchor({
   variant,
   size,
+  roll = true,
   className,
+  children,
   ...props
-}: React.ComponentProps<"a"> & { variant?: Variant; size?: Size }) {
-  return <a className={buttonClass({ variant, size, className })} {...props} />;
+}: React.ComponentProps<"a"> & Own) {
+  return (
+    <a className={buttonClass({ variant, size, className })} {...props}>
+      {roll ? <Roll className="gap-2">{children}</Roll> : children}
+    </a>
+  );
 }
 
 export function Button({
   variant,
   size,
+  roll = true,
   className,
   type = "button",
+  children,
   ...props
-}: React.ComponentProps<"button"> & { variant?: Variant; size?: Size }) {
-  return <button type={type} className={buttonClass({ variant, size, className })} {...props} />;
+}: React.ComponentProps<"button"> & Own) {
+  return (
+    <button type={type} className={buttonClass({ variant, size, className })} {...props}>
+      {roll ? <Roll className="gap-2">{children}</Roll> : children}
+    </button>
+  );
 }
