@@ -48,3 +48,4 @@ An installable web app for Android Chrome that warns blind and low-vision pedest
 - Each track owns its folders (table in "Tracks & timeline" in `docs/PLAN.md`). Touch another track's folder only in a small, separate commit.
 - Shared contracts live in `lib/shared`: `enums`, `contracts` (zod schemas and response types), `params` (every tunable number), `reporting` (categories and severity), `geo` (coarsening and grid cells), `stations`. Add to these files; never reorder or reformat them.
 - A module that uses a sponsor service starts with a comment naming the prize it serves.
+- Every page follows `docs/DESIGN.md`: colours, fonts, components, motion, 3D and accessibility.
