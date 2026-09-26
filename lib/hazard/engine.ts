@@ -22,6 +22,8 @@ export interface LabelQuery {
   angle: number;
   distance: number;
   poleLike: boolean;
+  // Where the hazard sits across the camera view, 0 at the left edge to 1 at the right; null out of view.
+  u: number | null;
 }
 
 // The detector's label for a hazard, or null for no match.
@@ -84,6 +86,11 @@ function relative(world: Vec3, update: SensingUpdate): { ahead: number; lateral:
 function inView(world: Vec3, update: SensingUpdate): boolean {
   const at = toViewCoords(world, update.viewFromWorld, update.projection);
   return at !== null && at.u >= 0 && at.u <= 1 && at.v >= 0 && at.v <= 1;
+}
+
+function acrossView(world: Vec3, update: SensingUpdate): number | null {
+  const at = toViewCoords(world, update.viewFromWorld, update.projection);
+  return at !== null && at.u >= 0 && at.u <= 1 ? at.u : null;
 }
 
 function toUpdate(track: Track): HazardUpdate {
@@ -223,6 +230,7 @@ export class HazardEngine {
           angle: track.angle,
           distance: track.distance,
           poleLike: track.poleLike,
+          u: acrossView(track.world, update),
         }) ?? fallback;
       if (activates) events.push({ type: "hazard_seen", t, hazard: toUpdate(track) });
 

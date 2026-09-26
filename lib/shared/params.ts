@@ -162,6 +162,10 @@ export const DETECTOR = {
   maxResults: 10,
   labelMatchWindowDeg: 10,
   labelHoldMs: 1000,
+  // Label matching: an obstacle's box must reach into the lower two-thirds of the frame, and a
+  // head-height box must start in the upper half. 0 is the top of the frame, 1 the bottom.
+  obstacleBoxBottomMin: 1 / 3,
+  headBoxTopMax: 0.5,
 } as const;
 
 export const GATE = {
