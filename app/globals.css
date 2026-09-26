@@ -176,22 +176,6 @@
   color: var(--foreground);
 }
 
-@utility bg-dots {
-  background-image: radial-gradient(rgb(255 255 255 / 0.09) 1px, transparent 1px);
-  background-size: 22px 22px;
-}
-
-@utility bg-grid {
-  background-image:
-    linear-gradient(to right, rgb(255 255 255 / 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgb(255 255 255 / 0.05) 1px, transparent 1px);
-  background-size: 56px 56px;
-}
-
-@utility mask-fade {
-  mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
-}
-
 html {
   scroll-behavior: smooth;
   scroll-padding-top: 6rem;
