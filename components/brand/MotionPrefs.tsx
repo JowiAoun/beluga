@@ -1,6 +1,6 @@
 "use client";
 
-import { MotionConfig, useReducedMotion } from "motion/react";
+import { MotionConfig } from "motion/react";
 import { useCallback, useSyncExternalStore } from "react";
 import { IconPlayerPauseFilled, IconPlayerPlayFilled } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
@@ -34,11 +34,25 @@ export function usePaused() {
   return useSyncExternalStore(subscribe, isPaused, () => false);
 }
 
+const REDUCED = "(prefers-reduced-motion: reduce)";
+
+function subscribeReduced(onChange: () => void) {
+  const query = window.matchMedia(REDUCED);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
+// Motion's useReducedMotion reads the setting in the first render, which doesn't match the
+// server's HTML. This one starts from the server's answer and updates after hydration.
+export function useReducedMotionSafe() {
+  return useSyncExternalStore(subscribeReduced, () => window.matchMedia(REDUCED).matches, () => false);
+}
+
 // True when nothing should move by itself: the Pause motion switch or the system's reduced motion.
 export function useStill() {
   const paused = usePaused();
-  const reduced = useReducedMotion();
-  return paused || Boolean(reduced);
+  const reduced = useReducedMotionSafe();
+  return paused || reduced;
 }
 
 export function MotionPrefs({ children }: { children: React.ReactNode }) {

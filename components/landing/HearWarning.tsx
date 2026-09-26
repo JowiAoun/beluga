@@ -3,6 +3,7 @@
 import { IconArrowLeft, IconArrowRight, IconArrowUp, IconHeadphones, IconPlayerStopFilled } from "@tabler/icons-react";
 import { useScroll } from "motion/react";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/brand/Button";
 import { CARD } from "@/components/brand/Card";
@@ -53,14 +54,27 @@ const STEP_SECONDS = 2.6;
 // Starts quiet: people press play with headphones already on.
 const START_GAIN = 0.35;
 
-function EarbudsPoster() {
+// Where each contact pad sits on the still, as a share of its width and height.
+const PAD_SPOTS = { left: ["33.5%", "41%"], right: ["66.5%", "40%"] } as const;
+
+// The still shown first, and in place of the 3D earbuds with reduced motion or no WebGL2. The
+// pad on the playing side glows here too.
+function EarbudsPoster({ side }: { side: Side | null }) {
   return (
-    <div className="flex size-full items-center justify-center">
-      <div className="relative aspect-square w-3/5">
-        <div className="absolute inset-0 rounded-full bg-sonar/15 blur-3xl" />
-        <SonarRings className="inset-0" count={3} />
-      </div>
-    </div>
+    <>
+      <Image src="/3d/trekz-air.webp" alt="" fill sizes="(min-width: 1024px) 50vw, 100vw" className="object-contain" />
+      {(["left", "right"] as const).map((pad) => (
+        <span
+          key={pad}
+          aria-hidden
+          className={cn(
+            "absolute size-[9%] -translate-1/2 rounded-full bg-sonar/80 shadow-[0_0_40px_12px_rgb(56_189_248/0.6)] transition-opacity duration-300",
+            side === pad || side === "ahead" ? "opacity-100" : "opacity-0",
+          )}
+          style={{ left: PAD_SPOTS[pad][0], top: PAD_SPOTS[pad][1] }}
+        />
+      ))}
+    </>
   );
 }
 
@@ -209,7 +223,7 @@ export function HearWarning() {
 
         <div className="relative">
           <div aria-hidden className="absolute inset-[12%] rounded-full bg-sonar/10 blur-3xl contrast-more:hidden" />
-          <SceneSlot poster={<EarbudsPoster />} className="aspect-square w-full">
+          <SceneSlot poster={<EarbudsPoster side={side} />} className="aspect-square w-full">
             {(controls) => <EarbudsScene side={side} progress={scrollYProgress} still={paused} {...controls} />}
           </SceneSlot>
         </div>

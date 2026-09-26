@@ -1,6 +1,7 @@
 "use client";
 
-import { useInView, useReducedMotion } from "motion/react";
+import { useInView } from "motion/react";
+import { useReducedMotionSafe } from "@/components/brand/MotionPrefs";
 import { useCallback, useRef, useState, useSyncExternalStore } from "react";
 import { cn } from "@/lib/utils";
 
@@ -41,7 +42,7 @@ export function SceneSlot({
   const ref = useRef<HTMLDivElement>(null);
   const near = useInView(ref, { margin: "300px 0px" });
   const onScreen = useInView(ref);
-  const reduced = useReducedMotion();
+  const reduced = useReducedMotionSafe();
   const canDraw = useSyncExternalStore(noSubscribe, hasWebGL2, () => false);
   const [seen, setSeen] = useState(false);
   const [ready, setReady] = useState(false);
