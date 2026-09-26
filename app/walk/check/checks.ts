@@ -14,7 +14,8 @@ export const CHECKS = [
   { id: "audio", label: "Sound: left, centre, right" },
   { id: "wakeLock", label: "Screen wake lock" },
   { id: "location", label: "Location" },
-  { id: "compass", label: "Compass heading" },
+  { id: "compass", label: "Compass heading, before AR" },
+  { id: "compassInAr", label: "Compass heading, inside AR" },
 ] as const;
 
 export type CheckId = (typeof CHECKS)[number]["id"];

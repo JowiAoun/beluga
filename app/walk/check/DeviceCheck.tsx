@@ -45,7 +45,7 @@ const SESSION_CHECKS = [
   "audio",
   "wakeLock",
   "location",
-  "compass",
+  "compassInAr",
 ] as const;
 
 function displayMode(): string {
@@ -135,10 +135,12 @@ export default function DeviceCheck() {
       }
     };
     void checkEnvironment();
+    const stopCompass = watchCompass(report, "compass");
 
     const cleanups = cleanupRef.current;
     return () => {
       overlay?.removeEventListener("beforexrselect", stopSelect);
+      stopCompass();
       cleanups.forEach((fn) => fn());
       void sessionRef.current?.end().catch(() => {});
     };
@@ -213,7 +215,7 @@ export default function DeviceCheck() {
 
     audioRef.current ??= startAudio();
     playTones();
-    cleanupRef.current.push(watchLocation(report), watchCompass(report));
+    cleanupRef.current.push(watchLocation(report));
     void requestWakeLock(report).then((lock) => {
       if (lock) cleanupRef.current.push(() => void lock.release());
     });
@@ -224,6 +226,7 @@ export default function DeviceCheck() {
       (session) => {
         sessionRef.current = session;
         setInAr(true);
+        cleanupRef.current.push(watchCompass(report, "compassInAr"));
         void runXrCheck({ session, gl, report, onLive, preview: previewRef.current })
           .catch((err) => report("session", "fail", errorText(err)))
           .finally(() => {

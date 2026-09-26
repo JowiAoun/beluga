@@ -99,8 +99,9 @@ export function watchLocation(report: Report): () => void {
   return () => navigator.geolocation.clearWatch(id);
 }
 
-// Chrome on Android sends compass headings as "deviceorientationabsolute".
-export function watchCompass(report: Report): () => void {
+// Chrome on Android sends compass headings as "deviceorientationabsolute". The device check runs
+// this twice: from page load, and again once the AR session runs, to see if Chrome pauses them in AR.
+export function watchCompass(report: Report, id: "compass" | "compassInAr"): () => void {
   let seen = false;
   let lastReport = 0;
   const onEvent = (event: Event) => {
@@ -111,12 +112,12 @@ export function watchCompass(report: Report): () => void {
     if (now - lastReport < 250) return;
     lastReport = now;
     const heading = Math.round((360 - e.alpha) % 360);
-    report("compass", "pass", `heading ${heading}° from north`);
+    report(id, "pass", `heading ${heading}° from north`);
   };
-  report("compass", "running", "waiting for orientation events");
+  report(id, "running", "waiting for orientation events");
   window.addEventListener("deviceorientationabsolute", onEvent);
   const timer = window.setTimeout(() => {
-    if (!seen) report("compass", "fail", "no absolute orientation events after 5 s");
+    if (!seen) report(id, "fail", "no absolute orientation events after 5 s");
   }, 5000);
   return () => {
     window.removeEventListener("deviceorientationabsolute", onEvent);
