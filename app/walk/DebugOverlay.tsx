@@ -102,6 +102,7 @@ export default function DebugOverlay({ view, session }: { view: DebugView | null
           </p>
         </>
       )}
+      {stats?.cameraError && <p>Camera off after an error: {stats.cameraError}</p>}
       <p>
         Location {view?.fix ? `±${Math.round(view.fix.accuracy)} m` : "no fix"}
         {missing.length > 0 && `. Not granted: ${missing.join(", ")}`}

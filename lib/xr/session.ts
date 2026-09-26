@@ -31,6 +31,7 @@ export interface LiveStats {
   updateRate: number;
   processingMs: number;
   depthError: string | null;
+  cameraError: string | null;
 }
 
 export interface SessionSummary {
@@ -146,8 +147,10 @@ export function startSensing(options: SensingOptions): SensingSession {
   let startedAt = performance.now();
   let lastUpdateT = -Infinity;
   let lastDetectorT = -Infinity;
+  // ARCore takes a moment to start tracking. That is not a loss, so the monitor waits for the first pose.
+  let everTracked = false;
 
-  const live: LiveStats = { frameRate: 0, updateRate: 0, processingMs: 0, depthError: null };
+  const live: LiveStats = { frameRate: 0, updateRate: 0, processingMs: 0, depthError: null, cameraError: null };
   let windowStart = startedAt;
   let windowFrames = 0;
   let windowUpdates = 0;
@@ -228,12 +231,16 @@ export function startSensing(options: SensingOptions): SensingSession {
     countFrame(now);
     resolveCaptures(now, false);
 
-    const pose = frame.getViewerPose(refSpace);
-    const poseOk = pose !== undefined && !pose.emulatedPosition;
-    const { change, cue } = tracking.update(t, poseOk);
-    if (change === "lost") {
-      motion.reset();
-      if (cue) onCue("hold_steady");
+    // Chrome returns null here, not undefined, until ARCore is tracking.
+    const pose = frame.getViewerPose(refSpace) ?? null;
+    const poseOk = pose !== null && !pose.emulatedPosition;
+    everTracked ||= poseOk;
+    if (everTracked) {
+      const { change, cue } = tracking.update(t, poseOk);
+      if (change === "lost") {
+        motion.reset();
+        if (cue) onCue("hold_steady");
+      }
     }
     if (tracking.lost) lostFrames++;
 
@@ -258,7 +265,16 @@ export function startSensing(options: SensingOptions): SensingSession {
       }
     }
 
-    readCamera(view, t);
+    try {
+      readCamera(view, t);
+    } catch (err) {
+      // A camera failure costs the detector and Gemini their frames, never the warnings.
+      live.cameraError = errorText(err);
+      reader?.dispose();
+      reader = null;
+      binding = null;
+      resolveCaptures(now, true);
+    }
 
     // About 10 updates a second at 30 or 60 frames a second.
     if (t - lastUpdateT < interval * 0.9) return;
@@ -287,9 +303,11 @@ export function startSensing(options: SensingOptions): SensingSession {
     if (floorEvent === "calibrated") {
       calibratedAt = t;
       onCue("calibrated");
-      // The hit test's one job was the first floor value.
+    }
+    if (hitSource && floor.calibrated) {
+      // The hit test's one job was the floor value before calibration.
       try {
-        hitSource?.cancel();
+        hitSource.cancel();
       } catch {
         // Already gone.
       }

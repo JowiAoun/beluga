@@ -37,6 +37,7 @@ export class FloorTracker {
 
   private hits: number[] = [];
   private pool: number[] = [];
+  private calibrationDone = false;
   private calibrationStart = 0;
   private walked = 0;
   private lastCamera: Vec3 | null = null;
@@ -51,7 +52,7 @@ export class FloorTracker {
     return this.source === "calibrated";
   }
 
-  // A hit on a flat surface. The median of the first few hits sets the floor until calibration ends.
+  // A hit on a flat surface. The median of the first few hits sets the floor, unless calibration found it from depth.
   addHit(hitY: number, cameraY: number): void {
     if (this.calibrated || this.hits.length >= SENSING.floorHitSamples) return;
     const below = cameraY - hitY;
@@ -68,7 +69,7 @@ export class FloorTracker {
     const candidates = floorCandidates(points, camera, forward, right);
 
     let event: FloorEvent | null = null;
-    if (!this.calibrated && !this.calibrating) {
+    if (!this.calibrationDone && !this.calibrating) {
       this.calibrating = true;
       this.calibrationStart = t;
       this.walked = 0;
@@ -81,19 +82,25 @@ export class FloorTracker {
       this.lastCamera = { ...camera };
       for (const y of candidates) this.pool.push(y);
 
-      const done = this.walked >= SENSING.calibrationMoveM || t - this.calibrationStart >= SENSING.calibrationMaxMs;
-      if (done && this.pool.length >= SENSING.calibrationMinPoints) {
+      const timedOut = t - this.calibrationStart >= SENSING.calibrationMaxMs;
+      const enough = this.pool.length >= SENSING.calibrationMinPoints;
+      const finished = timedOut || (enough && this.walked >= SENSING.calibrationMoveM);
+      if (!finished) return event;
+
+      // Out of time with too few points means the floor barely shows 0.5 to 2 m ahead (a phone
+      // held level). Then use what there is, or keep the hit test's value, and follow drift from there.
+      if (enough || this.pool.length >= SENSING.floorReestimateMinPoints) {
         // Median of the lowest 20%: objects standing on the floor only add points above it.
         const sorted = this.pool.sort((a, b) => a - b);
         const lowest = sorted.slice(0, Math.max(1, Math.floor(sorted.length * SENSING.floorCalibrationLowestShare)));
         this.y = median(lowest);
         this.source = "calibrated";
-        this.calibrating = false;
-        this.pool = [];
-        this.lastReestimate = t;
-        return "calibrated";
       }
-      return event;
+      this.calibrating = false;
+      this.calibrationDone = true;
+      this.pool = [];
+      this.lastReestimate = t;
+      return "calibrated";
     }
 
     for (const y of candidates) {

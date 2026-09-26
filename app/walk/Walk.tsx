@@ -65,6 +65,7 @@ export default function Walk() {
 
   const [support, setSupport] = useState<Support>("checking");
   const [needLocation, setNeedLocation] = useState(false);
+  const [locationGranted, setLocationGranted] = useState(false);
   const [phase, setPhase] = useState<Phase>("ready");
   const [session, setSession] = useState<SensingSession | null>(null);
   const [debug, setDebug] = useState(false);
@@ -93,7 +94,9 @@ export default function Walk() {
         supported = false;
       }
       setSupport(supported ? "ok" : "none");
-      setNeedLocation((await locationPermission()) === "prompt");
+      const permission = await locationPermission();
+      setNeedLocation(permission === "prompt");
+      setLocationGranted(permission === "granted");
       const on = readDebugDefault();
       debugRef.current = on;
       setDebug(on);
@@ -163,11 +166,14 @@ export default function Walk() {
       if (sessionRef.current === started) cleanupRef.current.push(() => void lock.release());
       else void lock.release();
     });
-    cleanupRef.current.push(
-      watchLocation((fix) => {
-        latestRef.current.fix = fix;
-      }),
-    );
+    // Only with permission already given: a prompt inside AR may never show.
+    if (locationGranted) {
+      cleanupRef.current.push(
+        watchLocation((fix) => {
+          latestRef.current.fix = fix;
+        }),
+      );
+    }
 
     latestRef.current = { update: null, nearest: null, fix: latestRef.current.fix, granted: null };
     setSession(started);
@@ -205,7 +211,9 @@ export default function Walk() {
 
   const allowLocation = async () => {
     await askLocation();
-    setNeedLocation((await locationPermission()) === "prompt");
+    const permission = await locationPermission();
+    setNeedLocation(permission === "prompt");
+    setLocationGranted(permission === "granted");
   };
 
   const inAr = phase === "starting" || phase === "running";

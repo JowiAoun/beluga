@@ -59,12 +59,19 @@ describe("FloorTracker", () => {
     expect(walk(floor, SENSING.calibrationMaxMs, 100, 0, 0, noise(5))).toEqual(["calibrated"]);
   });
 
-  it("keeps calibrating until depth gives enough points", () => {
+  it("keeps the hit test's floor when the floor stays out of view during calibration", () => {
     const floor = new FloorTracker(-0.3);
+    for (const y of [0.02, 0.01, 0.03, 0.02, 0.02]) floor.addHit(y, 1.3);
     const camera = { x: 0, y: 1.3, z: 0 };
-    for (let t = 0; t < 20_000; t += 100) floor.update(t, new Float32Array(0), camera, forward, right);
-    expect(floor.calibrating).toBe(true);
-    expect(floor.y).toBe(-0.3);
+    const events: string[] = [];
+    for (let t = 0; t <= SENSING.calibrationMaxMs + 5000; t += 100) {
+      const event = floor.update(t, new Float32Array(0), camera, forward, right);
+      if (event) events.push(event);
+    }
+    expect(events).toEqual(["calibration_started", "calibrated"]);
+    expect(floor.calibrating).toBe(false);
+    expect(floor.source).toBe("hit_test");
+    expect(floor.y).toBeCloseTo(0.02, 6);
   });
 
   it("follows slow drift near the floor and ignores anything outside the band", () => {
