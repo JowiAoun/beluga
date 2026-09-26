@@ -45,6 +45,8 @@ const ICONS: Record<Step, typeof IconBlind> = {
 
 const BIG_PRIMARY = cn(PRIMARY, "min-h-20");
 const BIG_SECONDARY = cn(SECONDARY, "min-h-20");
+// The step questions are whole sentences, so they stay in sentence case: long runs of capitals are
+// hard to read with low vision.
 const HEADING = cn(DISPLAY, "text-3xl leading-[1.1] sm:text-4xl");
 
 // The heading is uppercase, but the name inside it stays lowercase.
@@ -153,7 +155,7 @@ export default function FirstRun({
             <StepIcon size={34} stroke={1.75} />
           </span>
         )}
-        <h2 ref={headingRef} tabIndex={-1} className={cn(HEADING, "mb-2 outline-none")}>
+        <h2 ref={headingRef} tabIndex={-1} className={cn(HEADING, "mb-2 tracking-[-0.02em] normal-case outline-none")}>
           {withName(PROMPTS[step])}
         </h2>
 
