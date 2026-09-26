@@ -30,7 +30,9 @@ import AskButton from "./AskButton";
 import DebugOverlay, { type DebugView } from "./DebugOverlay";
 import { askLocation, locationPermission, watchLocation, type Fix } from "./location";
 import StopButton from "./StopButton";
-import { LINES, say, speakText, unlockVoice } from "./voice";
+import MicrophoneSetup from "./MicrophoneSetup";
+import VoiceAsk from "./VoiceAsk";
+import { LINES, say, speakLocalText, unlockVoice } from "./voice";
 
 type Phase = "ready" | "starting" | "running" | "ended";
 type Support = "checking" | "ok" | "none";
@@ -122,6 +124,9 @@ export default function Walk() {
     setHasClip(true);
     download(blob);
   };
+  const [microphone, setMicrophone] = useState("");
+  const [soundsLoading, setSoundsLoading] = useState(true);
+  const [soundStatus, setSoundStatus] = useState("Preparing offline sounds…");
 
   const runCleanups = useCallback(() => {
     cleanupRef.current.splice(0).forEach((fn) => fn());
@@ -170,6 +175,10 @@ export default function Walk() {
     // The recorded sounds download now, so the walk itself needs no network.
     void fetchLibrary().then((raw) => {
       libraryRef.current = raw;
+      setSoundsLoading(false);
+      setSoundStatus(raw?.offlineReady
+        ? "Spoken labels saved on this device for offline playback."
+        : "Offline tones are ready. Recorded labels could not be saved; a local device voice may be used.");
     });
     // Reporting starts off until the user turns it on; an older consent counts as off.
     reportingRef.current ??= new Reporting();
@@ -243,7 +252,10 @@ export default function Walk() {
     if (result.events.length > 0) latest.events = [...result.events.reverse(), ...latest.events].slice(0, RECENT_EVENTS);
   }, []);
 
-  const onCue = useCallback((cue: Cue) => say(cue), []);
+  const onCue = useCallback((cue: Cue) => {
+    if (soundRef.current) soundRef.current.say([cue]);
+    else speakLocalText(LINES[cue]);
+  }, []);
 
   const onEnd = useCallback(
     (result: SessionSummary) => {
@@ -278,7 +290,7 @@ export default function Walk() {
   const start = () => {
     const overlay = overlayRef.current;
     const gl = glRef.current;
-    if (!overlay || !gl || support !== "ok") return;
+    if (!overlay || !gl || support !== "ok" || soundsLoading) return;
 
     // startSensing calls requestSession before anything else in this tap.
     const started = startSensing({ overlayRoot: overlay, gl, onUpdate, onCue, onEnd });
@@ -288,7 +300,7 @@ export default function Walk() {
     const ctx = (audioRef.current ??= new AudioContext({ latencyHint: "interactive" }));
     void ctx.resume();
     unlockVoice();
-    const sound = new AudioEngine(ctx, { speak: speakText });
+    const sound = new AudioEngine(ctx, { speak: speakLocalText });
     sound.start();
     sound.setVolume(settingsRef.current.volumeDb);
     sound.setAliveTick(settingsRef.current.aliveTick);
@@ -468,6 +480,11 @@ export default function Walk() {
             {debug && <DebugOverlay view={view} session={session} />}
           </div>
           <AskButton asking={asking} onAsk={() => void ask()} />
+          {phase === "running" && session && <VoiceAsk
+            session={session} microphone={microphone}
+            getAudio={() => audioRef.current} getEngine={() => soundRef.current}
+            getFov={() => latestRef.current.update?.fov.horizontal}
+          />}
           <StopButton onStop={() => sessionRef.current?.stop()} />
         </main>
       ) : (
@@ -515,11 +532,17 @@ export default function Walk() {
               <button
                 type="button"
                 onClick={start}
-                disabled={support !== "ok"}
+                disabled={support !== "ok" || soundsLoading}
                 className="min-h-24 rounded-lg bg-yellow-300 px-4 text-2xl font-bold text-black disabled:opacity-50"
               >
-                {support === "checking" ? "Checking this phone" : phase === "ended" ? "Start again" : "Start"}
+                {soundsLoading ? "Preparing sounds" : support === "checking" ? "Checking this phone" : phase === "ended" ? "Start again" : "Start"}
               </button>
+
+              <p role="status">{soundStatus}</p>
+              <Link href="/walk/practice" className="flex min-h-16 items-center justify-center rounded-lg border-2 border-yellow-300 p-3 text-xl font-semibold">
+                Learn the warning sounds
+              </Link>
+              <MicrophoneSetup value={microphone} onChange={setMicrophone} />
 
               {message && (
                 <p role="alert" className="rounded-lg bg-red-900 p-3">

@@ -11,7 +11,7 @@ import { deleteConversation, runAgentTurn } from "@/lib/server/agents/turn";
 
 const API = "https://api.elevenlabs.io/v1";
 const LONGEST_CONVERSATION_S = 30;
-// Google says Gemini 3 models can loop below 1.0; ElevenLabs agents default to 0.
+// Use the provider's supported default temperature.
 const TEMPERATURE = 1;
 // Server events the backend reads over the WebSocket.
 const CLIENT_EVENTS = [

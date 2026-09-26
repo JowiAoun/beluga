@@ -1,7 +1,7 @@
 import "server-only";
 
 // Best Use of ElevenLabs: one text-only turn with an agent over its WebSocket. The frame goes up
-// as a file in the conversation, the agent sees it with Gemini and answers by calling its client
+// as a file in the conversation, the agent sees it and answers by calling its client
 // tool, and the socket closes. The caller deletes the conversation afterwards (rule 5).
 
 import { env } from "../env";

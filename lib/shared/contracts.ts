@@ -45,7 +45,7 @@ export const CellSchema = z
 
 export const DeviceKeySchema = z.string().min(8).max(64);
 
-// Top, left, bottom, right, scaled 0 to 1000. This is Gemini's own box order.
+// Top, left, bottom, right, scaled 0 to 1000.
 const boxEdge = z.int().min(0).max(1000);
 export const BoxSchema = z
   .tuple([boxEdge, boxEdge, boxEdge, boxEdge])
@@ -136,7 +136,7 @@ export const TriageRequestSchema = z.object({
 });
 export type TriageRequest = z.infer<typeof TriageRequestSchema>;
 
-// Gemini gives the yes/no answers; the backend works out severity and report.
+// The agent gives yes/no answers; the backend works out severity and report.
 export const TriageResponseSchema = z.object({
   report: z.boolean(),
   category: z.enum(CIVIC_CATEGORIES).nullable(),

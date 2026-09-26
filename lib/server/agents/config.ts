@@ -1,7 +1,7 @@
 import "server-only";
 
-// Best Use of ElevenLabs: the two agents that see for beluga, each with a Gemini model from the
-// ElevenLabs list and one client tool that carries its answer back. `npm run agents` creates or
+// Best Use of ElevenLabs: the two image-capable agents that see for beluga, each with one client
+// tool that carries its answer back. `npm run agents` creates or
 // updates them from this file, so a prompt change is a commit. Prompts are the Phase 5 wording.
 
 import type { TriageHazard } from "@/lib/shared/contracts";
@@ -67,7 +67,7 @@ export const AGENTS: Record<AgentKey, AgentSpec> = {
     key: "triage",
     name: "beluga triage",
     idEnv: "ELEVENLABS_TRIAGE_AGENT_ID",
-    llm: "gemini-3.5-flash-lite",
+    llm: "gpt-4.1-mini",
     prompt: TRIAGE_PROMPT,
     tool: {
       name: "triage_answer",
@@ -119,7 +119,7 @@ export const AGENTS: Record<AgentKey, AgentSpec> = {
     key: "ask",
     name: "beluga ask",
     idEnv: "ELEVENLABS_ASK_AGENT_ID",
-    llm: "gemini-3.5-flash",
+    llm: "gpt-4.1",
     prompt: ASK_PROMPT,
     tool: {
       name: "ask_answer",

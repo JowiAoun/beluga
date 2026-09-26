@@ -478,7 +478,7 @@ export function startSensing(options: SensingOptions): SensingSession {
   return {
     ready,
     stop: () => end("stop"),
-    captureFrame(longEdge = FRAMES.geminiLongEdgePx, quality = FRAMES.geminiJpegQuality) {
+    captureFrame(longEdge = FRAMES.captureLongEdgePx, quality = FRAMES.captureJpegQuality) {
       if (over || granted?.camera === false) return Promise.resolve(null);
       return new Promise((resolve) => captures.push({ longEdge, quality, at: performance.now(), resolve }));
     },

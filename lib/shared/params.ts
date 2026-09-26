@@ -186,8 +186,8 @@ export const GATE = {
 } as const;
 
 export const FRAMES = {
-  geminiLongEdgePx: 768,
-  geminiJpegQuality: 0.7,
+  captureLongEdgePx: 768,
+  captureJpegQuality: 0.7,
   maxFrameBytes: 400 * 1024,
   // A requested frame that doesn't arrive in this time resolves as no frame.
   captureWaitMs: 1000,

@@ -225,7 +225,8 @@ export class AudioEngine {
 
   // An Ask answer from the side of the object it describes. It plays under any hazard, 12 dB down,
   // and stops for a drop-off or head-height hazard: warnings always come first.
-  playAnswer(buffer: AudioBuffer, pan: Pan): void {
+  playAnswer(buffer: AudioBuffer, pan: Pan): boolean {
+    if (this.scene.hazards.some((h) => h.active && priorityOf(h) <= 2)) return false;
     this.stopAnswer();
     const placer = createPlacer(this.ctx, this.master, pan, this.ears);
     const playing = this.startSound(buffer, 1, placer, this.ctx.currentTime, false);
@@ -237,6 +238,7 @@ export class AudioEngine {
     };
     this.answer = answer;
     this.fitAnswer();
+    return this.answer === answer;
   }
 
   stopAnswer(): void {

@@ -42,3 +42,15 @@ export function speakText(text: string): void {
   utterance.lang = "en-CA";
   synth.speak(utterance);
 }
+
+// The warning loop may only use a voice confirmed to be installed on this device.
+// If none is available, the local warning tone still plays.
+export function speakLocalText(text: string): void {
+  const synth = speech();
+  const voice = synth?.getVoices().find((voice) => voice.localService && voice.lang.startsWith("en"));
+  if (!synth || !voice) return;
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.voice = voice;
+  utterance.lang = voice.lang;
+  synth.speak(utterance);
+}
