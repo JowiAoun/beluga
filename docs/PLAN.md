@@ -96,6 +96,7 @@ Devpost submission closes **10:00 EDT, Sunday Sept 27, 2026**, with a public Git
 | The cut list said "cut from the bottom up", which cuts detector labels first and the tactile-strip stretch last. | Medium | Now "cut from the top down", with five new items at the top. |
 | Near-miss pressure `1 + near-misses ÷ 10`: with the seed's volume a busy cell reaches the hundreds, so crowding outranks everything else. | Medium | Log scale (Phase 6). |
 | `cell_daily` averaged averages for positions. | Low | Positions come from the geohash centre (Phase 6). |
+| Gemini picked severity on its own, so the same scene could score 2 one time and 3 the next. It also had to guess if a thing would "still be there in an hour" from one photo. | Medium | Gemini answers yes/no questions; code works out severity from a fixed table; "left or fixed" replaces "lasting" ("What gets reported"). |
 | deck.gl's HexagonLayer re-bins cells, so its hexagons wouldn't match the queue. | Low | MapLibre fill squares, no deck.gl (Phase 7). |
 
 ### Demo & safety
@@ -301,16 +302,20 @@ Response: accepted count and rejected count. The backend rejects the whole batch
 
 ### Triage (phone → `/api/triage`)
 
-Request: one JPEG frame (long edge ≤ 768 px, quality \~0.7, base64), the triggering hazard (kind, distance, angle, height band, detector class), scene hint if known, and deviceKey (for rate limiting only).
+Request: one JPEG frame (long edge ≤ 768 px, quality \~0.7, base64), the triggering hazard (kind, distance, angle, height band, blocking share, detector class), scene hint if known, and deviceKey (for rate limiting only).
 
-Response (validated against the schema before returning):
+Response (validated against the schema before returning). The yes/no answers come from Gemini; severity and the report decision come from the backend (see "What gets reported"):
 
 | Field | Type | Notes |
 | --- | --- | --- |
 | report | boolean | Final decision after the backend applies the rules (not just the model's say-so) |
 | category | civic category or null |  |
-| lasting | boolean | Model's judgment that it will still be there in an hour |
-| severity | 1–4 |  |
+| isPublic | boolean | Open to anyone: street, path, platform, station or public building |
+| leftOrFixed | boolean | Not moving, not held, not in use |
+| wayAround | `clear`, `narrow` or `none` | Room to get past it without leaving the path |
+| caneWarning | boolean | A warning a cane or foot can find: a solid barrier down to the ground, or an intact tactile strip |
+| tripOrDrop | boolean | A lip, hole, trench or drop that can catch a foot |
+| severity | 1 to 4 | Worked out by the backend from the category table |
 | confidence | 0–1 |  |
 | description | string | ≤ 15 words, no people, faces, plates |
 | context | scene context |  |
@@ -328,13 +333,73 @@ Response: answer text (≤ 2 sentences), target box or null, target label, and t
 
 | Endpoint | Returns |
 | --- | --- |
-| queue | Top 25 fix-first rows: cell, place label, lat/lon, category, worst severity, reporters, near-misses, last seen, score, and each score part |
+| queue | Top 25 fix-first rows: cell, place label, lat/lon, category, who fixes it, worst severity, reporters, near-misses, last seen, score, and each score part |
+| urgent | "Check now" list: severity 4 reports from the last 14 days, read from `cell_daily`: cell, place label, category, who fixes it, day, source. No reporter minimum, no time of day |
 | cells | Map cells for a time window (1 h / 24 h / 7 d), category filter and source filter: cell, lat/lon, events, near-misses, reports, score |
 | stations | Hourly near-misses per station for 7 days, plus an hour-of-day profile for one station |
 | feed | Last 20 civic reports (time, category, severity, description, place label, source) |
 | perf | Latest measured raw vs aggregate query times, compression ratio, row counts, last seed load time |
 
 Every dashboard response includes `includesSimulated` so the banner can show.
+
+## What gets reported
+
+**A fixed list says what can be reported, a fixed table says how bad it is, and Gemini only answers questions about what it sees.** Code makes every decision, so the same answers always give the same severity, and the dashboard can say why. The rules live once in `lib/shared/reporting` and are used by triage, the seed generator and the dashboard.
+
+### The four tests
+
+A sighting becomes a civic report only if all four are true:
+
+1. **Public:** a place open to anyone. Streets, paths, crossings, curb ramps, transit platforms and stations, and public buildings. Homes and private workplaces are out.
+2. **Left or fixed:** not moving, not held, not in use. A scooter lying across the path counts; someone riding it doesn't. This replaces "will it still be there in an hour", which one photo can't answer.
+3. **In the way:** in or over the walking path. The phone already makes sure of this, because it only asks about hazards inside the corridor.
+4. **Someone can fix it:** its category is on the list below, and so it has an owner. People, animals and vehicles in the road never pass.
+
+### Severity
+
+Severity measures what the cane or guide dog misses. Something the cane finds costs a detour. Something it misses gets walked into. Something it misses that you can fall into is the worst.
+
+| Level | Name | Meaning |
+| --- | --- | --- |
+| 1 | Minor | The path stays clear. Never reported; anything that passes the four tests is at least a 2 |
+| 2 | Detour | The cane or dog finds it, but the user has to leave their line to get past |
+| 3 | Collision | Likely to be hit: the cane can't find it (head height, tape-only barrier), or the only way past is the road |
+| 4 | Fall | A drop with no warning a cane or foot can find: missing strip at a platform edge or top of stairs, open hole or trench |
+
+### Categories
+
+| Category | Covers | Not this | Base | Goes up when | Who fixes it |
+| --- | --- | --- | --- | --- | --- |
+| `sidewalk_obstruction` | E-scooter, bike, sandwich board, bin or furniture left in the path | Cars in the road, people, things being carried | 2 | 3 if `wayAround` is none or blocking is over 0.6 | City by-law, or the scooter operator |
+| `construction_barrier` | Fencing, barriers, cones, a closed sidewalk | | 2 | 3 if no `caneWarning` (tape only, gaps between cones); 4 if also `tripOrDrop` | The permit holder, through the City |
+| `head_height_hazard` | Sign, branch, awning, mirror or open window sticking out at head height, with nothing below for a cane to hit | Anything that reaches the ground: the cane finds it | 3 | | Property owner; City forestry for branches |
+| `surface_damage` | Hole, heaved or broken slab, broken curb in the path | Cracks with no height change | 2 | 3 if `tripOrDrop`, or the phone measured a drop-off | City roads & sidewalks |
+| `blocked_curb_cut` | Curb ramp blocked by a car, snow, a scooter or water | | 2 | 3 if `wayAround` is none (the way on is through the road) | City by-law or roads |
+| `tactile_strip_issue` | Warning strip missing, worn, broken or covered at a platform edge, top of stairs or curb ramp | Intact strips | 3 | 4 at a platform edge or top of stairs | OC Transpo within 150 m of a station; the City at curbs; the property owner indoors |
+| `snow_ice` | Snowbank or ice in the path, unplowed curb ramp | | 2 | 3 if `wayAround` is none | City winter maintenance |
+| `other_fixed` | Anything fixed and in the way that fits nothing above | | 2 | Never; it stays at 2 and needs confidence 0.85 | City 311 |
+
+The owner is worked out in the API from this table (no database column). The dashboard shows it as "Who fixes it" and can filter by it.
+
+### Who decides what
+
+| Piece | Decided by | Why |
+| --- | --- | --- |
+| In the path, how far, how wide, how high, any drop | Phone depth | Measured |
+| Category, the yes/no answers, description | Gemini, from a schema of enums and yes/no fields only | It can see what a thing is; it can't measure |
+| Severity | Code, from the tables above | Same input, same answer, and the "why" line can quote the rule |
+| Report or not | Code: four tests, confidence, no duplicate, budget left | Gemini's confidence number is a weak signal on its own |
+| Place in the queue | The fix-first score (Phase 6) | Severity is one report; the queue is a place over 14 days |
+
+The real check on a report is the 3-reporter rule: a spot only reaches the queue once 3 different phones have reported it.
+
+### Severity is not priority
+
+Severity is how bad one report is. Priority is what to fix first: the fix-first score multiplies the severity weight (1, 2, 4, 8) by reporters, near-misses, recency and transit. A severity 2 scooter spot that 15 people pass every evening can outrank a severity 3 sign that 3 people reported. That is on purpose: the city fixes the spot, like a scooter parking corral, and not the one scooter.
+
+### Severity 4 doesn't wait
+
+A missing strip at a platform edge shouldn't need three people to nearly fall first. Severity 4 reports skip the 3-reporter rule and go to a "Check now" list on the dashboard. That list shows the cell and the day, never the time, so one report can't place one person at one moment. It still shows that someone was in that cell that day; the README says so.
 
 ## Phase 0: repo, deploy skeleton, device test page
 
@@ -619,13 +684,13 @@ MCP suits apps and agents that find their tools at runtime. The backend knows ex
 
 System instruction (use this wording):
 
-> You are the civic triage step of beluga, an app used by blind and low-vision pedestrians together with a white cane or guide dog. You see one forward-facing chest-height photo and a short note about the hazard the phone detected. Decide whether it shows a lasting public-space hazard that the city should fix. Only these categories are reportable: sidewalk\_obstruction (scooter, bike or object left across the walking path), construction\_barrier, head\_height\_hazard (sign, branch, awning at head height), surface\_damage (pothole, broken curb, heaved slab), blocked\_curb\_cut, tactile\_strip\_issue (missing or damaged warning strip at a platform or curb edge), snow\_ice, other\_fixed. People, moving or parked vehicles in the road, animals and things being carried are never reportable. Severity: 1 minor inconvenience, 2 forces a detour, 3 collision likely, 4 fall risk. Be conservative: if unsure, lower your confidence. Describe only what is visible in 15 words or fewer. Never mention faces, licence plates or anything that identifies a person. Never say a road is safe to cross. Also classify the scene context. Return JSON only.
+> You are the civic triage step of beluga, an app used by blind and low-vision pedestrians together with a white cane or guide dog. You see one forward-facing chest-height photo and a short note about the hazard the phone detected. Say what the hazard is and answer questions about it. You do not decide whether it is reported or how severe it is. Pick the category from this list, or none: sidewalk\_obstruction (scooter, bike or object left across the walking path), construction\_barrier, head\_height\_hazard (sign, branch, awning sticking out at head height with nothing below for a cane to hit), surface\_damage (hole, broken curb, heaved slab), blocked\_curb\_cut, tactile\_strip\_issue (missing, worn or covered warning strip at a platform edge, top of stairs or curb ramp), snow\_ice, other\_fixed. People, vehicles in the road, animals and things being carried are always none. Then answer: is the place open to the public; is the thing left or fixed in place, and not moving, held or in use; is there room to get past it without leaving the path (clear, narrow, none); is there a warning a cane or foot can find, such as a solid barrier down to the ground or an intact tactile strip; is there a lip, hole, trench or drop that can catch a foot. If unsure, lower your confidence. Describe only what is visible in 15 words or fewer. Never mention faces, licence plates or anything that identifies a person. Never say a road is safe to cross. Also classify the scene context. Return JSON only.
 
-Text part: the phone's note, e.g. "Hazard: head\_height, 1.6 m ahead, 10° right, detector label unknown, scene hint sidewalk."
+Text part: the phone's note, e.g. "Hazard: head\_height, 1.6 m ahead, 10° right, blocking 0.3, detector label unknown, scene hint sidewalk."
 
-Schema fields: report, category, lasting, severity, confidence, description, context, box (nullable).
+Schema fields: category (enum, including none), isPublic, leftOrFixed, wayAround (enum), caneWarning, tripOrDrop, confidence, description, context, box (nullable). Enums in the schema keep the category inside the list.
 
-Backend decision (overrides the model): report is true only if the model said report, category is in the reportable list, lasting is true, confidence ≥ 0.7 and severity ≥ 2. Also false if the same device hash reported the same category in the same grid cell in the last 15 minutes (checked in the database), or if the hourly budget is spent.
+Backend decision (overrides the model): the backend works out severity from the category table in "What gets reported", then sets report to true only if all four tests pass, the category is not none, and confidence is at least 0.7 (0.85 for `other_fixed`). Also false if the same device hash reported the same category in the same grid cell in the last 15 minutes (checked in the database), or if the hourly budget is spent.
 
 Hourly budget: a tiny `api_budget` table (hour, route, count) incremented per call; refuse triage above `GEMINI_HOURLY_BUDGET`. Ask gets its own row in the same table and stops at `ASK_HOURLY_BUDGET`; past it, the phone speaks the offline line.
 
@@ -637,7 +702,7 @@ System instruction:
 
 Schema fields: answer, target label (nullable), box (nullable).
 
-Then call ElevenLabs Text to Speech streaming with the answer, the configured voice and Flash v2.5, MP3 output. Pipe the audio straight back as the response body, with answer, label and box in response headers. If ElevenLabs fails, return the JSON with a voice-failed flag; the phone speaks the cached apology.
+Then call ElevenLabs Text to Speech with the answer, the configured voice and Flash v2.5, MP3 output. Send the whole file back as the response body, with answer, label and box in response headers (see the Ask contract). If ElevenLabs fails, return the JSON with a voice-failed flag; the phone speaks the cached apology.
 
 ### Test set (commit it under `docs/test-frames`)
 
@@ -645,8 +710,11 @@ Take 10–12 photos at chest height around the venue and campus: scooter across 
 
 | Photo | Expected triage |
 | --- | --- |
-| Scooter across sidewalk | report, sidewalk\_obstruction, severity 2–3 |
+| Scooter across sidewalk, room to pass | report, sidewalk\_obstruction, severity 2 |
+| Scooter across the whole sidewalk | report, sidewalk\_obstruction, severity 3 |
 | Head-height sign | report, head\_height\_hazard, severity 3 |
+| Construction area marked with tape only | report, construction\_barrier, severity 3 |
+| Someone riding a scooter | no report (not left or fixed) |
 | Person walking | no report |
 | Car in the road | no report |
 | Empty hallway | no report |
@@ -728,7 +796,7 @@ For each cell × civic category over the last 14 days (from `cell_daily`, civic 
 | Transit | 1.3 if within 150 m of a station, else 1 |
 | **Score** | product of the five |
 
-Only rows with at least 3 distinct reporters are returned (k-anonymity). The view also returns each part, the station name and a place label ("near Rideau" or the cell).
+Only rows with at least 3 distinct reporters are returned (k-anonymity). Severity 4 goes to the separate "Check now" list instead (see "What gets reported"). The view also returns each part, the station name and a place label ("near Rideau" or the cell).
 
 ### `/api/events` intake
 
@@ -755,7 +823,7 @@ The free service has no connection pooler, and every request can land on a fresh
 | Area | Content |
 | --- | --- |
 | Header | "beluga for cities"; time window (1 h / 24 h / 7 d / 14 d); category filter; source toggle (Live / Simulated / Both); a yellow banner "Demo data: simulated events for illustration, not real incidents" whenever simulated rows are included |
-| Left column | **Fix-first queue** table: rank, place, category, severity, reporters, near-misses, last seen, score, and a "why" line built from the score parts (e.g. "Severity 3 × 6 reporters × 20 near-misses × seen yesterday × near Rideau") |
+| Left column | **Check now** list on top (severity 4, cell and day only), then the **Fix-first queue** table: rank, place, category, who fixes it, severity, reporters, near-misses, last seen, score, and a "why" line built from the score parts (e.g. "Severity 3 × 6 reporters × 20 near-misses × seen yesterday × near Rideau") |
 | Right column | **Map** of Ottawa centred on the five stations: cells as squares (their geohash bounds) coloured by score (or by event count when no reports), station markers, click a cell for a detail card |
 | Below | **Station panels**: hourly near-misses over 7 days per station (small line charts) and an hour-of-day bar chart for the selected station |
 | Below | **Live feed**: last 20 civic reports with time, category, severity, description, place, source badge |
@@ -808,6 +876,7 @@ With seed data loaded, every panel renders in under a second, filters work, and 
 - **Reporters:** simulated device keys drawn from a pool (\~400 per station) so recurring spots collect 3–20 distinct reporters.
 - **Places:** drop-off events within \~20 m of each station point; sidewalk hazards scattered within \~400 m; all coordinates rounded to 3 decimals, cells computed the same way as live data.
 - **Labelling:** every row has source = simulated.
+- **Severity:** the generator picks the yes/no answers for each story and calls the same `lib/shared/reporting` rules, so seeded severities match live ones.
 - **Determinism:** seeded random generator so reruns produce the same data.
 
 ### Loading
@@ -1018,7 +1087,8 @@ Drop-offs: same table shifted one band outward (start 3.5 m, continuous under 1.
 | Gate: skip if brightness below | 25/255 |
 | Phone budget | 1 triage per 6 s, 150 per hour |
 | Backend hourly budget | 150 triage calls, 120 Ask calls |
-| Report thresholds | confidence ≥ 0.7, severity ≥ 2, lasting |
+| Report thresholds | four tests pass, confidence ≥ 0.7 (0.85 for `other_fixed`) |
+| Check now list | severity 4, cell and day only, no reporter minimum |
 | Report dedup | same device + cell + category within 15 min |
 | Timeouts | triage 6 s, Ask 8 s |
 | Stop long press | 600 ms |
