@@ -291,6 +291,8 @@ export interface FeedRow {
   description: string;
   placeLabel: string;
   source: Source;
+  // So a new report can flash on the map too.
+  cell: string;
 }
 
 export interface FeedResponse extends DashboardResponse {
