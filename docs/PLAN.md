@@ -80,6 +80,7 @@ Devpost submission closes **10:00 EDT, Sunday Sept 27, 2026**, with a public Git
 | Image input is only documented for chat sessions, and the docs don't say which models take images. | High | A 15-minute image check opens Phase 5. If it fails, triage and Ask call Gemini directly with the billing key (Fallbacks). |
 | An agent turn adds a WebSocket connect, a file upload and a tool call, and ElevenLabs publishes no end-to-end time. Ask has a 3 s target. | Medium | The image check measures it. Flash-Lite for triage, Flash for Ask, default temperature (Phase 5). If Ask is slow, get the signed URL while the phone captures the frame. |
 | Agents have no JSON output mode. | Medium | Each agent answers through one client tool whose parameters are a JSON schema with enums; the backend checks them with zod, retries once, then fails safe (Phase 5). |
+| The venue network only lets port 443 out, and Tiger Cloud listens on another port, so a laptop there can't reach the database. Vercel can. | High | Run `npm run db:migrate` and the seed from a phone hotspot. Migrations were tested on a local TimescaleDB 2.30 in Docker. |
 | Tiger's free service turns read-only at 750 MB and has no connection pooler. Reloading the seed a few times, or many cold function connections, can hit a limit. | Medium | Smoke test in Phase 0, size check before reloads (Phase 8), small client pool (Phase 6). The trial service is the fallback. |
 | Giving the agents database tools (MCP or webhook tools) in triage or Ask would add a round trip and let text in a frame steer database access. | Medium | Each agent's only tool carries its answer back; the backend runs every query (Phase 5, "Agents and the database"). |
 | Anyone can call `/api/ask` and `/api/triage`, and a loop bug could drain ElevenLabs credits (agent turns, frame uploads and voice). | Low | Hourly budgets on both routes (Phase 5). |
@@ -699,7 +700,7 @@ Every AI call goes through ElevenLabs Agents, using a Gemini model from the Elev
 
 ### First: the image check (15 minutes, before anything else here)
 
-The docs show images in chat (text-only) sessions, and don't list which models take them. Check before building on it:
+The docs show images in chat (text-only) sessions, and don't list which models take them. Check before building on it. With the agents set up, `npm run agents -- --check photo.jpg` runs steps 2 to 4:
 
 1. Create a throwaway text-only agent with `gemini-3.5-flash` and file input on.
 2. From a Node script: get a signed URL, open the WebSocket, upload one test photo to the conversation, and send a `multimodal_message` asking what is in it.
@@ -726,13 +727,13 @@ MCP suits apps and agents that find their tools at runtime. The backend knows ex
 | --- | --- | --- |
 | Mode | text-only | text-only (design B below needs voice) |
 | LLM | `gemini-3.5-flash-lite` | `gemini-3.5-flash` |
-| Temperature | default | default |
+| Temperature | 1.0 | 1.0 |
 | File input | on, 1 file | on, 1 file |
 | Client tool | `triage_answer`, fields below | `ask_answer`: answer, target label (nullable), box (nullable) |
 | Longest conversation | 30 s | 30 s |
-| Privacy | shortest retention allowed, no audio recording | same |
+| Privacy | Zero Retention Mode when the account allows it, no audio recording, private (signed URLs only) | same |
 
-Temperature stays at the default: Google says values below 1.0 on Gemini 3 models can cause looping or worse output.
+Temperature is set to 1.0 on purpose: ElevenLabs agents default to 0, and Google says values below 1.0 on Gemini 3 models can cause looping or worse output. The script also checks the account's model list (`GET /v1/convai/llm/list`) and stops if a chosen model can't take images.
 
 ### How a route runs one agent turn
 
@@ -873,7 +874,7 @@ For each cell × civic category over the last 14 days (from `cell_daily`, civic 
 | Transit | 1.3 if within 150 m of a station, else 1 |
 | **Score** | product of the five |
 
-Only rows with at least 3 distinct reporters are returned (k-anonymity). Severity 4 goes to the separate "Check now" list instead (see "What gets reported"). The view also returns each part, the station name and a place label ("near Rideau" or the cell).
+Only rows with at least 3 distinct reporters are returned (k-anonymity). The score lives in a function, `fix_first_for(sources)`, so the dashboard's live, simulated or both filter can pass its sources; the `fix_first` view calls it with both. Severity 4 goes to the separate "Check now" list instead (see "What gets reported"). The view also returns each part, the station name and a place label ("near Rideau" or the cell).
 
 ### `/api/events` intake
 

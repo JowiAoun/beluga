@@ -19,7 +19,10 @@ An installable web app for Android Chrome that warns blind and low-vision pedest
 - `npm run build`: production build, the same one Vercel runs. It and `npm run dev` first put the detector's model and WASM in `public` (`scripts/detector-assets.ts`)
 - `npm run phone`: sends the phone's `localhost:3000` to this laptop over USB (see Phone testing)
 - `npm run db:smoke`: Phase 0 database check, needs `DATABASE_URL` in `.env.local`
-- `npm run db:migrate`, `npm run seed`, `npm run sounds`, `npm run agents`: filled in by Phases 6, 8, 3 and 5
+- `npm run db:migrate`: applies `db/migrations` in order, once each. The venue network blocks the database's port, so run it from a phone hotspot
+- `npm run agents`: creates or updates the two ElevenLabs agents and prints their ids; `npm run agents -- --check photo.jpg` runs the Phase 5 image check
+- `npm run sounds`: generates the ElevenLabs sound library into `public/sounds`
+- `npm run seed`: filled in by Phase 8
 
 ## Phone testing
 
