@@ -1,8 +1,7 @@
 "use client";
 
-import { useInView } from "motion/react";
-import { useReducedMotionSafe } from "@/components/brand/MotionPrefs";
-import { useCallback, useRef, useState, useSyncExternalStore } from "react";
+import { Component, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useReducedMotionSafe } from "@/components/brand/motionState";
 import { cn } from "@/lib/utils";
 
 let webgl2: boolean | undefined;
@@ -20,6 +19,35 @@ function hasWebGL2() {
 }
 
 const noSubscribe = () => () => {};
+
+// Whether the element is on screen, or within `margin` of it. Plain IntersectionObserver, so the
+// slot works on pages that don't load the animation library.
+function useOnScreen(ref: React.RefObject<HTMLElement | null>, margin: string) {
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(([entry]) => setOn(entry.isIntersecting), { rootMargin: margin });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [ref, margin]);
+  return on;
+}
+
+// A 3D chunk that fails to load (offline before it was ever cached) or a scene that throws
+// leaves the still in place instead of breaking the page.
+class Fallback extends Component<{ onError: () => void; children: React.ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch() {
+    this.props.onError();
+  }
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
+}
 
 export interface SceneControls {
   onScreen: boolean;
@@ -40,8 +68,8 @@ export function SceneSlot({
   children: (controls: SceneControls) => React.ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const near = useInView(ref, { margin: "300px 0px" });
-  const onScreen = useInView(ref);
+  const near = useOnScreen(ref, "300px 0px");
+  const onScreen = useOnScreen(ref, "0px");
   const reduced = useReducedMotionSafe();
   const canDraw = useSyncExternalStore(noSubscribe, hasWebGL2, () => false);
   const [seen, setSeen] = useState(false);
@@ -63,7 +91,11 @@ export function SceneSlot({
       >
         {poster}
       </div>
-      {mount && <div className="absolute inset-0">{children({ onScreen, onReady, onFallback })}</div>}
+      {mount && (
+        <div className="absolute inset-0">
+          <Fallback onError={onFallback}>{children({ onScreen, onReady, onFallback })}</Fallback>
+        </div>
+      )}
     </div>
   );
 }

@@ -6,7 +6,6 @@
 
 import { ContactShadows, PerformanceMonitor, useGLTF } from "@react-three/drei";
 import { Canvas, useFrame } from "@react-three/fiber";
-import type { MotionValue } from "motion/react";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
@@ -74,7 +73,10 @@ function Pivot({
   );
 }
 
-function Beluga({ still, progress, onReady }: { still: boolean; progress: MotionValue<number>; onReady: () => void }) {
+// How far the page has scrolled past the scene, 0 to 1. A Motion value fits; /walk passes none.
+type Progress = { get(): number };
+
+function Beluga({ still, progress, onReady }: { still: boolean; progress?: Progress; onReady: () => void }) {
   const { nodes } = useGLTF(MODEL) as unknown as { nodes: Record<string, THREE.Object3D> };
   const parts = useMemo<Part[]>(
     () =>
@@ -110,7 +112,7 @@ function Beluga({ still, progress, onReady }: { still: boolean; progress: Motion
 
   useFrame((state) => {
     const t = still ? 0 : state.clock.elapsedTime;
-    const dive = progress.get();
+    const dive = progress?.get() ?? 0;
     if (body.current) {
       body.current.position.y = Math.sin(t * 1.1) * 0.12 - dive * 0.6;
       body.current.rotation.z = Math.sin(t * 1.1 + 0.8) * 0.035 - dive * 0.15;
@@ -181,7 +183,7 @@ export default function BelugaScene({
   onFallback,
 }: {
   still: boolean;
-  progress: MotionValue<number>;
+  progress?: Progress;
   onScreen: boolean;
   onReady: () => void;
   onFallback: () => void;
