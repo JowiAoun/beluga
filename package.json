@@ -9,6 +9,7 @@
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
+    "phone": "tsx scripts/phone.ts",
     "db:smoke": "tsx --env-file-if-exists=.env.local db/smoke.ts",
     "db:migrate": "tsx --env-file-if-exists=.env.local db/migrate.ts",
     "seed": "tsx --env-file-if-exists=.env.local scripts/seed/index.ts",

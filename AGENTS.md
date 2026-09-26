@@ -17,13 +17,14 @@ An installable web app for Android Chrome that warns blind and low-vision pedest
 - `npm run dev`: dev server on port 3000
 - `npm run lint`, `npm run typecheck`, `npm test`: run all three before committing
 - `npm run build`: production build, the same one Vercel runs
+- `npm run phone`: sends the phone's `localhost:3000` to this laptop over USB (see Phone testing)
 - `npm run db:smoke`: Phase 0 database check, needs `DATABASE_URL` in `.env.local`
 - `npm run db:migrate`, `npm run seed`, `npm run sounds`: filled in by Phases 6, 8 and 3
 
 ## Phone testing
 
 1. Plug the phone in over USB with USB debugging on.
-2. Run `adb reverse tcp:3000 tcp:3000`.
+2. Run `npm run phone`. It runs `adb reverse tcp:3000 tcp:3000` for each plugged-in phone and finds `adb` in the Android SDK when it isn't on PATH.
 3. Open `http://localhost:3000/walk` in Chrome on the phone. `localhost` counts as a secure page, so WebXR works with no tunnel.
 
 The device check (`/walk`, and `/walk/check` for good) prints its results in the `npm run dev` terminal as `[beluga check]` lines.

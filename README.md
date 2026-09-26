@@ -14,7 +14,7 @@ Built at Hack the Hill III. The plan is in `docs/PLAN.md`.
 ## Test on the phone
 
 1. Plug the phone in over USB with USB debugging on
-2. Run `adb reverse tcp:3000 tcp:3000`
+2. Run `npm run phone`
 3. Open `http://localhost:3000/walk` in Chrome on the phone and tap Start test
 
 ## License
