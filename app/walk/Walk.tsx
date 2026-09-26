@@ -85,6 +85,8 @@ interface Latest {
 }
 
 const RECENT_EVENTS = 5;
+// Start waits this long at most for the recorded sounds.
+const SOUNDS_WAIT_MS = 8000;
 
 function freshLatest(fix: Fix | null = null): Latest {
   return { update: null, nearest: null, fix, granted: null, hazards: [], events: [], floorSlope: null, lastAsk: null };
@@ -191,10 +193,17 @@ export default function Walk() {
         registration.active?.postMessage({ type: "cache", urls });
       });
     }
-    // The recorded sounds download now, so the walk itself needs no network.
+    // The recorded sounds download now, so the walk itself needs no network. A slow network
+    // doesn't hold Start back for long: tones play until the recorded sounds arrive.
+    const soundsWait = window.setTimeout(() => setSoundsLoading(false), SOUNDS_WAIT_MS);
     void fetchLibrary().then((raw) => {
+      window.clearTimeout(soundsWait);
       libraryRef.current = raw;
       setSoundsLoading(false);
+      // A walk that started on tones takes the recorded sounds now.
+      const sound = soundRef.current;
+      const ctx = audioRef.current;
+      if (raw && sound && ctx) void decodeLibrary(ctx, raw).then((library) => sound.useLibrary(library));
       setSoundStatus(raw?.offlineReady
         ? "Spoken labels saved on this device for offline playback."
         : "Offline tones are ready. Recorded labels could not be saved; a local device voice may be used.");
@@ -209,6 +218,7 @@ export default function Walk() {
     else void detect.load(choice === "cpu" ? "CPU" : "GPU");
 
     return () => {
+      window.clearTimeout(soundsWait);
       overlay?.removeEventListener("beforexrselect", stopSelect);
       sessionRef.current?.stop();
       runCleanups();
