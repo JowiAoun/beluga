@@ -312,8 +312,8 @@ Response (validated against the schema before returning). The yes/no answers com
 | category | civic category or null |  |
 | isPublic | boolean | Open to anyone: street, path, platform, station or public building |
 | leftOrFixed | boolean | Not moving, not held, not in use |
-| wayAround | `clear`, `narrow` or `none` | Room to get past it without leaving the path |
-| caneWarning | boolean | A warning a cane or foot can find: a solid barrier down to the ground, or an intact tactile strip |
+| wayAround | `clear`, `narrow` or `none` | Path left to get past it: `clear` is 1.5 m or more, `narrow` is less |
+| caneWarning | boolean | A warning a cane or foot can find: a solid barrier with a rail or edge at or below 0.68 m, or an intact tactile strip |
 | tripOrDrop | boolean | A lip, hole, trench or drop that can catch a foot |
 | severity | 1 to 4 | Worked out by the backend from the category table |
 | confidence | 0–1 |  |
@@ -370,16 +370,31 @@ Severity measures what the cane or guide dog misses. Something the cane finds co
 
 | Category | Covers | Not this | Base | Goes up when | Who fixes it |
 | --- | --- | --- | --- | --- | --- |
-| `sidewalk_obstruction` | E-scooter, bike, sandwich board, bin or furniture left in the path | Cars in the road, people, things being carried | 2 | 3 if `wayAround` is none or blocking is over 0.6 | City by-law, or the scooter operator |
-| `construction_barrier` | Fencing, barriers, cones, a closed sidewalk | | 2 | 3 if no `caneWarning` (tape only, gaps between cones); 4 if also `tripOrDrop` | The permit holder, through the City |
-| `head_height_hazard` | Sign, branch, awning, mirror or open window sticking out at head height, with nothing below for a cane to hit | Anything that reaches the ground: the cane finds it | 3 | | Property owner; City forestry for branches |
+| `sidewalk_obstruction` | E-scooter, bike, sandwich board, bin or furniture left in the path | Cars in the road, people, things being carried | 2 | 3 if `wayAround` is none or blocking is over 0.6 | The scooter operator for e-scooters; City by-law for the rest |
+| `construction_barrier` | Fencing, barriers, cones, a closed sidewalk | | 2 | 3 if no `caneWarning` (tape only, gaps between cones, no edge at or below 0.68 m); 4 if also `tripOrDrop` | The permit holder, through the City |
+| `head_height_hazard` | Sign, branch, awning, mirror or open window sticking out more than 10 cm between 0.68 m and 2.1 m high, with nothing at or below 0.68 m for a cane to hit | Anything that reaches the ground: the cane finds it | 3 | | Property owner; City forestry for branches |
 | `surface_damage` | Hole, heaved or broken slab, broken curb in the path | Cracks with no height change | 2 | 3 if `tripOrDrop`, or the phone measured a drop-off | City roads & sidewalks |
 | `blocked_curb_cut` | Curb ramp blocked by a car, snow, a scooter or water | | 2 | 3 if `wayAround` is none (the way on is through the road) | City by-law or roads |
-| `tactile_strip_issue` | Warning strip missing, worn, broken or covered at a platform edge, top of stairs or curb ramp | Intact strips | 3 | 4 at a platform edge or top of stairs | OC Transpo within 150 m of a station; the City at curbs; the property owner indoors |
+| `tactile_strip_issue` | Warning strip missing, worn, broken or covered where one is required: a transit platform edge, the top of stairs, a curb ramp or depressed curb at a crossing | Intact strips; places where no strip is required | 3 | 4 at a platform edge or top of stairs | OC Transpo within 150 m of a station; the City at curbs; the property owner indoors |
 | `snow_ice` | Snowbank or ice in the path, unplowed curb ramp | | 2 | 3 if `wayAround` is none | City winter maintenance |
 | `other_fixed` | Anything fixed and in the way that fits nothing above | | 2 | Never; it stays at 2 and needs confidence 0.85 | City 311 |
 
 The owner is worked out in the API from this table (no database column). The dashboard shows it as "Who fixes it" and can filter by it.
+
+### Where the numbers come from
+
+The categories follow Ontario's and Ottawa's own accessibility rules, so a planner sees which rule a spot likely breaks.
+
+| Rule | Source | Used in |
+| --- | --- | --- |
+| Outdoor paths keep 1.5 m of clear width (1.2 m where a path meets a curb ramp) | Ontario O. Reg. 191/11 (AODA), s. 80.23 | `wayAround`: `clear` or `narrow` |
+| Where headroom drops below 2.1 m, a rail or barrier a cane can find must go around the object | O. Reg. 191/11, s. 80.23; City of Ottawa Accessibility Design Standards (ADS) 2.5.2 | `head_height_hazard`, `caneWarning` |
+| Anything sticking out more than 100 mm between 680 mm and 2030 mm must be cane-detectable at or below 680 mm | CSA B651-12, 4.4.1; Ottawa ADS 2.5.1 and 2.5.3 | `head_height_hazard`, `caneWarning` |
+| Tactile strips at the top of every flight of stairs, and at curb ramps and depressed curbs at crossings | O. Reg. 191/11, s. 80.25 to 80.27 | `tactile_strip_issue` |
+| Tactile strips along the full length of a transit platform edge | CSA B651-12, 4.3.5.3.2; Ottawa ADS 6.20.1.3 (OC Transpo platforms) | `tactile_strip_issue` at severity 4 |
+| Parked e-scooters leave 2 m of foot path clear | City of Ottawa e-scooter rules, 2026 season | `sidewalk_obstruction` for scooters |
+
+The phone can't measure to the centimetre, so a report means a spot likely breaks a rule, and the dashboard says "likely". A person from the city confirms it. The detail card for a spot names the rule and the 311 channel to use: the "Misparked e-scooter" form for scooters, a 311 phone call for broken sidewalks (there is no online form), and the road, sidewalk or pathway problem form for the rest.
 
 ### Who decides what
 
@@ -684,7 +699,7 @@ MCP suits apps and agents that find their tools at runtime. The backend knows ex
 
 System instruction (use this wording):
 
-> You are the civic triage step of beluga, an app used by blind and low-vision pedestrians together with a white cane or guide dog. You see one forward-facing chest-height photo and a short note about the hazard the phone detected. Say what the hazard is and answer questions about it. You do not decide whether it is reported or how severe it is. Pick the category from this list, or none: sidewalk\_obstruction (scooter, bike or object left across the walking path), construction\_barrier, head\_height\_hazard (sign, branch, awning sticking out at head height with nothing below for a cane to hit), surface\_damage (hole, broken curb, heaved slab), blocked\_curb\_cut, tactile\_strip\_issue (missing, worn or covered warning strip at a platform edge, top of stairs or curb ramp), snow\_ice, other\_fixed. People, vehicles in the road, animals and things being carried are always none. Then answer: is the place open to the public; is the thing left or fixed in place, and not moving, held or in use; is there room to get past it without leaving the path (clear, narrow, none); is there a warning a cane or foot can find, such as a solid barrier down to the ground or an intact tactile strip; is there a lip, hole, trench or drop that can catch a foot. If unsure, lower your confidence. Describe only what is visible in 15 words or fewer. Never mention faces, licence plates or anything that identifies a person. Never say a road is safe to cross. Also classify the scene context. Return JSON only.
+> You are the civic triage step of beluga, an app used by blind and low-vision pedestrians together with a white cane or guide dog. You see one forward-facing chest-height photo and a short note about the hazard the phone detected. Say what the hazard is and answer questions about it. You do not decide whether it is reported or how severe it is. Pick the category from this list, or none: sidewalk\_obstruction (scooter, bike or object left across the walking path), construction\_barrier, head\_height\_hazard (sign, branch, awning sticking out between 0.68 m and 2.1 m high, with nothing below for a cane to hit), surface\_damage (hole, broken curb, heaved slab), blocked\_curb\_cut, tactile\_strip\_issue (missing, worn or covered warning strip at a platform edge, the top of stairs, or a curb ramp at a crossing), snow\_ice, other\_fixed. People, vehicles in the road, animals and things being carried are always none. Then answer: is the place open to the public; is the thing left or fixed in place, and not moving, held or in use; how much path is left to get past it (clear: 1.5 m or more, about two people side by side; narrow: less; none); is there a warning a cane or foot can find, such as a solid barrier with a rail or edge at or below 0.68 m, or an intact tactile strip; is there a lip, hole, trench or drop that can catch a foot. If unsure, lower your confidence. Describe only what is visible in 15 words or fewer. Never mention faces, licence plates or anything that identifies a person. Never say a road is safe to cross. Also classify the scene context. Return JSON only.
 
 Text part: the phone's note, e.g. "Hazard: head\_height, 1.6 m ahead, 10° right, blocking 0.3, detector label unknown, scene hint sidewalk."
 
