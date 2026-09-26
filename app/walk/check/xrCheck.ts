@@ -1,4 +1,5 @@
 import { createCameraReader, type CameraReader } from "@/lib/xr/cameraImage";
+import { xrReady } from "@/lib/xr/gl";
 import { fieldOfView, orientationOf, type FieldOfView } from "@/lib/xr/projection";
 import type { Report } from "./checks";
 import { errorText } from "./sensors";
@@ -41,7 +42,7 @@ const GRID_Y = 9;
 const PREVIEW_WIDTH = 160;
 
 // Runs until the session ends, reporting each XR check as it passes.
-export async function runXrCheck({ session, gl, report, onLive, preview }: XrCheckOptions): Promise<void> {
+export async function runXrCheck({ session, gl: pageGl, report, onLive, preview }: XrCheckOptions): Promise<void> {
   const ended = new Promise<void>((resolve) => session.addEventListener("end", () => resolve(), { once: true }));
 
   const listed = session.enabledFeatures;
@@ -61,8 +62,9 @@ export async function runXrCheck({ session, gl, report, onLive, preview }: XrChe
   );
 
   let baseLayer: XRWebGLLayer;
+  let gl: WebGL2RenderingContext;
   try {
-    await gl.makeXRCompatible();
+    gl = await xrReady(pageGl);
     baseLayer = new XRWebGLLayer(session, gl, { alpha: true, antialias: false, depth: false });
     session.updateRenderState({ baseLayer });
   } catch (err) {

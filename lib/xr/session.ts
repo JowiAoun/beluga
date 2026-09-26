@@ -5,6 +5,7 @@ import { DETECTOR, FRAMES, SENSING } from "@/lib/shared/params";
 import { createCameraReader, encodeJpeg, fitLongEdge, type CameraReader, type SmallImage } from "./cameraImage";
 import { gridFor, NO_DEPTH, sampleDepth, type DepthSample } from "./depth";
 import { FloorTracker, type FloorEvent } from "./floor";
+import { xrReady } from "./gl";
 import { forwardOf, upOf } from "./geometry";
 import { MotionTracker } from "./motion";
 import { fieldOfView, type FieldOfView } from "./projection";
@@ -123,7 +124,9 @@ export function startSensing(options: SensingOptions): SensingSession {
     ? requestArSession(navigator.xr, options.overlayRoot)
     : Promise.reject(new Error("WebXR is missing: use Chrome on an ARCore phone"));
 
-  const { gl, onUpdate, onCue, onEnd } = options;
+  const { onUpdate, onCue, onEnd } = options;
+  // Replaced by a new context if this one was lost before the session started.
+  let gl = options.gl;
   const interval = 1000 / SENSING.updatesPerSecond;
   const tracking = new TrackingMonitor();
   const motion = new MotionTracker();
@@ -403,7 +406,7 @@ export function startSensing(options: SensingOptions): SensingSession {
 
     try {
       if (endReason) throw new Error("Stopped before the session started");
-      await gl.makeXRCompatible();
+      gl = await xrReady(gl);
       const baseLayer = new XRWebGLLayer(s, gl, { alpha: true, antialias: false, depth: false });
       s.updateRenderState({ baseLayer });
 
