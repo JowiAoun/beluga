@@ -1,0 +1,47 @@
+{
+  "name": "beluga",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "vitest run",
+    "db:smoke": "tsx --env-file-if-exists=.env.local db/smoke.ts",
+    "db:migrate": "tsx --env-file-if-exists=.env.local db/migrate.ts",
+    "seed": "tsx --env-file-if-exists=.env.local scripts/seed/index.ts",
+    "sounds": "tsx --env-file-if-exists=.env.local scripts/sounds/index.ts"
+  },
+  "dependencies": {
+    "@google/genai": "2.24.0",
+    "@mediapipe/tasks-vision": "1.0.1",
+    "maplibre-gl": "6.11.2",
+    "next": "16.3.6",
+    "ngeohash": "0.6.4",
+    "postgres": "3.4.9",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "recharts": "3.10.1",
+    "server-only": "0.0.1",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/ngeohash": "0.6.8",
+    "@types/node": "22.20.4",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/webxr": "0.5.24",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.6",
+    "tailwindcss": "^4",
+    "tsx": "4.23.15",
+    "typescript": "^5",
+    "vitest": "5.0.2"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

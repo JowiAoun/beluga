@@ -1,0 +1,212 @@
+// Every tunable number from "Tunable parameters" in docs/PLAN.md, plus the few numbers the
+// phases name outside that table. Tune here, on the phone, never inline in other modules.
+
+import type { HazardKind, Severity } from "./enums";
+
+export const SENSING = {
+  updatesPerSecond: 10,
+  depthGrid: { cols: 48, rows: 36 },
+  depthMinM: 0.2,
+  depthMaxM: 5.0,
+
+  corridorHalfWidthM: 0.45,
+  corridorAheadMinM: 0.3,
+  corridorAheadMaxM: 3.0,
+  dropOffAheadMaxM: 3.5,
+
+  // Heights are above the fitted floor line.
+  floorBandM: { low: -0.25, high: 0.15 },
+  obstacleBandM: { low: 0.15, high: 1.4 },
+  headHeightBottomM: 1.4,
+  dropOffBelowFloorM: 0.25,
+  floorSlopeClamp: 0.1,
+
+  lateralBuckets: 5,
+  minPointsPerHit: 6,
+  bucketMergeDistanceM: 0.3,
+  poleLikeMinHeightSpanM: 1.0,
+
+  activateAfterUpdates: 3,
+  deactivateAfterUpdates: 6,
+  smoothingWeight: 0.5,
+  outOfViewMemoryMaxMs: 3000,
+
+  nearMissDistanceM: 1.0,
+  // A hazard covering the whole corridor (a wall, a closed door) never counts as a near-miss.
+  nearMissMaxBlocking: 0.9,
+
+  // Floor and walking direction (Phase 1).
+  localFloorGuessM: 1.2,
+  floorCalibrationLowestShare: 0.2,
+  floorCalibrationAheadM: { min: 0.5, max: 2.0 },
+  floorReestimateMs: 5000,
+  floorReestimateBandM: 0.1,
+  walkingDirectionSmoothingMs: 500,
+  travelBlendMinSpeedMps: 0.3,
+  travelBlendWeight: 0.5,
+  travelDirectionWindowMs: 1000,
+  stationaryMaxMoveM: 0.1,
+  stationaryWindowMs: 5000,
+  trackingLostMs: 1000,
+  holdSteadyCooldownMs: 10_000,
+} as const;
+
+export const USER = {
+  defaultHeightM: 1.85,
+  heightStepM: 0.05,
+  // Door frames sit at 2.03 m, so the top follows the user and not a fixed 2.2 m.
+  headHeightAboveUserM: 0.1,
+} as const;
+
+export function headHeightTopM(userHeightM: number = USER.defaultHeightM): number {
+  return userHeightM + USER.headHeightAboveUserM;
+}
+
+// Repeat interval and volume by distance ahead, nearest band first. Past the last band: silent.
+export const AUDIO_BANDS = [
+  { upToM: 0.5, repeatMs: 80, gainDb: 0 },
+  { upToM: 1.0, repeatMs: 120, gainDb: 0 },
+  { upToM: 1.5, repeatMs: 220, gainDb: -3 },
+  { upToM: 2.0, repeatMs: 350, gainDb: -6 },
+  { upToM: 2.5, repeatMs: 500, gainDb: -9 },
+  { upToM: 3.0, repeatMs: 700, gainDb: -12 },
+] as const;
+
+export type AudioBand = (typeof AUDIO_BANDS)[number];
+
+// Drop-offs use the same table shifted one band outward: they start at 3.5 m and go continuous under 1.0 m.
+export const DROP_OFF_BAND_SHIFT_M = 0.5;
+
+export function audioBandFor(distanceM: number, kind: HazardKind): AudioBand | null {
+  const shift = kind === "drop_off" ? DROP_OFF_BAND_SHIFT_M : 0;
+  for (const band of AUDIO_BANDS) {
+    if (distanceM <= band.upToM + shift) return band;
+  }
+  return null;
+}
+
+export const AUDIO = {
+  angleExaggeration: 1.5,
+  angleClampDeg: 80,
+  sourceDistanceM: 1.5,
+  centreZoneDeg: 8,
+  maxHazardVoices: 2,
+  lowerPriorityDuckDb: -12,
+  askDuckDb: -12,
+  stationaryAfterMs: 5000,
+  stationaryReductionDb: -6,
+  stationaryStopAfterRepeats: 3,
+  voiceClipBandM: { from: 1.5, to: 2.0 },
+  voiceClipCooldownMs: 8000,
+  schedulerTickMs: 25,
+  // A new repeat cuts the one still playing with this fade.
+  cutFadeMs: 10,
+  aliveTickMs: 30_000,
+  effectPeakDbfs: -3,
+  voiceLufs: -16,
+} as const;
+
+export const DETECTOR = {
+  inputWidth: 320,
+  inputHeight: 240,
+  ratePerSecond: 4,
+  hotRatePerSecond: 2,
+  scoreThreshold: 0.35,
+  maxResults: 10,
+  labelMatchWindowDeg: 10,
+  labelHoldMs: 1000,
+} as const;
+
+export const GATE = {
+  newThingActiveMs: 1000,
+  newThingCooldownMs: 20_000,
+  lastingCooldownMs: 30_000,
+  dropOffCooldownMs: 30_000,
+  headHeightCooldownMs: 30_000,
+  headHeightTriggerM: 1.5,
+  steerAroundAngleDeg: 15,
+  steerAroundMaxDistanceM: 2,
+  maxTurnRateDegPerS: 60,
+  minBrightness: 25,
+  phoneMinIntervalMs: 6000,
+  phoneHourlyBudget: 150,
+  // Over this share, a sidewalk obstruction or construction barrier switches to the "blocked" sound.
+  blockedSoundMinBlocking: 0.6,
+} as const;
+
+export const FRAMES = {
+  geminiLongEdgePx: 768,
+  geminiJpegQuality: 0.7,
+  maxFrameBytes: 400 * 1024,
+} as const;
+
+export const NETWORK = {
+  triageTimeoutMs: 6000,
+  askTimeoutMs: 8000,
+  // Defaults for GEMINI_HOURLY_BUDGET and ASK_HOURLY_BUDGET.
+  triageHourlyBudget: 150,
+  askHourlyBudget: 120,
+  eventBatchIntervalMs: 10_000,
+  eventBatchMaxEvents: 50,
+  eventBatchLimit: 200,
+  eventMaxAgeDays: 7,
+  eventMaxFutureMinutes: 5,
+  reportDedupMs: 15 * 60 * 1000,
+  stationSnapRadiusM: 150,
+  locationMaxAccuracyM: 100,
+  locationFixTimeoutMs: 30_000,
+} as const;
+
+export const CONTROLS = {
+  stopLongPressMs: 600,
+  minButtonHeightPx: 64,
+} as const;
+
+export const COARSENING = {
+  decimals: 3,
+  geohashLength: 7,
+} as const;
+
+export const REPORTING = {
+  minConfidence: 0.7,
+  minConfidenceOtherFixed: 0.85,
+  descriptionMaxWords: 15,
+  // Blocking share over which a sidewalk obstruction goes from 2 to 3.
+  obstructionBlockingForSeverity3: 0.6,
+  checkNowSeverity: 4,
+} as const;
+
+export const SEVERITY_WEIGHTS: Readonly<Record<Severity, number>> = { 1: 1, 2: 2, 3: 4, 4: 8 };
+
+// Fix-first score parts (Phase 6). The view computes them in SQL; these are the same numbers.
+export const FIX_FIRST = {
+  windowDays: 14,
+  kAnonymityReporters: 3,
+  recentReportHours: 48,
+  recentBoost: 1.5,
+  recencyHalfLifeDays: 7,
+  transitBoost: 1.3,
+  transitRadiusM: 150,
+} as const;
+
+export const DATABASE = {
+  chunkDays: 1,
+  compressAfterDays: 7,
+  deleteRawAfterDays: 180,
+  clientMaxConnections: 2,
+  clientIdleTimeoutS: 20,
+  freeServiceLimitMb: 750,
+} as const;
+
+export const DASHBOARD = {
+  feedAndQueuePollMs: 5000,
+  cellsAndStationsPollMs: 15_000,
+  queueLimit: 25,
+  feedLimit: 20,
+} as const;
+
+export const SEED = {
+  days: 14,
+  minRows: 300_000,
+  maxRows: 500_000,
+} as const;

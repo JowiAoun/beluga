@@ -1,0 +1,45 @@
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
+
+# beluga
+
+An installable web app for Android Chrome that warns blind and low-vision pedestrians about obstacles with directional sounds, plus a fix-first hazard dashboard for the city. The full plan is `docs/PLAN.md`: read the phase you are working on before writing code.
+
+## Commands
+
+- `npm run dev`: dev server on port 3000
+- `npm run lint`, `npm run typecheck`, `npm test`: run all three before committing
+- `npm run build`: production build, the same one Vercel runs
+- `npm run db:smoke`: Phase 0 database check, needs `DATABASE_URL` in `.env.local`
+- `npm run db:migrate`, `npm run seed`, `npm run sounds`: filled in by Phases 6, 8 and 3
+
+## Phone testing
+
+1. Plug the phone in over USB with USB debugging on.
+2. Run `adb reverse tcp:3000 tcp:3000`.
+3. Open `http://localhost:3000/walk` in Chrome on the phone. `localhost` counts as a secure page, so WebXR works with no tunnel.
+
+The device check (`/walk`, and `/walk/check` for good) prints its results in the `npm run dev` terminal as `[beluga check]` lines.
+
+## Rules for every change
+
+- The name is "beluga", always lowercase.
+- The safety loop (depth, hazard, sound) never touches the network.
+- No image ever reaches the database. Frames go only to Gemini and are never stored.
+- Reporting is off until the user turns it on. Locations are rounded to 3 decimals on the phone and again on the backend.
+- Never tell the user it is safe to cross a road, in any string, prompt or spoken line.
+- API keys live only on the backend. Files under `lib/server` start with `import "server-only"`.
+- Simulated data is labelled as simulated everywhere.
+
+## Where things go
+
+- Each track owns its folders (table in "Tracks & timeline" in `docs/PLAN.md`). Touch another track's folder only in a small, separate commit.
+- Shared contracts live in `lib/shared`: `enums`, `contracts` (zod schemas and response types), `params` (every tunable number), `reporting` (categories and severity), `geo` (coarsening and grid cells), `stations`. Add to these files; never reorder or reformat them.
+- A module that uses a sponsor service starts with a comment naming the prize it serves.
