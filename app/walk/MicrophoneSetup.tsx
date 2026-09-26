@@ -1,5 +1,8 @@
 "use client";
+import { IconMicrophone } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
+import { PANEL, SECONDARY, SELECT } from "./styles";
 
 export default function MicrophoneSetup({ value, onChange }: { value: string; onChange: (id: string) => void }) {
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
@@ -23,19 +26,19 @@ export default function MicrophoneSetup({ value, onChange }: { value: string; on
       if (alive.current) setMessage(error instanceof Error ? error.message : "Microphone permission was not granted.");
     } finally { if (alive.current) setBusy(false); }
   };
-  return <section className="flex flex-col gap-3 rounded-lg border border-slate-500 p-4">
-    <h2 className="text-xl font-bold">Voice questions (optional)</h2>
-    <p>Ask sends your recorded question and one camera frame to ElevenLabs. beluga does not save them.</p>
-    <p>Choose the phone microphone. A Bluetooth microphone can make warning sounds mono while recording. Stop walking to ask a question.</p>
-    <button type="button" disabled={busy} onClick={() => void enable()} className="min-h-16 rounded-lg border-2 border-yellow-300 p-3 font-semibold disabled:opacity-50">
+  return <section className={cn(PANEL, "flex flex-col gap-3")}>
+    <h2 className="flex items-center gap-3 text-2xl font-bold"><IconMicrophone aria-hidden size={24} className="shrink-0 text-sonar" />Voice questions (optional)</h2>
+    <p className="text-lg text-muted">Ask sends your recorded question and one camera frame to ElevenLabs. beluga does not save them.</p>
+    <p className="text-lg text-muted">Choose the phone microphone. A Bluetooth microphone can make warning sounds mono while recording. Stop walking to ask a question.</p>
+    <button type="button" disabled={busy} onClick={() => void enable()} className={SECONDARY}>
       {busy ? "Requesting microphone…" : "Set up microphone"}
     </button>
-    {devices.length > 0 && <label className="flex flex-col gap-2">Microphone
-      <select value={value} onChange={(event) => onChange(event.target.value)} className="min-h-16 rounded bg-slate-900 px-3 text-white">
+    {devices.length > 0 && <label className="flex flex-col gap-2 text-lg">Microphone
+      <select value={value} onChange={(event) => onChange(event.target.value)} className={SELECT}>
         <option value="">Voice questions off</option>
         {devices.map((device, index) => <option key={device.deviceId} value={device.deviceId}>{device.label || `Microphone ${index + 1}`}</option>)}
       </select>
     </label>}
-    <p role="status">{message}</p>
+    <p role="status" className="text-lg">{message}</p>
   </section>;
 }
