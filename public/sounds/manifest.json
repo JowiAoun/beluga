@@ -1,0 +1,102 @@
+{
+  "generatedAt": "2026-09-26T19:58:51.795Z",
+  "sounds": {},
+  "clips": {
+    "edge": {
+      "file": "voice/edge.wav",
+      "text": "edge"
+    },
+    "step_down": {
+      "file": "voice/step_down.wav",
+      "text": "step down"
+    },
+    "head": {
+      "file": "voice/head.wav",
+      "text": "head"
+    },
+    "pole": {
+      "file": "voice/pole.wav",
+      "text": "pole"
+    },
+    "bike": {
+      "file": "voice/bike.wav",
+      "text": "bike"
+    },
+    "scooter": {
+      "file": "voice/scooter.wav",
+      "text": "scooter"
+    },
+    "car": {
+      "file": "voice/car.wav",
+      "text": "car"
+    },
+    "person": {
+      "file": "voice/person.wav",
+      "text": "person"
+    },
+    "blocked": {
+      "file": "voice/blocked.wav",
+      "text": "blocked"
+    },
+    "stairs": {
+      "file": "voice/stairs.wav",
+      "text": "stairs"
+    },
+    "left": {
+      "file": "voice/left.wav",
+      "text": "left"
+    },
+    "right": {
+      "file": "voice/right.wav",
+      "text": "right"
+    },
+    "ahead": {
+      "file": "voice/ahead.wav",
+      "text": "ahead"
+    },
+    "ready": {
+      "file": "voice/ready.wav",
+      "text": "beluga ready, tap to start"
+    },
+    "take_steps": {
+      "file": "voice/take_steps.wav",
+      "text": "take three slow steps"
+    },
+    "calibrated": {
+      "file": "voice/calibrated.wav",
+      "text": "calibrated"
+    },
+    "hold_steady": {
+      "file": "voice/hold_steady.wav",
+      "text": "hold steady"
+    },
+    "stopped": {
+      "file": "voice/stopped.wav",
+      "text": "beluga stopped"
+    },
+    "reported": {
+      "file": "voice/reported.wav",
+      "text": "reported"
+    },
+    "reporting_on": {
+      "file": "voice/reporting_on.wav",
+      "text": "reporting on"
+    },
+    "reporting_off": {
+      "file": "voice/reporting_off.wav",
+      "text": "reporting off"
+    },
+    "ask_offline": {
+      "file": "voice/ask_offline.wav",
+      "text": "Ask is offline. Obstacle alerts still on."
+    },
+    "sorry": {
+      "file": "voice/sorry.wav",
+      "text": "Sorry, I couldn't see that."
+    },
+    "alongside": {
+      "file": "voice/alongside.wav",
+      "text": "beluga works alongside your cane or guide dog. It can miss things."
+    }
+  }
+}

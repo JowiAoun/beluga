@@ -93,6 +93,7 @@ export class AudioEngine {
   private aliveTick = false;
   // Audio-clock time the last sound started, for the alive tick.
   private lastSoundAt = 0;
+  private readonly oneShots = new Set<Playing>();
   // The spoken Ask answer, while it plays.
   private answer: { playing: Playing; placer: Placer; ducked: boolean } | null = null;
 
@@ -164,7 +165,9 @@ export class AudioEngine {
   playBuffer(buffer: AudioBuffer, pan: Pan = 0, level = 1, at = this.ctx.currentTime): number {
     const placer = createPlacer(this.ctx, this.master, pan, this.ears);
     const playing = this.startSound(buffer, level, placer, at, false);
+    this.oneShots.add(playing);
     playing.source.onended = () => {
+      this.oneShots.delete(playing);
       playing.gain.disconnect();
       placer.disconnect();
     };
@@ -181,6 +184,8 @@ export class AudioEngine {
     this.keepAlive?.stop();
     this.keepAlive?.disconnect();
     this.keepAlive = null;
+    for (const playing of this.oneShots) this.fade(playing, this.ctx.currentTime);
+    this.oneShots.clear();
     setTimeout(() => this.limiter.disconnect(), 200);
   }
 
@@ -319,7 +324,7 @@ export class AudioEngine {
 
   // Recorded clips play one after another from the hazard's side. Without all of them, the
   // phone's own voice says the words, from both sides.
-  private say(words: string[], pan: Pan): void {
+  say(words: string[], pan: Pan = 0): void {
     const buffers = words.map((word) => (isClipId(word) ? this.clips[word] : undefined));
     if (buffers.some((b) => !b)) {
       this.speak?.(words.join(", "));
@@ -327,6 +332,27 @@ export class AudioEngine {
     }
     let at = this.ctx.currentTime;
     for (const buffer of buffers) at = this.playBuffer(buffer!, pan, 1, at) + CLIP_GAP_S;
+  }
+
+  stopAnswer(): void {
+    if (this.answer) this.fade(this.answer, this.ctx.currentTime);
+    this.answer = null;
+  }
+
+  // Nonessential speech yields to head-height and drop-off warnings.
+  playAnswer(buffer: AudioBuffer, pan: Pan): boolean {
+    this.stopAnswer();
+    if (this.scene.hazards.some((hazard) => hazard.active && priorityOf(hazard) <= 2)) return false;
+    const placer = createPlacer(this.ctx, this.master, pan, this.ears);
+    const level = this.scene.hazards.some((hazard) => hazard.active) ? dbToGain(AUDIO.askDuckDb) : 1;
+    const playing = this.startSound(buffer, level, placer, this.ctx.currentTime, false);
+    this.answer = playing;
+    playing.source.onended = () => {
+      playing.gain.disconnect();
+      placer.disconnect();
+      if (this.answer === playing) this.answer = null;
+    };
+    return true;
   }
 
   private startSound(buffer: AudioBuffer, level: number, placer: Placer, at: number, loop: boolean): Playing {

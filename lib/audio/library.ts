@@ -4,6 +4,7 @@
 // from `tones.ts` play instead.
 
 import type { SoundId } from "@/lib/shared/enums";
+import { cachedSound, soundCache } from "./cache";
 
 export const SOUNDS_PATH = "/sounds";
 
@@ -68,6 +69,7 @@ export function isClipId(word: string): word is ClipId {
 export interface RawLibrary {
   manifest: LibraryManifest;
   files: Map<string, ArrayBuffer>;
+  offlineReady: boolean;
 }
 
 export interface DecodedSound {
@@ -84,8 +86,9 @@ export interface DecodedLibrary {
 // Null when there is no library yet or the network is down: the tones cover both.
 export async function fetchLibrary(): Promise<RawLibrary | null> {
   try {
-    const response = await fetch(`${SOUNDS_PATH}/manifest.json`, { cache: "no-cache" });
-    if (!response.ok) return null;
+    const cache = await soundCache();
+    const response = await cachedSound(`${SOUNDS_PATH}/manifest.json`, cache, true);
+    if (!response?.ok) return null;
     const manifest = (await response.json()) as LibraryManifest;
     const paths = new Set<string>();
     for (const sound of Object.values(manifest.sounds)) {
@@ -97,11 +100,18 @@ export async function fetchLibrary(): Promise<RawLibrary | null> {
     const files = new Map<string, ArrayBuffer>();
     await Promise.all(
       [...paths].map(async (file) => {
-        const got = await fetch(`${SOUNDS_PATH}/${file}`);
-        if (got.ok) files.set(file, await got.arrayBuffer());
+        if (!/^[a-zA-Z0-9_/-]+\.(mp3|wav)$/.test(file) || file.includes("..")) return;
+        // Version the cache keys so regenerated clips replace their previous versions.
+        const url = `${SOUNDS_PATH}/${file}?v=${encodeURIComponent(manifest.generatedAt)}`;
+        const got = await cachedSound(url, cache);
+        if (got?.ok) files.set(file, await got.arrayBuffer());
       }),
     );
-    return { manifest, files };
+    const offlineReady = !!cache && paths.size > 0 && files.size === paths.size &&
+      (await Promise.all([...paths].map((file) =>
+        cache.match(`${SOUNDS_PATH}/${file}?v=${encodeURIComponent(manifest.generatedAt)}`),
+      ))).every(Boolean);
+    return { manifest, files, offlineReady };
   } catch {
     return null;
   }
