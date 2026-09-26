@@ -27,7 +27,7 @@ An installable web app for Android Chrome that warns blind and low-vision pedest
 2. Run `npm run phone`. It runs `adb reverse tcp:3000 tcp:3000` for each plugged-in phone and finds `adb` in the Android SDK when it isn't on PATH.
 3. Open `http://localhost:3000/walk` in Chrome on the phone. `localhost` counts as a secure page, so WebXR works with no tunnel.
 
-`/walk` is the walking app. The device check at `/walk/check` prints its results in the `npm run dev` terminal as `[beluga check]` lines. With the debug overlay on, each `/walk` session ends with a `[beluga walk]` summary line there too.
+`/walk` is the walking app. The device check at `/walk/check` prints its results in the `npm run dev` terminal as `[beluga check]` lines. With the debug overlay on, each `/walk` session ends with a `[beluga walk]` summary line there too. The sound check at `/walk/sounds` plays every warning sound left, centre and right, and runs the blindfold test; each score prints as a `[beluga sounds]` line.
 
 ## Rules for every change
 
