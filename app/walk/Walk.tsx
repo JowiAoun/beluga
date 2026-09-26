@@ -19,7 +19,10 @@ import {
 } from "@/lib/xr/session";
 import type { SensingUpdate } from "@/lib/xr/types";
 import { askAboutView } from "./ask";
+import { encodeClip } from "@/lib/replay/format";
+import { CLIP_SECONDS, Recorder } from "@/lib/replay/recorder";
 import FirstRun, { type FirstRunResult } from "./FirstRun";
+import ReplayPlayer from "./ReplayPlayer";
 import { Reporting } from "./reporting";
 import { DEFAULT_SETTINGS, readSettings, saveSettings, type Settings } from "./settings";
 import SettingsPanel from "./SettingsPanel";
@@ -105,6 +108,20 @@ export default function Walk() {
   // Null until read from storage, so the first-run steps never flash for a returning user.
   const [settings, setSettings] = useState<Settings | null>(null);
   const settingsRef = useRef<Settings>(DEFAULT_SETTINGS);
+  // `?replay=<file>` plays a recorded walk instead (Phase 10). Null until the address is read.
+  const [replaySrc, setReplaySrc] = useState<string | null>(null);
+  const recorderRef = useRef<Recorder | null>(null);
+  const [recording, setRecording] = useState<number | null>(null);
+  const lastClipRef = useRef<Blob | null>(null);
+  const [hasClip, setHasClip] = useState(false);
+
+  // Keeps the clip for "save again", and downloads it now.
+  const saveClip = async (recorder: Recorder) => {
+    const blob = await encodeClip(recorder.clip());
+    lastClipRef.current = blob;
+    setHasClip(true);
+    download(blob);
+  };
 
   const runCleanups = useCallback(() => {
     cleanupRef.current.splice(0).forEach((fn) => fn());
@@ -134,6 +151,7 @@ export default function Walk() {
       debugRef.current = on;
       setDebug(on);
       setReportingOn(reportingRef.current?.isOn() ?? false);
+      setReplaySrc(new URLSearchParams(window.location.search).get("replay"));
       const saved = readSettings();
       settingsRef.current = saved;
       setSettings(saved);
@@ -173,6 +191,14 @@ export default function Walk() {
   useEffect(() => {
     if (phase !== "starting" && phase !== "running") return;
     const id = window.setInterval(() => {
+      const recorder = recorderRef.current;
+      if (recorder) {
+        setRecording(recorder.done ? null : recorder.seconds());
+        if (recorder.done) {
+          recorderRef.current = null;
+          void saveClip(recorder);
+        }
+      }
       setView({
         ...latestRef.current,
         stats: sessionRef.current?.stats() ?? null,
@@ -187,6 +213,7 @@ export default function Walk() {
   const onUpdate = useCallback((update: SensingUpdate) => {
     const latest = latestRef.current;
     latest.update = update;
+    recorderRef.current?.add(update, detectRef.current?.latestDetections() ?? []);
     // Out to the full depth range, so the tape-measure check works past the corridor's 3 m.
     latest.nearest = update.tracking ? nearestAhead(update, SENSING.depthMaxM) : null;
     const detect = detectRef.current;
@@ -220,6 +247,11 @@ export default function Walk() {
 
   const onEnd = useCallback(
     (result: SessionSummary) => {
+      // A recording cut short by the end of the walk is still saved.
+      const recorder = recorderRef.current;
+      recorderRef.current = null;
+      setRecording(null);
+      if (recorder && recorder.seconds() > 0) void saveClip(recorder);
       sessionRef.current = null;
       setSession(null);
       runCleanups();
@@ -340,6 +372,11 @@ export default function Walk() {
     }
   };
 
+  const record = () => {
+    recorderRef.current = new Recorder();
+    setRecording(0);
+  };
+
   const changeSettings = (next: Settings) => {
     settingsRef.current = next;
     setSettings(next);
@@ -374,6 +411,8 @@ export default function Walk() {
     setNeedLocation(permission === "prompt");
     setLocationGranted(permission === "granted");
   };
+
+  if (replaySrc !== null) return <ReplayPlayer src={replaySrc} />;
 
   const inAr = phase === "starting" || phase === "running";
   const update = view?.update ?? null;
@@ -413,6 +452,18 @@ export default function Walk() {
               <p role="alert" className="rounded bg-red-900/90 px-3 py-2 text-white">
                 {message}
               </p>
+            )}
+            {debug && (
+              <button
+                type="button"
+                onClick={record}
+                disabled={recording !== null}
+                className="min-h-12 self-start rounded-lg bg-black/75 px-3 font-semibold text-white"
+              >
+                {recording === null
+                  ? `Record a ${CLIP_SECONDS} s replay`
+                  : `Recording, ${recording.toFixed(0)} of ${CLIP_SECONDS} s`}
+              </button>
             )}
             {debug && <DebugOverlay view={view} session={session} />}
           </div>
@@ -489,6 +540,16 @@ export default function Walk() {
                 </p>
               </section>
 
+              {hasClip && (
+                <button
+                  type="button"
+                  onClick={() => lastClipRef.current && download(lastClipRef.current)}
+                  className="min-h-16 rounded-lg border-2 border-neutral-500 px-4 text-lg"
+                >
+                  Save the last replay again
+                </button>
+              )}
+
               {settings && (
                 <SettingsPanel
                   settings={settings}
@@ -523,6 +584,17 @@ export default function Walk() {
       )}
     </div>
   );
+}
+
+// Saves a replay clip on the phone, for the player at /walk?replay= or a commit to public/replays.
+function download(blob: Blob): void {
+  const stamp = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "");
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `beluga-replay-${stamp}.json.gz`;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
 function metres(value: number | null): string {

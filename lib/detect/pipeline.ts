@@ -194,6 +194,11 @@ export class DetectPipeline {
     return result;
   }
 
+  // The latest boxes, for the replay recorder. A new array each time the detector answers.
+  latestDetections(): Detection[] {
+    return this.detections;
+  }
+
   stats(): DetectStats {
     return {
       state: this.state,
