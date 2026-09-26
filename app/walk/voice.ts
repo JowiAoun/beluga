@@ -27,9 +27,14 @@ export function unlockVoice(): void {
 }
 
 export function say(line: Line): void {
+  speakText(LINES[line]);
+}
+
+// For hazard words like "pole, left", which the recorded clips from Phase 3a will replace.
+export function speakText(text: string): void {
   const synth = speech();
   if (!synth) return;
-  const utterance = new SpeechSynthesisUtterance(LINES[line]);
+  const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = "en-CA";
   synth.speak(utterance);
 }

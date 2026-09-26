@@ -1,9 +1,10 @@
+import { createPlacer } from "@/lib/audio/placement";
 import type { Report } from "./checks";
 
 const SWEEP = [
-  { name: "left", angle: -90 },
-  { name: "centre", angle: 0 },
-  { name: "right", angle: 90 },
+  { name: "left", pan: -1 },
+  { name: "centre", pan: 0 },
+  { name: "right", pan: 1 },
 ] as const;
 
 const STEP_SECONDS = 0.8;
@@ -15,29 +16,23 @@ export function startAudio(): AudioContext {
   return ctx;
 }
 
-// One tone hard left, one ahead, one hard right, each through an HRTF panner 1.5 m away.
-// A filtered sawtooth has enough high end for HRTF to place it; a pure sine barely moves.
+// One tone hard left, one ahead, one hard right, placed the way the warnings are: a level and
+// time difference between the ears, since bone-conduction earbuds lose HRTF cues.
 // Returns how long the sweep lasts, in milliseconds.
 export function playSweep(ctx: AudioContext): number {
   const start = ctx.currentTime + 0.05;
   SWEEP.forEach((step, i) => {
     const t = start + i * STEP_SECONDS;
-    const rad = (step.angle * Math.PI) / 180;
-    const panner = new PannerNode(ctx, {
-      panningModel: "HRTF",
-      distanceModel: "linear",
-      rolloffFactor: 0,
-      positionX: Math.sin(rad) * 1.5,
-      positionY: 0,
-      positionZ: -Math.cos(rad) * 1.5,
-    });
-    const osc = new OscillatorNode(ctx, { type: "sawtooth", frequency: 330 });
+    const panner = createPlacer(ctx, ctx.destination, step.pan);
+    // 880 Hz and up: bone conduction plays little below about 300 Hz.
+    const osc = new OscillatorNode(ctx, { type: "sawtooth", frequency: 880 });
     const filter = new BiquadFilterNode(ctx, { type: "lowpass", frequency: 3000 });
     const gain = new GainNode(ctx, { gain: 0 });
     gain.gain.setValueAtTime(0, t);
     gain.gain.linearRampToValueAtTime(0.5, t + 0.01);
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
-    osc.connect(filter).connect(gain).connect(panner).connect(ctx.destination);
+    osc.connect(filter).connect(gain).connect(panner.input);
+    osc.onended = () => panner.disconnect();
     osc.start(t);
     osc.stop(t + 0.4);
   });

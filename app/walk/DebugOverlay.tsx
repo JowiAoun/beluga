@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { AudioStats } from "@/lib/audio/engine";
+import { lateralOf, sideOf } from "@/lib/audio/placement";
 import type { HazardEvent } from "@/lib/hazard/engine";
 import type { HazardUpdate } from "@/lib/shared/contracts";
-import { AUDIO } from "@/lib/shared/params";
 import { forwardOf } from "@/lib/xr/geometry";
 import type { Granted, LiveStats, SensingSession } from "@/lib/xr/session";
 import type { SensingUpdate } from "@/lib/xr/types";
@@ -18,16 +19,28 @@ export interface DebugView {
   events: HazardEvent[];
   floorSlope: number | null;
   stats: LiveStats | null;
+  audio: AudioStats | null;
 }
 
-function side(angle: number): string {
-  if (Math.abs(angle) < AUDIO.centreZoneDeg) return "ahead";
-  return `${Math.abs(angle).toFixed(0)}° ${angle < 0 ? "left" : "right"}`;
+// The same side the sound plays from: metres off the walking line, not the angle.
+function side(h: HazardUpdate): string {
+  const lateral = lateralOf(h);
+  const where = sideOf(lateral);
+  return where === "ahead" ? "ahead" : `${Math.abs(lateral).toFixed(2)} m ${where}`;
 }
 
 function describe(h: HazardUpdate): string {
   const label = h.label === "unknown" ? "" : ` (${h.label.replace("_", " ")})`;
-  return `${h.kind.replace("_", " ")}${label} ${h.distance.toFixed(2)} m, ${side(h.angle)}, covers ${Math.round(h.blocking * 100)}%`;
+  return `${h.kind.replace("_", " ")}${label} ${h.distance.toFixed(2)} m, ${side(h)}, covers ${Math.round(h.blocking * 100)}%`;
+}
+
+function describeSound(audio: AudioStats): string {
+  const voices = audio.voices.map((v) => {
+    const rhythm = v.muted ? "stopped, standing still" : v.looping ? "continuous" : `every ${v.repeatMs} ms`;
+    return `${v.sound.replace("_", " ")} at ${v.distance.toFixed(2)} m, ${rhythm}, ${v.gainDb} dB, pan ${v.pan.toFixed(2)}`;
+  });
+  const lead = `looks ${audio.leadMs} ms ahead (Chrome says ${audio.outputLatencyMs} ms output latency)`;
+  return `Sound ${audio.state}: ${voices.length > 0 ? voices.join("; ") : "silent"}. ${lead}`;
 }
 
 const FEATURE_NAMES: Record<keyof Granted, string> = {
@@ -105,6 +118,7 @@ export default function DebugOverlay({ view, session }: { view: DebugView | null
           Last events: {view.events.map((e) => `${e.type.replace("_", " ")} ${e.hazard.kind.replace("_", " ")}`).join(", ")}
         </p>
       )}
+      {view?.audio && <p>{describeSound(view.audio)}</p>}
       {stats && (
         <p>
           {stats.updateRate.toFixed(1)} updates/s, {stats.frameRate.toFixed(0)} frames/s, {stats.processingMs.toFixed(1)} ms per update
@@ -139,7 +153,7 @@ export default function DebugOverlay({ view, session }: { view: DebugView | null
         <canvas ref={previewRef} aria-label="Detector frame" className="w-24 rounded border border-white/40" />
         <div className="flex flex-col gap-1">
           <button type="button" onClick={testFrame} className="min-h-12 rounded bg-neutral-700 px-3 font-semibold">
-            Test Gemini frame
+            Test Ask frame
           </button>
           {frameInfo && <p>{frameInfo}</p>}
         </div>

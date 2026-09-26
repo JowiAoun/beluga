@@ -111,10 +111,18 @@ export function audioBandFor(distanceM: number, kind: HazardKind): AudioBand | n
 }
 
 export const AUDIO = {
-  angleExaggeration: 1.5,
-  angleClampDeg: 80,
-  sourceDistanceM: 1.5,
-  centreZoneDeg: 8,
+  // Bone-conduction earbuds skip the outer ear, so HRTF cues are lost, and the skull carries each
+  // side to both ears. A sound's side is a level and time difference between the ears instead.
+  // A hazard this far to the side of the walking line plays from one ear only.
+  fullPanLateralM: 0.45,
+  // Sounds placed by angle (Ask answers) play from one ear only at this angle.
+  fullPanAngleDeg: 20,
+  // Within this of the walking line, a hazard is straight ahead and gets the centre marker.
+  centreLateralM: 0.09,
+  // The far ear drops by this × pan (0 to 1), and goes silent at full pan.
+  farEarCutDb: 24,
+  // The far ear also hears it later, by this × pan.
+  maxEarDelayMs: 0.6,
   maxHazardVoices: 2,
   lowerPriorityDuckDb: -12,
   askDuckDb: -12,
@@ -129,6 +137,20 @@ export const AUDIO = {
   aliveTickMs: 30_000,
   effectPeakDbfs: -3,
   voiceLufs: -16,
+  // Repeats are placed on the audio clock this far ahead of each scheduler tick.
+  scheduleAheadMs: 100,
+  // Bluetooth plays a sound this late, so bands use the distance the user will be at by then:
+  // distance - speed × output latency, with the latency capped here.
+  latencyLeadMaxMs: 400,
+  // Android and the earbuds go idle after a few seconds of silence and clip the start of the next
+  // sound. A steady noise this quiet keeps them awake without being heard.
+  keepAliveDbfs: -70,
+  // A limiter on the mix keeps two hazards plus a voice from clipping, which buzzes on bone conduction.
+  limiterThresholdDb: -3,
+  // Bone conduction plays little below this and buzzes when pushed, so sound files are cut below it.
+  highPassHz: 250,
+  // Voice clips add "left", "right" or "ahead", since side cues are weak on bone conduction.
+  voiceClipSaysSide: true,
 } as const;
 
 export const DETECTOR = {

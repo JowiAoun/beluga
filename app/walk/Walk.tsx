@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AudioEngine } from "@/lib/audio/engine";
 import { nearestAhead } from "@/lib/hazard/corridor";
 import { HazardEngine, type HazardEvent } from "@/lib/hazard/engine";
 import type { HazardUpdate } from "@/lib/shared/contracts";
@@ -18,7 +19,7 @@ import type { SensingUpdate } from "@/lib/xr/types";
 import DebugOverlay, { type DebugView } from "./DebugOverlay";
 import { askLocation, locationPermission, watchLocation, type Fix } from "./location";
 import StopButton from "./StopButton";
-import { LINES, say, unlockVoice } from "./voice";
+import { LINES, say, speakText, unlockVoice } from "./voice";
 
 type Phase = "ready" | "starting" | "running" | "ended";
 type Support = "checking" | "ok" | "none";
@@ -71,6 +72,7 @@ export default function Walk() {
   const glRef = useRef<WebGL2RenderingContext | null>(null);
   const sessionRef = useRef<SensingSession | null>(null);
   const audioRef = useRef<AudioContext | null>(null);
+  const soundRef = useRef<AudioEngine | null>(null);
   const cleanupRef = useRef<Array<() => void>>([]);
   const debugRef = useRef(false);
   const latestRef = useRef<Latest>(freshLatest());
@@ -127,7 +129,11 @@ export default function Walk() {
   useEffect(() => {
     if (phase !== "starting" && phase !== "running") return;
     const id = window.setInterval(() => {
-      setView({ ...latestRef.current, stats: sessionRef.current?.stats() ?? null });
+      setView({
+        ...latestRef.current,
+        stats: sessionRef.current?.stats() ?? null,
+        audio: soundRef.current?.stats() ?? null,
+      });
     }, DEBUG_OVERLAY.refreshMs);
     return () => window.clearInterval(id);
   }, [phase]);
@@ -139,6 +145,8 @@ export default function Walk() {
     latest.nearest = update.tracking ? nearestAhead(update, SENSING.depthMaxM) : null;
     const result = engineRef.current?.update(update);
     if (!result) return;
+    // While tracking is lost the list is empty, so every warning goes quiet.
+    soundRef.current?.update(result.hazards, update);
     latest.hazards = result.hazards;
     if (result.floor) latest.floorSlope = result.floor.slope;
     if (result.events.length > 0) latest.events = [...result.events.reverse(), ...latest.events].slice(0, RECENT_EVENTS);
@@ -158,10 +166,14 @@ export default function Walk() {
       say("stopped");
       if (debugRef.current) {
         console.info("[beluga walk] summary", result);
+        // Chrome's Bluetooth latency estimate, next to the Phase 3 target of 0.6 s to the first sound.
+        const ctx = audioRef.current;
+        const outputLatencyMs = ctx ? Math.round(((ctx.outputLatency || 0) + ctx.baseLatency) * 1000) : null;
         // Lands in the dev server terminal (or Vercel logs) for testers. No location in it.
-        void fetch("/api/device-check", { method: "POST", body: JSON.stringify({ kind: "walk", ...result }) }).catch(
-          () => {},
-        );
+        void fetch("/api/device-check", {
+          method: "POST",
+          body: JSON.stringify({ kind: "walk", ...result, outputLatencyMs }),
+        }).catch(() => {});
       }
     },
     [runCleanups],
@@ -177,9 +189,16 @@ export default function Walk() {
     sessionRef.current = started;
 
     // The same tap has to resume audio and unlock speech, or Chrome keeps both silent.
-    audioRef.current ??= new AudioContext({ latencyHint: "interactive" });
-    void audioRef.current.resume();
+    const ctx = (audioRef.current ??= new AudioContext({ latencyHint: "interactive" }));
+    void ctx.resume();
     unlockVoice();
+    const sound = new AudioEngine(ctx, { speak: speakText });
+    sound.start();
+    soundRef.current = sound;
+    cleanupRef.current.push(() => {
+      sound.stop();
+      if (soundRef.current === sound) soundRef.current = null;
+    });
     void requestWakeLock().then((lock) => {
       if (!lock) return;
       if (sessionRef.current === started) cleanupRef.current.push(() => void lock.release());
