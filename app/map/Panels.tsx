@@ -644,7 +644,7 @@ export function PerfPanel({
           <p className="mt-4 text-base text-muted">
             Same question both times: events and near-misses per cell over the last 7 days, timed by the database.
             {perf.seedLoadSeconds !== null && ` Seed loaded in ${perf.seedLoadSeconds.toFixed(1)} s.`} Measured at{" "}
-            <span className="font-mono">{timeOfDay(perf.takenAt)}</span>
+            <span className="font-mono whitespace-nowrap">{timeOfDay(perf.takenAt)}</span>
             {timeOfDay(perf.takenAt).endsWith(".") ? "" : "."}
           </p>
         </>
