@@ -176,6 +176,9 @@ Still open. Each one has a default, so no track waits for the answer.
 | Dashboard map | MapLibre GL JS with the OpenFreeMap basemap (`https://tiles.openfreemap.org/styles/liberty`), cells drawn by MapLibre itself | No paid map keys, no deck.gl (see Phase 7) |
 | Dashboard charts | Lightweight SVG charts or Recharts | Small line charts and a bar chart |
 | Build-time scripts | Node scripts run locally | Sound generation, seed data |
+| Styling | Tailwind CSS | Chosen in Phase 0 |
+| Validation | zod | One schema per contract in `lib/shared/contracts.ts`, used by the phone and the backend |
+| Tests | Vitest | `npm test`; Phase 2 hazard tests go here |
 | Audio post-processing | ffmpeg (local) | Trim, fade, mono, loudness |
 
 ### Repository layout
