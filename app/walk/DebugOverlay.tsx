@@ -218,6 +218,12 @@ export default function DebugOverlay({ view, session }: { view: DebugView | null
         </>
       )}
       {stats?.cameraError && <p>Camera off after an error: {stats.cameraError}</p>}
+      {session?.setup() && (
+        <p>
+          Setup: {session.setup()!.name}
+          {session.setup()!.refused.length > 0 && `, after the phone refused ${session.setup()!.refused.join("; ")}`}
+        </p>
+      )}
       <p>
         Location {view?.fix ? `±${Math.round(view.fix.accuracy)} m` : "no fix"}
         {missing.length > 0 && `. Not granted: ${missing.join(", ")}`}

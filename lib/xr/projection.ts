@@ -22,3 +22,15 @@ export function fieldOfView(m: ArrayLike<number>): FieldOfView {
 export function orientationOf(fov: FieldOfView): "portrait" | "landscape" {
   return fov.horizontal < fov.vertical ? "portrait" : "landscape";
 }
+
+// A centred WebGL projection for a camera that sees `horizontalDeg` by `verticalDeg`, column-major.
+// Camera mode has no AR view to take one from.
+export function perspectiveFor(horizontalDeg: number, verticalDeg: number, near = 0.1, far = 100): Float32Array {
+  const m = new Float32Array(16);
+  m[0] = 1 / Math.tan((horizontalDeg * Math.PI) / 360);
+  m[5] = 1 / Math.tan((verticalDeg * Math.PI) / 360);
+  m[10] = -(far + near) / (far - near);
+  m[11] = -1;
+  m[14] = -(2 * far * near) / (far - near);
+  return m;
+}

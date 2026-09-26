@@ -344,3 +344,14 @@ export const TACTILE = {
   // Depth's own drop-off within this distance of the strip plays instead.
   depthCoversM: 0.75,
 } as const;
+
+// Camera mode: phones without WebXR AR, like an iPhone in Safari. No depth, no position tracking.
+export const CAMERA_MODE = {
+  // A phone's main camera sees about this wide across the long side of its picture.
+  longSideFovDeg: 67,
+  // The phone sits on the chest, at this share of the user's height above the floor.
+  chestShare: 0.72,
+  // Asked of getUserMedia; phones give what they have.
+  idealWidth: 1280,
+  idealHeight: 720,
+} as const;

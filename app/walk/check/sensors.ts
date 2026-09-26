@@ -43,7 +43,7 @@ export function playSweep(ctx: AudioContext): number {
 // video check (film the tap and listen) stays the real number.
 export function describeLatency(ctx: AudioContext): string {
   const output = Math.round((ctx.outputLatency ?? 0) * 1000);
-  const base = Math.round(ctx.baseLatency * 1000);
+  const base = Math.round((ctx.baseLatency || 0) * 1000);
   return `Chrome reports ${output} ms output latency (${base} ms base)`;
 }
 

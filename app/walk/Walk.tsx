@@ -19,6 +19,8 @@ import {
   type SensingSession,
   type SessionSummary,
 } from "@/lib/xr/session";
+import { startCameraSensing } from "@/lib/xr/cameraSession";
+import { ArUnavailableError, forgetLevel, savedLevel, SESSION_LEVELS } from "@/lib/xr/request";
 import type { SensingUpdate } from "@/lib/xr/types";
 import { askAboutView } from "./ask";
 import { encodeClip } from "@/lib/replay/format";
@@ -38,7 +40,10 @@ import VoiceAsk from "./VoiceAsk";
 import { LINES, say, speakLocalText, speakText, unlockVoice } from "./voice";
 
 type Phase = "ready" | "starting" | "running" | "ended";
-type Support = "checking" | "ok" | "none";
+// ok: WebXR AR. camera: camera mode, for a browser without AR (an iPhone) or a phone that refused
+// every AR setup. none: neither.
+type Support = "checking" | "ok" | "camera" | "none";
+type Mode = "ar" | "camera";
 
 const DEBUG_KEY = "beluga.debug";
 
@@ -104,6 +109,10 @@ export default function Walk() {
   const reportingRef = useRef<Reporting | null>(null);
 
   const [support, setSupport] = useState<Support>("checking");
+  // Camera mode shows the camera here, behind the buttons.
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [mode, setMode] = useState<Mode>("ar");
+  const arSupportedRef = useRef(false);
   const [needLocation, setNeedLocation] = useState(false);
   const [locationGranted, setLocationGranted] = useState(false);
   const [phase, setPhase] = useState<Phase>("ready");
@@ -157,7 +166,8 @@ export default function Walk() {
       } catch {
         supported = false;
       }
-      setSupport(supported ? "ok" : "none");
+      arSupportedRef.current = supported;
+      setSupport(supportFor(supported));
       const permission = await locationPermission();
       setNeedLocation(permission === "prompt");
       setLocationGranted(permission === "granted");
@@ -291,7 +301,7 @@ export default function Walk() {
         console.info("[beluga walk] summary", result);
         // Chrome's Bluetooth latency estimate, next to the Phase 3 target of 0.6 s to the first sound.
         const ctx = audioRef.current;
-        const outputLatencyMs = ctx ? Math.round(((ctx.outputLatency || 0) + ctx.baseLatency) * 1000) : null;
+        const outputLatencyMs = ctx ? Math.round(((ctx.outputLatency || 0) + (ctx.baseLatency || 0)) * 1000) : null;
         // Lands in the dev server terminal (or Vercel logs) for testers. No location in it.
         void fetch("/api/device-check", {
           method: "POST",
@@ -302,14 +312,24 @@ export default function Walk() {
     [runCleanups],
   );
 
-  const start = () => {
+  const start = (how: Mode = support === "camera" ? "camera" : "ar") => {
     const overlay = overlayRef.current;
     const gl = glRef.current;
-    if (!overlay || !gl || support !== "ok" || soundsLoading) return;
-
-    // startSensing calls requestSession before anything else in this tap.
-    const started = startSensing({ overlayRoot: overlay, gl, onUpdate, onCue, onEnd });
+    if (soundsLoading) return;
+    const video = videoRef.current;
+    let started: SensingSession;
+    // Each start call asks for the session before anything else in this tap: requestSession for
+    // AR, the motion sensors and the camera for camera mode.
+    if (how === "camera") {
+      if (!video) return;
+      started = startCameraSensing({ video, userHeightM: settingsRef.current.heightM, onUpdate, onEnd });
+    } else {
+      if (!overlay || !gl) return;
+      started = startSensing({ overlayRoot: overlay, gl, onUpdate, onCue, onEnd });
+    }
     sessionRef.current = started;
+    setMode(how);
+    playAsMedia();
 
     // The same tap has to resume audio and unlock speech, or Chrome keeps both silent.
     const ctx = (audioRef.current ??= new AudioContext({ latencyHint: "interactive" }));
@@ -347,7 +367,7 @@ export default function Walk() {
     // The head-height top follows the user's height.
     engineRef.current = new HazardEngine(settingsRef.current.heightM);
     cameraEngineRef.current = new CameraOnlyEngine();
-    cameraOnlyRef.current = settingsRef.current.cameraOnly;
+    cameraOnlyRef.current = how === "camera" || settingsRef.current.cameraOnly;
     setCameraOnly(cameraOnlyRef.current);
     const detect = detectRef.current;
     if (detect) {
@@ -389,6 +409,12 @@ export default function Walk() {
         setSession(null);
         runCleanups();
         setPhase("ready");
+        // The phone refused every AR setup: camera mode from here on, starting now.
+        if (err instanceof ArUnavailableError && supportFor(false) === "camera") {
+          setSupport("camera");
+          start("camera");
+          return;
+        }
         say("start_failed");
         setMessage(`beluga could not start: ${errorText(err)}`);
       },
@@ -481,8 +507,15 @@ export default function Walk() {
       }}
       className={`min-h-dvh w-full ${inAr ? "bg-transparent" : "bg-background"} text-foreground`}
     >
+      <video
+        ref={videoRef}
+        aria-hidden="true"
+        muted
+        playsInline
+        className={inAr && mode === "camera" ? "fixed inset-0 h-full w-full object-cover" : "hidden"}
+      />
       {inAr ? (
-        <main className="flex min-h-dvh flex-col justify-between gap-3 p-3">
+        <main className="relative z-10 flex min-h-dvh flex-col justify-between gap-3 p-3">
           <div className="flex flex-col gap-2">
             {status && (
               <p
@@ -534,6 +567,13 @@ export default function Walk() {
             </p>
           </header>
 
+          {support === "camera" && (
+            <p className="rounded-lg border-2 border-yellow-300 p-3">
+              This browser can&apos;t run AR, so beluga uses camera mode. It warns about things it can name, like
+              people, bikes and chairs, and about yellow edge strips. It can&apos;t find steps or drop-offs.
+            </p>
+          )}
+
           {support === "none" && (
             <p role="alert" className="rounded-lg bg-red-900 p-3">
               This browser can&apos;t start an AR session. Use Chrome on an Android phone with ARCore, and run the device
@@ -568,8 +608,8 @@ export default function Walk() {
 
               <button
                 type="button"
-                onClick={start}
-                disabled={support !== "ok" || soundsLoading}
+                onClick={() => start()}
+                disabled={support === "checking" || support === "none" || soundsLoading}
                 className="min-h-24 rounded-lg bg-yellow-300 px-4 text-2xl font-bold text-black disabled:opacity-50"
               >
                 {soundsLoading ? "Preparing sounds" : support === "checking" ? "Checking this phone" : phase === "ended" ? "Start again" : "Start"}
@@ -614,7 +654,12 @@ export default function Walk() {
                 <SettingsPanel
                   settings={settings}
                   onChange={changeSettings}
-                  onRunSetup={() => changeSettings({ ...settings, firstRunDone: false })}
+                  onRunSetup={() => {
+                    // Setup again also tries every AR setup again, on a phone that refused some.
+                    forgetLevel();
+                    setSupport(supportFor(arSupportedRef.current));
+                    changeSettings({ ...settings, firstRunDone: false });
+                  }}
                 />
               )}
 
@@ -657,6 +702,21 @@ function download(blob: Blob): void {
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
+// AR when the browser has it and this phone hasn't refused every AR setup before. Otherwise camera
+// mode, when there is a camera to ask for.
+function supportFor(arSupported: boolean): Support {
+  if (arSupported && savedLevel() < SESSION_LEVELS.length) return "ok";
+  return typeof navigator !== "undefined" && typeof navigator.mediaDevices?.getUserMedia === "function"
+    ? "camera"
+    : "none";
+}
+
+// iOS mutes Web Audio with the ring switch unless the page says it plays media (Safari 17 and up).
+function playAsMedia(): void {
+  const audioSession = (navigator as { audioSession?: { type: string } }).audioSession;
+  if (audioSession) audioSession.type = "playback";
+}
+
 function metres(value: number | null): string {
   return value === null ? "not measured" : `${value.toFixed(2)} m`;
 }
@@ -670,6 +730,7 @@ function Summary({ summary }: { summary: SessionSummary }) {
       <p>
         {Math.round(summary.durationS)} s, ended by {summary.reason}
         {summary.error && `: ${summary.error}`}
+        {summary.setup && `, setup: ${summary.setup}`}
       </p>
       <p>
         {summary.updateRate.toFixed(1)} updates/s (target about 10), {summary.frameRate.toFixed(0)} frames/s

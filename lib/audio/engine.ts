@@ -221,13 +221,13 @@ export class AudioEngine {
       recentWarnings: this.recentWarnings.map((warning) => ({ ...warning })),
       source: this.source,
       leadMs: Math.round(this.leadS() * 1000),
-      outputLatencyMs: Math.round(((this.ctx.outputLatency || 0) + this.ctx.baseLatency) * 1000),
+      outputLatencyMs: Math.round(((this.ctx.outputLatency || 0) + (this.ctx.baseLatency || 0)) * 1000),
       state: this.ctx.state,
     };
   }
 
   private leadS(): number {
-    const latency = (this.ctx.outputLatency || 0) + this.ctx.baseLatency;
+    const latency = (this.ctx.outputLatency || 0) + (this.ctx.baseLatency || 0);
     return Math.min(latency, AUDIO.latencyLeadMaxMs / 1000);
   }
 
