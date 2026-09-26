@@ -16,8 +16,10 @@ export type Delegate = "GPU" | "CPU";
 // or the page itself loads the classic build.
 async function createTask(delegate: Delegate, useModule: boolean): Promise<ObjectDetector> {
   const fileset = await FilesetResolver.forVisionTasks(WASM_PATH, useModule);
-  // GPU needs a canvas of its own for its WebGL context; the XR layer keeps the page's.
-  const canvas = delegate === "GPU" ? new OffscreenCanvas(1, 1) : undefined;
+  // A canvas of its own for MediaPipe's WebGL context (the CPU path uses it too, for pictures);
+  // the XR layer keeps the page's. On the page a plain canvas: Safari before 17 has no WebGL on
+  // an OffscreenCanvas. A worker only has OffscreenCanvas.
+  const canvas = typeof document !== "undefined" ? document.createElement("canvas") : new OffscreenCanvas(1, 1);
   const task = await ObjectDetector.createFromOptions(fileset, {
     baseOptions: { modelAssetPath: MODEL_PATH, delegate },
     canvas,
