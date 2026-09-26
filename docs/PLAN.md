@@ -644,7 +644,7 @@ Voice clips (one calm voice): "edge", "step down", "head", "pole", "bike", "scoo
 
 - MediaPipe Tasks Vision Object Detector with EfficientDet-Lite0 (COCO), video running mode, GPU delegate with automatic CPU fallback, score threshold 0.35, up to 10 results.
 - Input: the small camera frame from Phase 1 at 4 Hz. Load the model once, when `/walk` loads, from `public/models` (cached offline).
-- Self-host the MediaPipe WASM files as well (`FilesetResolver.forVisionTasks("/mediapipe/wasm")`, original file names kept). The usual examples load them from a CDN, which breaks offline. Together they are about 46 MB, so `scripts/detector-assets.ts` puts them in `public` before `dev` and `build` (the model checked against a pinned SHA-256) and they are not committed.
+- Self-host the MediaPipe WASM files as well (`FilesetResolver.forVisionTasks("/mediapipe/wasm")`, original file names kept). The usual examples load them from a CDN, which breaks offline. Together they are about 46 MB, so `scripts/assets.ts` puts them in `public` before `dev` and `build` (the model checked against a pinned SHA-256) and they are not committed.
 - The detector runs in a Web Worker (`lib/detect/detector.worker.ts`), one frame at a time, so it never holds up the safety loop. Turbopack starts it as a classic worker, where MediaPipe loads its classic build with `importScripts`. If the worker can't start, it runs on the page, outside the AR frame callback.
 - `/walk?detector=cpu` keeps it off the GPU, which ARCore and the camera also use, and `/walk?detector=off` turns it off. Compare update rates in the overlay to check the last "Done when" item.
 - Keep only the classes listed in the detector-class enumeration; map everything else to `unknown`.

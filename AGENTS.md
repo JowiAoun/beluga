@@ -16,7 +16,7 @@ An installable web app for Android Chrome that warns blind and low-vision pedest
 
 - `npm run dev`: dev server on port 3000
 - `npm run lint`, `npm run typecheck`, `npm test`: run all three before committing
-- `npm run build`: production build, the same one Vercel runs. It and `npm run dev` first put the detector's model and WASM in `public` (`scripts/detector-assets.ts`)
+- `npm run build`: production build, the same one Vercel runs. It and `npm run dev` first put the detector's model and WASM and MapLibre's worker in `public` (`scripts/assets.ts`)
 - `npm run phone`: sends the phone's `localhost:3000` to this laptop over USB (see Phone testing)
 - `npm run db:smoke`: Phase 0 database check, needs `DATABASE_URL` in `.env.local`
 - `npm run db:migrate`: applies `db/migrations` in order, once each. The venue network blocks the database's port, so run it from a phone hotspot

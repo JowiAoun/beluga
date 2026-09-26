@@ -1,7 +1,8 @@
-// Puts the detector's files in `public` before `dev` and `build`: the MediaPipe WASM from
-// node_modules, and the EfficientDet-Lite0 model from Google's model store. They are too big to
-// commit (about 46 MB together), and the app must serve them itself so the detector works offline.
-// A failure only warns: without the files the detector stays off and warnings still run on depth.
+// Puts the files the browser loads by URL in `public` before `dev` and `build`: the MediaPipe WASM
+// and MapLibre's map worker from node_modules, and the EfficientDet-Lite0 model from Google's model
+// store. They are too big to commit (about 47 MB together), and the app serves them itself so the
+// detector works offline. A failure only warns: without the files the detector stays off and
+// warnings still run on depth.
 
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
@@ -20,6 +21,12 @@ const WASM_FILES = [
   "vision_wasm_nosimd_internal.wasm",
 ];
 
+// MapLibre finds its worker next to its own file, which a bundle moves, so the dashboard points
+// it at these copies with setWorkerUrl. The worker imports the shared file.
+const MAP_FROM = "node_modules/maplibre-gl/dist";
+const MAP_TO = "public/maplibre";
+const MAP_FILES = ["maplibre-gl-worker.mjs", "maplibre-gl-shared.mjs"];
+
 const MODEL_URL =
   "https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/float16/1/efficientdet_lite0.tflite";
 const MODEL_TO = "public/models/efficientdet_lite0.tflite";
@@ -29,11 +36,11 @@ function sha256(file: string): string {
   return createHash("sha256").update(readFileSync(file)).digest("hex");
 }
 
-function copyWasm(): void {
-  mkdirSync(WASM_TO, { recursive: true });
-  for (const file of WASM_FILES) {
-    const from = path.join(WASM_FROM, file);
-    const to = path.join(WASM_TO, file);
+function copyAll(fromDir: string, toDir: string, files: string[]): void {
+  mkdirSync(toDir, { recursive: true });
+  for (const file of files) {
+    const from = path.join(fromDir, file);
+    const to = path.join(toDir, file);
     if (existsSync(to) && statSync(to).size === statSync(from).size) continue;
     copyFileSync(from, to);
   }
@@ -53,14 +60,19 @@ async function fetchModel(): Promise<void> {
 
 async function main(): Promise<void> {
   try {
-    copyWasm();
+    copyAll(WASM_FROM, WASM_TO, WASM_FILES);
   } catch (err) {
-    console.warn(`[detector assets] WASM copy failed, the detector will stay off: ${String(err)}`);
+    console.warn(`[assets] WASM copy failed, the detector will stay off: ${String(err)}`);
+  }
+  try {
+    copyAll(MAP_FROM, MAP_TO, MAP_FILES);
+  } catch (err) {
+    console.warn(`[assets] MapLibre worker copy failed, the dashboard map won't draw: ${String(err)}`);
   }
   try {
     await fetchModel();
   } catch (err) {
-    console.warn(`[detector assets] model download failed, the detector will stay off: ${String(err)}`);
+    console.warn(`[assets] model download failed, the detector will stay off: ${String(err)}`);
   }
 }
 

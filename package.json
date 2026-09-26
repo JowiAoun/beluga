@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "predev": "tsx scripts/detector-assets.ts",
+    "predev": "tsx scripts/assets.ts",
     "dev": "next dev",
-    "prebuild": "tsx scripts/detector-assets.ts",
+    "prebuild": "tsx scripts/assets.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

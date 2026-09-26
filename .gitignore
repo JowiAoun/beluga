@@ -51,6 +51,7 @@ next-env.d.ts
 # ElevenLabs downloads before processing (scripts/sounds). The processed files in public/sounds are committed.
 /scripts/sounds/raw/
 
-# Detector files, put in place by scripts/detector-assets.ts before dev and build.
+# Files scripts/assets.ts puts in place before dev and build.
 /public/mediapipe/
 /public/models/*.tflite
+/public/maplibre/
