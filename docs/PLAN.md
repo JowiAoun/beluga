@@ -2,11 +2,11 @@
 
 ## Context
 
-**beluga is an installable web app for Android (Chrome) that warns blind and low-vision pedestrians about obstacles with directional sounds, and turns lasting hazards into a ranked fix-first dashboard for the city.** It is built for Hack the Hill III (uOttawa, Ottawa). Build phases in order; each phase ends in something demonstrable, so the project is always submittable.
+**beluga is an installable web app for Android (Chrome) that warns blind and low-vision pedestrians about obstacles with directional sounds, and turns lasting hazards into a ranked fix-first dashboard for the city.** It is built for Hack the Hill III (uOttawa, Ottawa). Phases run in parallel tracks (see "Tracks & timeline"); inside a track, build them in order. Each phase ends in something demonstrable, so the project is always submittable.
 
 ### The product in one paragraph
 
-The user wears the phone on a chest lanyard (camera forward) and bone-conduction earbuds (ears stay open to traffic). beluga runs a WebXR augmented-reality session in Chrome that uses ARCore depth to measure distance to everything in front of the user. It stays silent until something enters a narrow walking corridor, then plays a short sound placed on the hazard's side that repeats faster as the user gets closer. Head-height obstacles and drop-offs (platform edges, stairs down) have their own distinct sounds. A double-tap sends one camera frame to Gemini, and the answer is spoken with an ElevenLabs voice from the direction of the object described. When the user meets a lasting civic hazard (a scooter left across the sidewalk, a construction barrier, a head-height sign), Gemini decides whether to report it; with consent, an anonymous, coarsened report is stored in Tiger Data, where continuous aggregates drive a live fix-first map and ranked queue for the City of Ottawa and OC Transpo.
+The user wears the phone on a chest mount (camera forward) and bone-conduction earbuds (ears stay open to traffic). beluga runs a WebXR augmented-reality session in Chrome that uses ARCore depth to measure distance to everything in front of the user. It stays silent until something enters a narrow walking corridor, then plays a short sound placed on the hazard's side that repeats faster as the user gets closer. Head-height obstacles and drop-offs (platform edges, stairs down) have their own distinct sounds. A tap on the Ask button sends one camera frame to Gemini, and the answer is spoken with an ElevenLabs voice from the direction of the object described. When the user meets a lasting civic hazard (a scooter left across the sidewalk, a construction barrier, a head-height sign), Gemini decides whether to report it; with consent, an anonymous, coarsened report is stored in Tiger Data, where continuous aggregates drive a live fix-first map and ranked queue for the City of Ottawa and OC Transpo.
 
 ### Non-negotiable rules
 
@@ -34,6 +34,119 @@ The user wears the phone on a chest lanyard (camera forward) and bone-conduction
 
 Devpost submission closes **10:00 EDT, Sunday Sept 27, 2026**, with a public GitHub link. Commits are reviewed to confirm the work was done during the event. Feature freeze at **02:00**; after that, only fixes, demo hardening and submission assets.
 
+## Risks
+
+**The biggest risk is time: at noon Saturday there are 14 hours to feature freeze and 12 phases to build.** The rest are grouped below, worst first in each group. Each one says where the plan now handles it.
+
+### Time & team
+
+| Risk | Level | What we do |
+| --- | --- | --- |
+| 12 phases in 14 hours. Built one after another, the phone alone (Phases 0 to 4) fills the day. | High | Four tracks in parallel, a thin end-to-end slice by 18:00, and cut checks at 20:00 and 23:00 (see "Tracks & timeline"). |
+| Several people and agents commit to one `main`. `package.json`, the lockfile and the shared modules conflict first. | Medium | Phase 0 adds every dependency and the shared modules in one commit. Each track owns its folders (Conventions). |
+| Every push to `main` builds on Vercel. The Hobby plan runs 1 build at a time and allows 100 deploys a day, so builds queue up. | Medium | Docs-only commits skip the build. Phone tests run on `localhost` over `adb reverse` (Local development). |
+| DNS can take hours, and the domain was in Phase 10. | Medium | Started in Phase 0. |
+
+### Sensing
+
+| Risk | Level | What we do |
+| --- | --- | --- |
+| Depth fails on the demo phone: the phone isn't supported, depth needs motion, and glass, dark and shiny floors leave holes. | High | Phase 0 before anything else. Replay clips and a known-good demo spot. Camera-only mode only if Phase 0 shows no depth. |
+| The camera can't see close to the feet. In portrait the view is roughly 30 to 40° wide, so the 0.9 m corridor only fits in view past about 1.4 m. A knee-high box drops out of the bottom of the view at about 1 m, and the old "6 updates off" rule would then stop the warning just before impact. | High | Out-of-view memory (Phase 2). Phase 0 measures the real field of view in both orientations, then the team picks orientation and tilt. |
+| Door frames (2.03 m) sat inside the old 1.4 to 2.2 m head-height band, so every doorway would ring. Ramps and sloped sidewalks read as walls or drop-offs against a flat floor. | High | Head-height top follows the user's height, heights come from a sloped floor line, and both have tests (Phase 2). |
+| A lanyard swings and spins: motion blur, lost tracking, and a corridor pointing into the wall. The screen faces the wearer, so clothing can tap it. | Medium | Rigid chest mount, travel-direction blend (Phase 1), long press on Stop (Phase 9). |
+| Chrome's `local-floor` on phones is a fixed guess (1.2 m below the start point). | Medium | Floor from a hit test, then depth calibration (Phase 1). |
+| Heat and battery: ARCore, depth, the detector, GPS and the screen all run at once. | Medium | Battery pack, detector to 2 Hz when hot, 15-minute soak test (Phase 10). |
+| Depth from motion reads moving people and bikes badly. | Low | Accept for the prototype; name it in the README limitations. |
+
+### Audio & controls
+
+| Risk | Level | What we do |
+| --- | --- | --- |
+| TalkBack takes raw taps, so double-tap-anywhere Ask could never work for a TalkBack user, and the plan's own TalkBack test would fail. | High | Ask and Stop are real DOM buttons (Phase 9). |
+| The 150 ms sound target can't be met: 3 updates at 10 Hz take 200 to 300 ms, and Bluetooth adds 150 to 300 ms. | Medium | Target is now 0.6 s (Phase 3). If still late, close hazards activate after 2 updates (Fallbacks). |
+| Left and right are weak on bone conduction: the skull carries sound to both ears. | Medium | Existing fallback: more angle exaggeration, a level difference, and the spoken "left" and "right". |
+| A streamed MP3 can't play through the panner as it arrives. | Medium | Whole MP3 in one response; PCM streaming only if Ask misses 3 s (Ask contract). |
+| Sounds longer than their repeat interval stack up. `loudnorm` can't measure clips shorter than 0.4 s. | Low | One instance per hazard, loop variants, peak normalising (Phase 3). |
+
+### Cloud services
+
+| Risk | Level | What we do |
+| --- | --- | --- |
+| Gemini's free limits are low and no longer published. On the free tier Google may use frames to improve its products and humans may read them, which clashes with rule 5. | High | Billing key for every live frame. The README says what Google keeps (abuse logs for 55 days on the paid tier). |
+| Gemini 3 Flash thinks at `high` by default, which alone can push Ask past 3 s. The plan's temperature 0.2 goes against Google's advice for Gemini 3. | Medium | `thinking_level: minimal` and the default temperature (Phase 5). |
+| Tiger's free service turns read-only at 750 MB and has no connection pooler. Reloading the seed a few times, or many cold function connections, can hit a limit. | Medium | Smoke test in Phase 0, size check before reloads (Phase 8), small client pool (Phase 6). The trial service is the fallback. |
+| Giving Gemini database tools (MCP or function calling) in triage or Ask would add a round trip and let text in a frame steer database access. | Medium | Gemini gets no tools on the phone paths; the backend runs every query (Phase 5, "Gemini and the database"). |
+| Anyone can call `/api/ask` and `/api/triage`, and a loop bug could drain ElevenLabs credits. | Low | Hourly budgets on both routes (Phase 5). |
+
+### Privacy
+
+| Risk | Level | What we do |
+| --- | --- | --- |
+| A device hash and a session id on every event add up to a movement trail per person, at 100 m. | Medium | Hash only on civic reports, no session id stored (contracts, Phase 6). |
+| Weekly salt rotation inside a 14-day window counts one person up to 3 times, so one person alone could pass the 3-reporter rule. | Medium | Rotate every 28 days at most often, never during the event. The README says a window that crosses a rotation can count one person twice. |
+| Test photos and replay clips in the public repo could show strangers. | Medium | Teammates only, no strangers' faces or plates (Phases 5 and 10). |
+| The live feed shows single reports, which skips the 3-reporter rule. | Low | The feed shows category, severity, place and time, and nothing about the device. The README says so. |
+
+### Logic fixes
+
+| Risk | Level | What we do |
+| --- | --- | --- |
+| The frame gate skipped every "vehicle", which blocks bikes and scooters: the main civic story. COCO has no scooter class at all. | High | Skip only person, car, bus and truck (Phase 4). |
+| The cut list said "cut from the bottom up", which cuts detector labels first and the tactile-strip stretch last. | Medium | Now "cut from the top down", with five new items at the top. |
+| Near-miss pressure `1 + near-misses ÷ 10`: with the seed's volume a busy cell reaches the hundreds, so crowding outranks everything else. | Medium | Log scale (Phase 6). |
+| `cell_daily` averaged averages for positions. | Low | Positions come from the geohash centre (Phase 6). |
+| deck.gl's HexagonLayer re-bins cells, so its hexagons wouldn't match the queue. | Low | MapLibre fill squares, no deck.gl (Phase 7). |
+
+### Demo & safety
+
+| Risk | Level | What we do |
+| --- | --- | --- |
+| The screen faces the wearer and the sound is in the wearer's ears, so judges see and hear nothing, in a loud hall. | High | `scrcpy` mirror with audio and spare earbuds for the judge (Phase 10, "Demo setup"). |
+| The backend drops the same device, cell and category for 15 minutes, so the second judge's staged report vanishes. | High | "New demo reporter" button (Phase 9). |
+| Blindfolded testing near stairs, curbs or platforms can hurt someone. | High | Spotter, indoors, staged edges only (hardening checklist). |
+| Indoors at the venue there may be no GPS fix, so events have no location and are rejected. | Medium | The chosen station's position as the fallback (Phase 9). |
+| The dashboard names the City of Ottawa and OC Transpo. Their logos, or wording that suggests a partnership, could read as speaking for them. | Low | No logos, and "not affiliated with the City of Ottawa or OC Transpo" in the dashboard footer and README. |
+
+## Tracks & timeline
+
+**Four tracks start together in Phase 0 and meet in a thin end-to-end slice at 18:00.** Times are EDT, Saturday Sept 26 into Sunday Sept 27.
+
+| Track | Phases | Owns |
+| --- | --- | --- |
+| A. Phone sensing | 0, 1, 2, 4 (detector) | `app/walk`, `lib/xr`, `lib/hazard`, `lib/detect` |
+| B. Sound & AI | 3, 4 (frame gate), 5 | `lib/audio`, `lib/server/gemini`, `lib/server/elevenlabs`, `app/api/triage`, `app/api/ask`, `scripts/sounds`, `public/sounds` |
+| C. Data & dashboard | 6, 7, 8 | `db`, `lib/server/db`, `app/api/events`, `app/api/dashboard`, `app/map`, `scripts/seed` |
+| D. Shell & ship | domain, 9, 10, 11 | `app/page`, `lib/events`, manifest, service worker, `docs`, README |
+
+| Time | Checkpoint |
+| --- | --- |
+| 12:00 to 14:00 | Phase 0 on the phone. In parallel: domain DNS, database smoke test, sound generation, Gemini limits. |
+| 14:00 | Decide: depth or camera-only, portrait or landscape, camera access or not. |
+| 18:00 | Thin slice: walking toward a chair plays a tick from its side; Ask speaks an answer; `/map` shows seeded data from the real database; the domain serves the landing page. |
+| 20:00 | Cut check 1: each track says what is left, and the team cuts from the cut list until it fits. |
+| 23:00 | Cut check 2, same rule. Record the three replay clips. |
+| 02:00 | Feature freeze. Run the final acceptance checklist. |
+| 02:00 to 06:00 | Hardening, backup demo video, screenshots, README numbers. |
+| 08:00 | Devpost draft submitted. It can still be edited, and Devpost gets slow near the deadline. |
+| 10:00 | Submission closes. |
+
+## Open questions
+
+Each one has a default, so no track waits for the answer.
+
+| Question | Default until answered |
+| --- | --- |
+| How many people, and who takes which track (with their agents)? | One owner per track |
+| Which phone runs the demo, is it on Google's ARCore depth list, and is there a second one? | A Pixel 6 or newer |
+| Are the bone-conduction earbuds Bluetooth, and is there a second pair for judges? | Bluetooth, one pair |
+| How is the phone worn: lanyard, harness, or a clip on a backpack strap? | Clip on a backpack shoulder strap, portrait |
+| Is the domain registered, and what is it? | Not yet; register it in Phase 0 |
+| Is there a Gemini key with billing on, and how many ElevenLabs credits did the event code give? | Billing key exists; credits cover the library and the demo |
+| What can be staged for the civic demo: an e-scooter, a bike, a construction barrier? | A bike laid across the hallway |
+| How is judging run: judges at our table, a stage demo, or both, and for how long? | Table visits, 5 minutes each |
+| Is the staged queue moment in "Demo setup" (2 simulated reporters plus the judge's live one) acceptable? | Yes, labelled |
+
 ## Stack and repository layout
 
 **One TypeScript web project serves everything: the phone app, the city dashboard, the landing page and the backend routes, deployed as a single Vercel project.** One deploy, one domain, secrets in one place.
@@ -52,7 +165,7 @@ Devpost submission closes **10:00 EDT, Sunday Sept 27, 2026**, with a public Git
 | Gemini | Google Gen AI SDK for JavaScript | Structured JSON output with a response schema |
 | ElevenLabs | REST calls from the backend | Sound Effects (build time), Text to Speech streaming (runtime) |
 | Database | Tiger Cloud free service (TimescaleDB + PostGIS) | Plain Postgres driver (postgres.js), SSL required |
-| Dashboard map | MapLibre GL JS with a free vector/raster basemap, deck.gl HexagonLayer over it | No paid map keys |
+| Dashboard map | MapLibre GL JS with the OpenFreeMap basemap (`https://tiles.openfreemap.org/styles/liberty`), cells drawn by MapLibre itself | No paid map keys, no deck.gl (see Phase 7) |
 | Dashboard charts | Lightweight SVG charts or Recharts | Small line charts and a bar chart |
 | Build-time scripts | Node scripts run locally | Sound generation, seed data |
 | Audio post-processing | ffmpeg (local) | Trim, fade, mono, loudness |
@@ -91,6 +204,8 @@ Devpost submission closes **10:00 EDT, Sunday Sept 27, 2026**, with a public Git
 - Every module that touches a sponsor service has a short comment header saying which prize it serves; the README links to these files.
 - Commit early and often with clear messages; the commit history is judged.
 - A `.env.example` lists every variable with no values; real values never enter the repo.
+- Phase 0 installs every dependency and creates the shared types and parameters modules in one commit. Parallel tracks then add to those files, and never reorder or reformat them, so merges stay clean.
+- Each track owns its folders (see "Tracks & timeline"). Touch another track's folder only in a small, separate commit.
 
 ## Accounts, secrets and environment
 
@@ -99,27 +214,30 @@ Devpost submission closes **10:00 EDT, Sunday Sept 27, 2026**, with a public Git
 | Variable | Used by | Value / source |
 | --- | --- | --- |
 | `DATABASE_URL` | Backend, seed script, migrations | Tiger Cloud service connection string (SSL required) |
+| `DATABASE_URL_READONLY` | Backend ("Ask the data" stretch only) | Connection string for a read-only database role |
 | `GEMINI_API_KEY` | Backend | Google AI Studio key |
-| `GEMINI_TRIAGE_MODEL` | Backend | Current Flash-Lite model id (check AI Studio; do not use 2.5 models) |
-| `GEMINI_ASK_MODEL` | Backend | Current Flash model id |
+| `GEMINI_TRIAGE_MODEL` | Backend | Current Flash-Lite model id, `gemini-3.5-flash-lite` as of Sept 2026 (check AI Studio; do not use 2.5 models) |
+| `GEMINI_ASK_MODEL` | Backend | Current Flash model id, `gemini-3.8-flash` as of Sept 2026 |
 | `ELEVENLABS_API_KEY` | Backend, sound script | ElevenLabs account with event credits applied |
 | `ELEVENLABS_VOICE_ID` | Backend, sound script | One calm, clear English voice chosen once and used everywhere |
 | `ELEVENLABS_TTS_MODEL` | Backend | `eleven_flash_v2_5` |
-| `DEVICE_HASH_SALT` | Backend | Random string; rotating it weekly is what rotates device hashes |
+| `DEVICE_HASH_SALT` | Backend | Random string; rotating it is what rotates device hashes. Rotate every 28 days at most often, and never during the event: a rotation inside the 14-day fix-first window counts one person as two reporters |
 | `GEMINI_HOURLY_BUDGET` | Backend | Default 150 triage calls per hour across all devices |
+| `ASK_HOURLY_BUDGET` | Backend | Default 120 Ask calls per hour across all devices, so a bug or a stranger can't drain ElevenLabs credits |
 | `DASHBOARD_SHOW_SIMULATED` | Dashboard | Default true (demo); the toggle still works |
 | `NEXT_PUBLIC_SITE_NAME` | Everywhere | `beluga` |
 
 ### Service setup notes
 
-- **Tiger Cloud:** free service (no card, up to 2 per account, us-east-1, shared CPU; turns read-only at its storage limit). Enable the PostGIS extension. If a free-service limit blocks a needed feature, create a 30-day trial service instead and change only `DATABASE_URL`.
-- **Gemini:** check the project's real per-model daily limits in AI Studio before building the gate; they vary widely. Keep a second key with billing enabled as a backup, swappable by env var only.
+- **Tiger Cloud:** free service (no card, up to 2 per account, us-east-1, shared CPU; 750 MB of storage, then it turns read-only; no connection pooler). Enable the PostGIS extension. If a free-service limit blocks a needed feature, create a 30-day trial service instead and change only `DATABASE_URL`.
+- **Gemini:** check the project's real per-model daily limits in AI Studio before building the gate; Google no longer publishes fixed numbers, and free limits were cut hard in late 2025. Use a key with billing enabled for every live frame: on the free tier Google may use the content to improve its products and human reviewers may read it, which breaks the privacy story for camera frames with bystanders in them. The paid tier does not train on prompts and keeps abuse logs for 55 days.
 - **ElevenLabs:** apply the event credit code before generating sounds; sound effects and TTS both draw on it.
 - **Domain:** the team's GoDaddy Registry domain points at the Vercel project; the dashboard is also reachable at a `map.` subdomain that routes to `/map`.
 
 ### Local development
 
 - WebXR only works on the phone over HTTPS, so phone testing always uses a Vercel preview deployment (every push) or a local HTTPS tunnel.
+- Fastest phone loop: plug the phone in over USB, run `adb reverse tcp:3000 tcp:3000`, and open `http://localhost:3000/walk` on the phone. Chrome treats `localhost` as a secure origin, so WebXR works with no tunnel and no deploy, and hot reload works. Use Vercel for testing the domain and the installed app.
 - Chrome remote debugging (phone connected over USB, inspect from desktop Chrome) is how console output from the phone is read.
 - The dashboard and backend routes can be developed on a laptop against the real database.
 
@@ -159,8 +277,7 @@ Request body: an object with `events` (1–200 items) and `consentVersion`. Each
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | ts | timestamp | yes | When it happened on the phone |
-| sessionId | uuid | yes | New random value per app launch; also rotated at midnight |
-| deviceKey | string | yes | Random id stored on the phone; the backend turns it into a salted hash and never stores the raw key |
+| deviceKey | string | yes | Random id stored on the phone; the backend turns it into a salted hash for civic reports only, and never stores the raw key. The session id stays on the phone: with a hash and a session on every event, the rows would add up to a movement trail per person |
 | kind | event kind | yes |  |
 | hazardKind | hazard kind | yes |  |
 | detectorClass | detector class | yes |  |
@@ -198,7 +315,7 @@ Response (validated against the schema before returning):
 
 Request: one JPEG frame (same limits), optional question text (MVP always "What's in front of me?").
 
-Response: answer text (≤ 2 sentences), target box or null, target label, and the spoken audio. Deliver audio as a streamed MP3 response with the answer, box and label in response headers (URL-encoded JSON), so playback can start while audio is still arriving. If voice generation fails, return the text with a flag so the phone can fall back to its cached "Sorry, I couldn't see that" line.
+Response: answer text (≤ 2 sentences), target box or null, target label, and the spoken audio. Return the whole MP3 as the response body, with the answer, box and label in response headers (URL-encoded JSON). The phone decodes it and plays it through the panner. Web Audio can't decode half an MP3, and an `<audio>` element can't send a POST, so a streamed MP3 would not start any sooner. If Ask misses 3 s, the upgrade is to stream `pcm_24000` from ElevenLabs and play each chunk as its own audio buffer. If voice generation fails, return the text with a flag so the phone can fall back to its cached "Sorry, I couldn't see that" line.
 
 ### Dashboard read endpoints (browser → `/api/dashboard/*`)
 
@@ -224,19 +341,32 @@ Every dashboard response includes `includesSimulated` so the banner can show.
 4. Landing page placeholder at `/`: "beluga" title, one-line description, research-prototype disclaimer.
 5. `/walk` capability check page, one large "Start test" button (the user gesture), then a pass/fail list:
    - WebXR present and `immersive-ar` supported
-   - Session starts with optional features depth sensing (CPU-optimised usage; luminance-alpha or float32 data format), camera access, hit test, DOM overlay, local-floor reference space; list which features were actually granted
+   - Session starts with optional features depth sensing (`usagePreference: ["cpu-optimized"]`, `dataFormatPreference: ["luminance-alpha", "unsigned-short"]`; Chrome on ARCore gives no `float32` depth, so asking for it alone returns none), camera access, hit test, DOM overlay, local-floor reference space; list which features were actually granted, and check `session.domOverlayState`, since Chrome drops an optional DOM overlay without saying so
    - Depth data arrives (show width, height, and the distance at screen centre, updating)
    - A camera image arrives (show its size and a tiny preview drawn from the camera texture)
-   - Audio: an AudioContext resumed from the same tap plays a test tone hard left, then centre, then hard right through an HRTF panner
+   - Audio: an AudioContext resumed from the same tap plays a test tone hard left, then centre, then hard right through an HRTF panner, on the Bluetooth bone-conduction earbuds. Note how late the tone sounds after the tap
    - Screen wake lock acquired
    - Geolocation fix with reported accuracy
    - Device orientation / compass heading available
+   - Field of view: horizontal and vertical degrees from the view's projection matrix, in portrait and in landscape
 6. Log every result to the console as well (read through Chrome remote debugging).
+7. Run the whole check again from the installed app (home screen), not only a browser tab.
+
+### Start now, in parallel with Phase 0
+
+None of these need the phone, and each one is slow to fix late.
+
+- **Domain:** point the domain at Vercel today (steps in Phase 10). DNS can take hours.
+- **Database smoke test:** on the free Tiger service, turn on PostGIS, then create a tiny hypertable, a real-time continuous aggregate with a second one stacked on it, a columnstore policy and a retention policy. If any step fails, move to the trial service now.
+- **Sound library:** Phase 3a needs nothing else; generate it now.
+- **Gemini:** read the project's real limits in AI Studio and set up the billing key.
+- **Hardware:** chest mount, earbuds, battery pack, USB cable, and a bike or scooter to stage.
 
 ### Done when
 
 - The team phone shows all checks passing, or the failing ones are known and a fallback from the final section is chosen.
 - Depth at screen centre roughly matches a tape measure at 1 m and 2 m while the phone is moving slowly (depth on most phones comes from motion).
+- The field of view is measured, and the team has picked portrait or landscape and how far the phone tilts down (see "The camera can't see close to the feet" in Risks).
 
 ## Phase 1: AR session, depth, camera frames, floor
 
@@ -244,7 +374,8 @@ Every dashboard response includes `includesSimulated` so the banner can show.
 
 ### Session lifecycle
 
-- One start tap does, in order: resume the AudioContext, request the wake lock, start the XR session, request location watching. Any failure is spoken (cached voice line) and shown in the overlay.
+- Location permission is asked during first run, before any session, so no prompt has to appear inside AR.
+- One start tap does, in order: call `requestSession` straight from the tap handler with no `await` before it, resume the AudioContext in the same handler, then request the wake lock and start location watching. Any failure is spoken (cached voice line) and shown in the overlay.
 - Required: `immersive-ar`. Optional: depth sensing, camera access, hit test, DOM overlay (rooted at the app's overlay element), local-floor. Prefer the local-floor reference space; fall back to local and estimate the floor yourself.
 - The session ends on "Stop", on visibility loss, or on error. On end: stop audio scheduling, flush the event queue, release the wake lock, speak "beluga stopped".
 - If the viewer pose is missing or reported as emulated for more than 1 s, mark tracking as lost, pause hazard output and play the "hold steady" voice line once (cooldown 10 s).
@@ -252,7 +383,7 @@ Every dashboard response includes `includesSimulated` so the banner can show.
 ### Depth sampling
 
 - Each XR frame, get the CPU depth information for the single view. Process only every Nth frame to reach \~10 Hz.
-- Sample a fixed grid in normalised view coordinates (default 48 × 36 points), mapping each point into depth-buffer coordinates with the depth-buffer-from-view transform the API provides, and reading metres with the provided raw-to-metres scale.
+- Sample a fixed grid in normalised view coordinates (default 48 × 36 points) and read each one with `getDepthInMeters(x, y)`. It takes normalised view coordinates (0 to 1, or it throws) and applies the depth-buffer transform and the raw-to-metres scale itself, so the data format doesn't matter.
 - Discard samples under 0.2 m or over 5 m, and samples that read zero.
 - Turn each sample into a 3D point: build the view-space ray for that pixel from the inverse projection matrix, scale it to the measured depth (depth is distance along the camera's forward axis), then transform by the view's pose into the reference space.
 - Output per update: array of world points, the camera position, timestamp, sample count, valid count.
@@ -266,8 +397,9 @@ Every dashboard response includes `includesSimulated` so the banner can show.
 
 ### Floor and walking direction
 
-- Floor height starts at the local-floor origin (y = 0) if available. Refine it during calibration: the user takes three slow steps; take the median height of the lowest 20% of points within 0.5–2 m ahead. Store it; re-estimate every 5 s from points that are clearly floor (within ±0.1 m of the current value) using a slow moving average.
+- On phones, Chrome's local-floor is a guess: it always puts the floor 1.2 m below where the phone started. Use it only as a starting value. The first real value comes from a hit test straight down and ahead against ARCore's detected floor plane (the one use for `hit-test`). Refine it during calibration: the user takes three slow steps; take the median height of the lowest 20% of points within 0.5–2 m ahead. Store it; re-estimate every 5 s from points that are clearly floor (within ±0.1 m of the current value) using a slow moving average.
 - Walking direction = the camera's forward vector flattened onto the horizontal plane, smoothed over \~0.5 s. Right vector = perpendicular on the horizontal plane.
+- When the user moves faster than 0.3 m/s, blend in the direction of travel (camera position change over the last 1 s) at weight 0.5. A phone on a strap twists away from where the user is going, and the corridor would point into the wall.
 - Stationary flag: camera position moved less than 0.1 m over the last 5 s.
 
 ### Debug overlay (DOM overlay, toggled by a three-finger tap or a settings switch)
@@ -293,9 +425,13 @@ For each world point, relative to the camera position: ahead = distance along th
 | Outside corridor | lateral beyond ±0.45 m, or ahead under 0.3 m, or ahead over 3.0 m (3.5 m for drop-off candidates) | ignore |
 | Walkable floor | height between −0.25 m and +0.15 m | ignore |
 | Obstacle | height over 0.15 m up to 1.4 m | obstacle candidate |
-| Head-height | height over 1.4 m up to 2.2 m | head\_height candidate |
-| Overhead | height over 2.2 m | ignore |
+| Head-height | height over 1.4 m up to the head-height top (user's height + 0.1 m, default 1.95 m) | head\_height candidate |
+| Overhead | above the head-height top | ignore |
 | Drop-off | height under −0.25 m | drop\_off candidate |
+
+The head-height top follows the user's height (asked in settings). Door frames sit at 2.03 m and exit signs hang near 2.1 m, so a fixed 2.2 m top would ring the head chime at every doorway.
+
+Heights are measured from a floor line that can slope. Each update, fit height against distance ahead through the walkable-floor points in the corridor (a median-based fit, slope clamped to ±10%). Ramps and sloped sidewalks then stay walkable, instead of reading as a wall ahead or a drop-off.
 
 ### Group into hazards
 
@@ -309,6 +445,7 @@ For each world point, relative to the camera position: ahead = distance along th
 - Track hazards across updates by kind + bucket (allowing one bucket of drift per update).
 - A hazard becomes active after appearing in 3 consecutive updates, and inactive after 6 consecutive updates without it.
 - Distance and angle are smoothed with a short exponential average (weight 0.5 on the new value) to stop sound jitter.
+- Out-of-view memory: a hazard that leaves the camera's view (off the bottom or side edge) keeps its last world position. It keeps sounding, placed from the user's current pose, until the user has passed it or 3 s go by. It deactivates early only when its position is back in view and empty. Without this, a knee-high box drops out of view at about 1 m and the warning stops right when it matters most.
 
 ### Priorities and output
 
@@ -318,7 +455,7 @@ For each world point, relative to the camera position: ahead = distance along th
 ### Events produced here
 
 - `hazard_seen` once when a hazard first becomes active.
-- `near_miss` once per hazard when its distance first drops below 1.0 m.
+- `near_miss` once per hazard when its distance first drops below 1.0 m. Skip hazards that cover the whole corridor (blocking above 0.9, like a wall or a closed door), or every door the user walks up to becomes a near-miss.
 - Both go to the event queue (Phase 9 decides whether they are sent).
 
 ### Tests (synthetic point clouds)
@@ -332,6 +469,9 @@ For each world point, relative to the camera position: ahead = distance along th
 | Floor ends 2 m ahead, drops 0.8 m | one drop\_off at \~2 m |
 | Noisy floor with scattered single points | no hazards |
 | Obstacle approaching from 3 m to 0.5 m over 3 s | active after 3 updates, one near\_miss at <1 m, never flickers |
+| Open doorway, header at 2.03 m, default user height | no hazards |
+| Ramp rising 8% over the corridor | no hazards |
+| Box 0.4 m tall approached to 0.3 m, leaving the view at about 1 m | keeps sounding until passed |
 
 ### Done when
 
@@ -345,9 +485,10 @@ All tests pass, and on the phone the debug overlay correctly shows a chair, a he
 
 1. For each sound effect below, call the ElevenLabs Sound Effects endpoint three times (text prompt, 0.5–1.0 s duration, prompt influence 0.7–0.8, no loop) and save all variants.
 2. For each voice clip, call Text to Speech with the chosen voice and the Flash v2.5 model.
-3. Process with ffmpeg: strip leading silence, trim effects to their target length, 50 ms fade-out, convert to mono 44.1 kHz, normalise loudness (about −16 LUFS). Voice clips keep their full length.
-4. Write a manifest (sound id → chosen file, duration, gain trim) to `public/sounds`.
-5. Add a hidden audition page under `/walk` that plays every variant through the earbuds left/centre/right so the team picks the best one by ear.
+3. Process with ffmpeg: strip leading silence, trim effects to their target length, 50 ms fade-out, convert to mono 44.1 kHz. Normalise effects by peak (−3 dBFS): loudness in LUFS can't be measured on clips shorter than 0.4 s. Normalise voice clips to about −16 LUFS. Voice clips keep their full length. Final balance between sounds comes from the gain trims, set by ear on the audition page.
+4. For `edge_pulse`, `head_chime` and `tick`, also generate a loop variant (`loop: true`, which needs the `eleven_text_to_sound_v2` model) for the closest distance band.
+5. Write a manifest (sound id → chosen file, duration, gain trim) to `public/sounds`.
+6. Add a hidden audition page under `/walk` that plays every variant through the earbuds left/centre/right so the team picks the best one by ear.
 
 | Sound id | Used for | Prompt | Target length |
 | --- | --- | --- | --- |
@@ -373,6 +514,7 @@ Voice clips (one calm voice): "edge", "step down", "head", "pole", "bike", "scoo
 - Placement: audio angle = hazard angle × 1.5, clamped to ±80°; the source sits 1.5 m from the listener on a frontal arc at that angle, at ear height. Never place a source behind the listener.
 - Centre marker: if |angle| < 8°, also play `centre_tick` in both ears with each repeat.
 - Scheduling runs on the audio clock: a 25 ms timer checks each voice and schedules the next repeat when due. Repeat interval and volume come from the distance table in "Tunable parameters". Under 0.5 m (1.0 m for drop-offs), repeat every 80 ms (effectively continuous).
+- Each hazard plays one instance at a time. A new repeat cuts the one still playing with a 10 ms fade. In the closest band, a sound longer than its interval switches to its loop variant. Without this, a 0.25 s sound every 80 ms stacks three deep and turns to mush.
 - Drop-offs use the table shifted one band outward (start at 3.5 m).
 - Voice clip: when a hazard enters the 1.5–2.0 m band for the first time, play its word once through the same panner, subject to the 8 s cooldown per kind + side.
 - Priority 1 always plays; while it plays, lower-priority voices drop by 12 dB.
@@ -382,7 +524,7 @@ Voice clips (one calm voice): "edge", "step down", "head", "pole", "bike", "scoo
 ### Done when
 
 - Blindfolded on the bone-conduction earbuds, a teammate names left / centre / right correctly for at least 8 of 10 random cues.
-- From a hand appearing in the corridor to the first sound feels immediate (aim under \~150 ms; measure by recording video with audio).
+- From an obstacle entering the corridor to the first sound takes under 0.6 s on the Bluetooth earbuds (measure by recording video with audio). 150 ms can't be reached: 3 updates at 10 Hz alone take 200 to 300 ms, and Bluetooth adds another 150 to 300 ms. Warnings start at 3 m, so at walking pace (1.4 m/s) a 0.6 s delay still leaves about 2 m.
 - No clicks, pile-ups or runaway repeats after a 5-minute walk.
 
 ## Phase 4: on-device detector and frame gate
@@ -393,6 +535,8 @@ Voice clips (one calm voice): "edge", "step down", "head", "pole", "bike", "scoo
 
 - MediaPipe Tasks Vision Object Detector with EfficientDet-Lite0 (COCO), video running mode, GPU delegate with automatic CPU fallback, score threshold 0.35, up to 10 results.
 - Input: the small camera frame from Phase 1 at 4 Hz. Load the model once at startup from `public/models` (cached offline).
+- Self-host the MediaPipe WASM files as well (`FilesetResolver.forVisionTasks("/mediapipe/wasm")`, original file names kept). The usual examples load them from a CDN, which breaks offline.
+- If the detector slows the safety loop, move it into a classic Web Worker. A module worker breaks it, because the library loads its files with `importScripts`.
 - Keep only the classes listed in the detector-class enumeration; map everything else to `unknown`.
 - Turn each box into an angle: box horizontal centre → (centre − 0.5) × camera horizontal field of view.
 
@@ -422,7 +566,7 @@ Voice clips (one calm voice): "edge", "step down", "head", "pole", "bike", "scoo
 | Drop-off | A drop\_off hazard becomes active | 30 s |
 | Head-height | A head\_height hazard gets closer than 1.5 m | 30 s |
 
-Skip the frame if any is true: the phone is turning faster than 60°/s; mean brightness of the small frame is below 25/255; a triage call is already in flight; the local budget (1 call per 6 s, 150 per hour) is spent; the label is `person` or a vehicle (never reportable).
+Skip the frame if any is true: the phone is turning faster than 60°/s; mean brightness of the small frame is below 25/255; a triage call is already in flight; the local budget (1 call per 6 s, 150 per hour) is spent; the label is `person`, `car`, `bus` or `truck` (never reportable). Bicycles and motorcycles still go to triage: a bike or e-scooter left across the path is the main civic story, and COCO has no scooter class, so a scooter shows up as `bicycle`, `motorcycle` or nothing.
 
 When a trigger fires, capture the larger JPEG at that moment and call `/api/triage` with the hazard, grid cell and scene hint.
 
@@ -442,10 +586,23 @@ When a trigger fires, capture the larger JPEG at that moment and call `/api/tria
 
 **Goal: two backend routes that turn one camera frame into a validated civic decision or a spoken answer, with strict limits on time, cost and privacy.** Frames are never logged or stored.
 
+### Gemini and the database
+
+Gemini never connects to Tiger Data, and needs no MCP server or tools. It is one step in the middle: a frame and a note go in, validated JSON comes out. The backend route does all database work with plain SQL: the 15-minute dedup check and the budget count in `/api/triage`, then the insert later through `/api/events`.
+
+- Faster: a tool call adds at least one more Gemini round trip, and triage has 6 s.
+- Safer: text in a camera frame (a sign, a sticker) can steer a model. With no tools, the worst it can do is return a bad answer, and the backend rule still decides.
+
+MCP suits apps and agents that find their tools at runtime. The backend knows exactly which queries it runs, so it calls them directly. Tiger Data's MCP server is still handy for the team's coding agents, to look at the database while building; it is never part of the app. The one place where Gemini reads the database is the optional "Ask the data" stretch in Phase 7.
+
 ### Shared rules for both routes
 
 - Node runtime. Reject frames over 400 KB or not JPEG.
-- Call Gemini with a system instruction, the image, a short text part, JSON response type and a response schema, temperature 0.2.
+- Call Gemini with a system instruction, the image, a short text part, JSON response type and a response schema.
+- Leave temperature at the default 1.0. Google says values below 1.0 on Gemini 3 models can cause looping or worse output.
+- Set `thinking_level` to `minimal`. Flash defaults to `high`, which costs seconds on every call.
+- Set `media_resolution` to `medium` (560 tokens per image) for triage. Try `high` for Ask if answers miss small things.
+- Before any text is returned or spoken, check it for crossing advice ("safe to cross", "you can cross", "okay to cross", "clear to cross", "go ahead and cross"). Replace a match with "I can't judge traffic. Cross the way you normally do." This backs up rule 7 when the model ignores its prompt.
 - Validate the JSON against the same schema on the backend; on invalid output, retry once, then fail safe (triage: report = false; Ask: cached apology).
 - Timeouts: triage 6 s, Ask 8 s end to end.
 - Log only: route, model, latency, outcome, category. Never the image or the description of people.
@@ -463,7 +620,7 @@ Schema fields: report, category, lasting, severity, confidence, description, con
 
 Backend decision (overrides the model): report is true only if the model said report, category is in the reportable list, lasting is true, confidence ≥ 0.7 and severity ≥ 2. Also false if the same device hash reported the same category in the same grid cell in the last 15 minutes (checked in the database), or if the hourly budget is spent.
 
-Hourly budget: a tiny `api_budget` table (hour, route, count) incremented per call; refuse triage above `GEMINI_HOURLY_BUDGET`. Ask is not budget-limited beyond Gemini's own limits.
+Hourly budget: a tiny `api_budget` table (hour, route, count) incremented per call; refuse triage above `GEMINI_HOURLY_BUDGET`. Ask gets its own row in the same table and stops at `ASK_HOURLY_BUDGET`; past it, the phone speaks the offline line.
 
 ### `/api/ask`
 
@@ -477,7 +634,7 @@ Then call ElevenLabs Text to Speech streaming with the answer, the configured vo
 
 ### Test set (commit it under `docs/test-frames`)
 
-Take 10–12 photos at chest height around the venue and campus: scooter across a sidewalk, construction barrier, head-height sign, broken curb, a person walking, a parked car in the road, an empty hallway, stairs going down, a platform-like edge with yellow strip.
+Take 10–12 photos at chest height around the venue and campus: scooter across a sidewalk, construction barrier, head-height sign, broken curb, a person walking, a parked car in the road, an empty hallway, stairs going down, a platform-like edge with yellow strip. The repo is public, so the only people in them are teammates who agreed, and no strangers' faces or licence plates show.
 
 | Photo | Expected triage |
 | --- | --- |
@@ -518,8 +675,7 @@ The test set matches expectations, triage returns in under \~3 s and Ask audio s
 | Column | Type | Notes |
 | --- | --- | --- |
 | time | timestamptz, not null | Partitioning column |
-| session\_id | uuid, not null |  |
-| device\_hash | text, not null | HMAC-SHA256 of the phone's device key with `DEVICE_HASH_SALT`, first 16 hex characters |
+| device\_hash | text | Civic reports only: HMAC-SHA256 of the phone's device key with `DEVICE_HASH_SALT`, first 16 hex characters. Null on other events. No session id column |
 | event\_kind | text, not null | hazard\_seen / near\_miss / civic\_report |
 | hazard\_kind | text, not null | obstacle / head\_height / drop\_off |
 | detector\_class | text, not null |  |
@@ -543,10 +699,14 @@ All four are created, switched to real-time mode (so the newest, not-yet-materia
 
 | Aggregate | Bucket | Group by | Measures | Refresh policy |
 | --- | --- | --- | --- | --- |
-| `cell_15m` | 15 minutes | cell, civic category (or hazard kind when null), source | events, near-misses, civic reports, worst severity, closest distance, average lat, average lon | every 1 min, covering the last 3 days, up to 1 min ago |
-| `cell_daily` | 1 day (stacked on `cell_15m`) | same | sums of counts, max severity, min closest, average position | every 15 min, covering the last 30 days |
+| `cell_15m` | 15 minutes | cell, civic category (or hazard kind when null), source | events, near-misses, civic reports, worst severity, closest distance | every 1 min, covering the last 3 days, up to 1 min ago |
+| `cell_daily` | 1 day (stacked on `cell_15m`) | same | sums of counts, max severity, min closest | every 15 min, covering the last 30 days |
 | `station_hourly` | 1 hour | station, hazard kind, source | near-misses, civic reports, events | every 1 min, covering the last 3 days |
 | `cell_reporters_daily` | 1 day | cell, civic category, device hash, source | reports per device | every 5 min, covering the last 30 days |
+
+- A cell's position is its geohash centre, worked out at read time with `ST_PointFromGeoHash(cell)`. The aggregates hold no positions: an average of averages in the stacked aggregate would be wrong.
+- Buckets are in UTC. The dashboard shows local time (UTC-4 in September), and the seed's rush hours are set in `America/Toronto`.
+- Refresh `cell_15m` before `cell_daily` whenever refreshing by hand.
 
 ### `fix_first` view
 
@@ -556,7 +716,7 @@ For each cell × civic category over the last 14 days (from `cell_daily`, civic 
 | --- | --- |
 | Severity weight | worst severity 1 → 1, 2 → 2, 3 → 4, 4 → 8 |
 | Reporters | log2(1 + distinct reporters) |
-| Near-miss pressure | 1 + near-misses in that cell ÷ 10 |
+| Near-miss pressure | 1 + log10(1 + near-misses in that cell), so 9 near-misses give 2 and 99 give 3. A straight ÷ 10 lets crowding outrank severity: the seed puts hundreds or thousands of near-misses in one cell |
 | Recency | 1.5 if last report within 48 h, else 0.5 ^ (days since last report ÷ 7) |
 | Transit | 1.3 if within 150 m of a station, else 1 |
 | **Score** | product of the five |
@@ -565,11 +725,13 @@ Only rows with at least 3 distinct reporters are returned (k-anonymity). The vie
 
 ### `/api/events` intake
 
-1. Validate the batch against the event contract; reject the whole batch if consent version is missing.
+1. Validate the batch against the event contract; reject the whole batch if consent version is missing. Drop events with `ts` more than 7 days old or more than 5 minutes in the future.
 2. Round lat/lon to 3 decimals again; recompute the cell from them; drop any civic fields on non-civic events.
-3. Turn device keys into device hashes; never store the raw key.
+3. Turn device keys into device hashes on civic reports only; never store the raw key.
 4. Fill station id when missing: nearest station within 150 m by PostGIS distance.
 5. Insert all rows in one multi-row statement with source = live. Return accepted and rejected counts.
+
+The free service has no connection pooler, and every request can land on a fresh function. Keep one postgres.js client per function instance (module scope, `max: 2`, idle timeout about 20 s).
 
 ### Done when
 
@@ -587,7 +749,7 @@ Only rows with at least 3 distinct reporters are returned (k-anonymity). The vie
 | --- | --- |
 | Header | "beluga for cities"; time window (1 h / 24 h / 7 d / 14 d); category filter; source toggle (Live / Simulated / Both); a yellow banner "Demo data: simulated events for illustration, not real incidents" whenever simulated rows are included |
 | Left column | **Fix-first queue** table: rank, place, category, severity, reporters, near-misses, last seen, score, and a "why" line built from the score parts (e.g. "Severity 3 × 6 reporters × 20 near-misses × seen yesterday × near Rideau") |
-| Right column | **Map** of Ottawa centred on the five stations: cells as hexagons or circles coloured by score (or by event count when no reports), station markers, click a cell for a detail card |
+| Right column | **Map** of Ottawa centred on the five stations: cells as squares (their geohash bounds) coloured by score (or by event count when no reports), station markers, click a cell for a detail card |
 | Below | **Station panels**: hourly near-misses over 7 days per station (small line charts) and an hour-of-day bar chart for the selected station |
 | Below | **Live feed**: last 20 civic reports with time, category, severity, description, place, source badge |
 | Footer panel | **Performance**: raw vs aggregate query time for the same 7-day question, compression ratio, total rows, seed load time, and a "Measure again" button |
@@ -597,7 +759,7 @@ Only rows with at least 3 distinct reporters are returned (k-anonymity). The vie
 - Poll the feed and queue every 5 s; cells and stations every 15 s; performance only on load and on button press.
 - Clicking a queue row flies the map to that cell and opens its card; clicking a cell highlights its queue row.
 - New live reports flash briefly in the feed and on the map, so the judge's own report is visible during the demo.
-- Map: MapLibre with a free, no-key basemap style; data layer via deck.gl (hexagons or scatter) or MapLibre's own circle layer, whichever is quicker to get right.
+- Map: MapLibre with OpenFreeMap's no-key `liberty` style. Draw each cell as a MapLibre fill layer square from its geohash bounds. Skip deck.gl: its HexagonLayer bins points again after the database already binned them into cells, so its hexagons would not match the queue. Load MapLibre through a client-only dynamic import.
 - Colours: a single sequential scale for score that stays readable for colour-blind viewers; severity also shown as a number, never colour alone.
 - The queue is a real HTML table with headers; keyboard navigable.
 
@@ -606,6 +768,14 @@ Only rows with at least 3 distinct reporters are returned (k-anonymity). The vie
 - Run the same question twice: "events and near-misses per cell over the last 7 days" from the raw hypertable, and from `cell_15m`. Time each with the database's own execution timing (explain-analyse style), not network time.
 - Read the compression statistics for `hazard_events` (compressed vs uncompressed bytes) and total row count.
 - Store the result in `perf_snapshots` and return the latest.
+
+### Stretch: ask the data
+
+Build only if the tracks are ahead at the 23:00 cut check. A planner types a question into the dashboard ("Which station had the most near-misses this week?"), and Gemini answers in one or two sentences.
+
+- Gemini uses function calling with four fixed functions that wrap the existing dashboard queries: queue, cells, stations and feed, each with typed filters (time window, category, station, source).
+- No free-form SQL. The functions run on a read-only database role (`DATABASE_URL_READONLY`).
+- The answer lists which functions it called, so judges see Gemini and the continuous aggregates working together.
 
 ### Done when
 
@@ -639,7 +809,7 @@ With seed data loaded, every panel renders in under a second, filters work, and 
 2. Manually refresh all four aggregates for the full 14-day range.
 3. Run the compression policy job once (or compress eligible chunks directly) so chunks older than 7 days are compressed now.
 4. Take a performance snapshot (Phase 7 measurement) and store the load time in it.
-5. Provide a "reset" command that deletes simulated rows only and reloads.
+5. Provide a "reset" command that deletes simulated rows only, reloads, and refreshes the aggregates. Check the database size before each reload: the free service turns read-only at 750 MB.
 
 ### Done when
 
@@ -653,8 +823,10 @@ The dashboard shows a populated map, a fix-first queue topped by recognisable st
 
 1. "beluga works alongside your cane or guide dog. It can miss things."
 2. Reporting choice, one large button each: "Help the city: share anonymous hazard reports" / "Not now". Explain in one sentence each: what is sent (hazard type, distance, rough location within about 100 metres, time) and what is never sent (images, audio, exact location, identity). Default is off.
-3. "Put the phone on your chest lanyard, camera facing forward, then tap anywhere to start."
-4. After start: "Take three slow steps" → calibration → "calibrated".
+3. Location permission prompt, with one sentence on why (reports and station). It is asked here because prompts may not show inside AR.
+4. "How tall are you?" in 5 cm steps, default 1.85 m. Sets the head-height top.
+5. "Put the phone on your chest mount, camera facing forward, then tap anywhere to start."
+6. After start: "Take three slow steps" → calibration → "calibrated".
 
 Store consent (on/off + consent version number) on the phone; changeable any time in settings, which speak "reporting on" / "reporting off".
 
@@ -668,20 +840,24 @@ Store consent (on/off + consent version number) on the phone; changeable any tim
 ### Location
 
 - Watch position with high accuracy. If accuracy is worse than 100 m or no fix arrives for 30 s (typical underground), keep the last good coarse position and the station chosen when the session started (settings offer the five stations plus "on the street").
+- With no good fix at all yet (indoors at the venue), use the chosen station's position. Otherwise events have no location, the backend rejects them, and the demo report never shows up.
 - Heading from device orientation, smoothed.
 
 ### Installable app and offline
 
-- Manifest: name and short name "beluga", full-screen display, portrait, dark theme colours, maskable icons (a simple beluga silhouette, 192 and 512 px), start URL `/walk`.
-- Service worker: pre-cache the app shell, all sound files, the sound manifest and the detector model; network-only for `/api/*`; the landing page and dashboard use normal network-first caching.
+- Manifest: name and short name "beluga", full-screen display, orientation picked by the Phase 0 field-of-view test (portrait unless landscape wins), dark theme colours, maskable icons (a simple beluga silhouette, 192 and 512 px), start URL `/walk`.
+- Service worker: a hand-written `public/sw.js` (the Next.js PWA plugins add more trouble than they save). Pre-cache the app shell, all sound files, the sound manifest, the detector model and the MediaPipe WASM files; network-only for `/api/*`; the landing page and dashboard use normal network-first caching.
 - Offline behaviour: Walk works fully; Ask speaks "Ask is offline. Obstacle alerts still on."; triage is skipped; events wait in the queue.
 
 ### Controls during a session
 
-- Screen taps inside the AR session arrive as XR select events, and taps on DOM-overlay elements arrive as normal DOM events; handle both.
-- Double-tap anywhere (two taps within 400 ms) → Ask. A large "Stop" button at the bottom of the overlay. Three-finger tap → debug overlay.
+- Screen taps inside the AR session arrive as XR select events, and taps on DOM-overlay elements arrive as normal DOM events; handle both. Call `preventDefault()` in `beforexrselect` on the overlay buttons, so a button tap doesn't also fire an XR select.
+- The overlay is two large DOM buttons: "Ask" (top two-thirds) and "Stop" (bottom third, long press, so a brush against the chest doesn't end the session). A click on Ask starts Ask. With TalkBack on, TalkBack takes raw taps (touch to focus, double-tap to activate), so a custom double-tap never reaches the page; a button click works both ways. An accidental Ask only costs a spoken answer.
+- Three-finger tap → debug overlay, for sighted testers only (TalkBack keeps multi-finger gestures for itself).
+- Stretch: Ask from the headset's play/pause button through the Media Session API. Chrome only routes the button to a page that is playing an `<audio>` element (Web Audio alone doesn't count), so this needs a silent looping `<audio>` running during the session.
 - All buttons have accessible names, at least 64 px tall, high contrast; nothing depends on colour alone.
-- Settings (outside the session): reporting on/off, "reported" sound on/off, optional alive tick every 30 s, master volume, starting station, debug overlay default.
+- Settings (outside the session): reporting on/off, "reported" sound on/off, optional alive tick every 30 s, master volume, starting station, height, debug overlay default.
+- Debug settings: "New demo reporter" makes a fresh device key. The backend drops a second report of the same category in the same cell from the same device for 15 minutes, so without this the second judge's staged report silently disappears.
 
 ### Done when
 
@@ -696,13 +872,13 @@ Store consent (on/off + consent version number) on the phone; changeable any tim
 
 ### Domain
 
-- Attach the team's GoDaddy Registry domain to the Vercel project (apex + `www`), and add a `map.` subdomain that rewrites to `/map`. Copy the DNS records Vercel shows into the registrar.
+- Attach the team's GoDaddy Registry domain to the Vercel project (apex + `www`), and add a `map.` subdomain that rewrites to `/map`. Copy the DNS records Vercel shows into the registrar. Start this in Phase 0; DNS can take hours.
 - Landing page (`/`): beluga name and one-line pitch, three links (Try beluga → `/walk`, City dashboard → `map.` subdomain, Source code → GitHub), the disclaimer, and a short "how it works" with the sponsor stack.
 - Keep the Vercel address working as a backup link.
 
 ### Replay mode (backup for tests and the demo)
 
-- Recorder: in a session, a debug toggle records 30 s of processed inputs: the world points (already sampled), camera pose, floor height, walking direction and detector results per update, plus a few small frames. Save as a compressed JSON file downloadable from the phone.
+- Recorder: in a session, a debug toggle records 30 s of processed inputs: the world points (already sampled), camera pose, floor height, walking direction and detector results per update, plus a few small frames. Save as a compressed JSON file downloadable from the phone. Clips committed to the public repo hold no frames with bystanders in them.
 - Player: `/walk?replay=<file>` feeds a recording into the hazard engine and audio engine without an AR session, at real time. Use it for Phase 2 regression tests and as a live demo fallback on any phone.
 - Record at least three clips before the freeze: chair approach, head-height sign, step-down edge.
 
@@ -714,8 +890,20 @@ Store consent (on/off + consent version number) on the phone; changeable any tim
 
 - In the lower third of the small frame, count pixels in a bright safety-yellow colour range. A wide horizontal band covering more than \~8% of that region for 3 updates raises a drop\_off-priority warning labelled "edge" with an estimated distance from the band's position (using the floor plane). Makes a taped edge detectable; always shown as a secondary signal.
 
+### Demo setup
+
+The phone sits on the chest with its screen facing the wearer, and the sounds play in the wearer's earbuds. Nobody else sees or hears anything unless the demo is set up for it.
+
+- Mirror the phone to the laptop with `scrcpy` over USB. It carries the screen and, on Android 11 and up, the audio, so judges watch the debug overlay and hear the sounds from the laptop speakers.
+- Bring a second pair of bone-conduction earbuds for the judge. They sit outside the ear, so handing them over is quick.
+- Keep the replay player open on the laptop, ready if live depth fails.
+- Tap "New demo reporter" before each staged report.
+- Optional, labelled: seed the demo spot's cell with 2 simulated reporters for the staged category. The judge's live report is the third, so the spot jumps into the fix-first queue on screen. The row shows "includes simulated".
+- Phone on a battery pack between demos. Record the backup demo video by 06:00, while people are still awake enough to redo it.
+
 ### Hardening checklist
 
+- [ ] Blindfold tests only with a sighted spotter, indoors, away from stairs and roads. Edges are staged (a single step or a taped line), never a real platform edge or curb.
 - [ ] 15-minute continuous session: no crash, no audio drift, phone temperature acceptable, battery drop noted
 - [ ] Airplane mode: warnings work; Ask speaks the offline line; queue flushes later
 - [ ] Venue Wi-Fi slow: Ask and triage time out gracefully
@@ -767,7 +955,10 @@ The repo is public, the README renders with working links and images, no secret 
 | Corridor ahead range | 0.3–3.0 m (drop-off 3.5 m) |
 | Floor band | −0.25 to +0.15 m |
 | Obstacle band | 0.15–1.4 m above floor |
-| Head-height band | 1.4–2.2 m above floor |
+| Head-height band | 1.4 m up to the user's height + 0.1 m (default 1.95 m) |
+| Floor line slope clamp | ±10% |
+| Out-of-view memory | until passed, at most 3 s |
+| Travel-direction blend | above 0.3 m/s, weight 0.5 |
 | Drop-off threshold | more than 0.25 m below floor |
 | Lateral buckets | 5 |
 | Minimum points per hit | 6 |
@@ -819,11 +1010,11 @@ Drop-offs: same table shifted one band outward (start 3.5 m, continuous under 1.
 | Gate: skip if turning faster than | 60°/s |
 | Gate: skip if brightness below | 25/255 |
 | Phone budget | 1 triage per 6 s, 150 per hour |
-| Backend hourly budget | 150 triage calls |
+| Backend hourly budget | 150 triage calls, 120 Ask calls |
 | Report thresholds | confidence ≥ 0.7, severity ≥ 2, lasting |
 | Report dedup | same device + cell + category within 15 min |
 | Timeouts | triage 6 s, Ask 8 s |
-| Double-tap window | 400 ms |
+| Stop long press | 600 ms |
 | Event batch | every 10 s or 50 events |
 | Coarsening | 3 decimal places (\~100 m); geohash 7 characters |
 | Station snap radius | 150 m |
@@ -842,7 +1033,7 @@ Drop-offs: same table shifted one band outward (start 3.5 m, continuous under 1.
 
 ## Fallbacks, cut list and final acceptance
 
-**If time runs short, cut from the bottom of the cut list; never cut anything in the acceptance checklist.**
+**If time runs short, cut from the top of the cut list down; never cut anything in the acceptance checklist.**
 
 ### Fallbacks by failure
 
@@ -857,21 +1048,30 @@ Drop-offs: same table shifted one band outward (start 3.5 m, continuous under 1.
 | Tiger free service hits a limit | Trial service; change `DATABASE_URL`; re-run migrations and seed |
 | Continuous aggregate features differ by version | Keep the same four aggregates; use the older compression names; if stacking fails, build `cell_daily` from the hypertable directly and say so |
 | Domain not resolving | Use the Vercel address everywhere; keep trying DNS |
+| Camera access and DOM overlay won't run together | Keep camera access. Drive the session with XR select events and spoken state; read debug info through remote debugging or `scrcpy` |
+| Warnings arrive too late on Bluetooth | Activate hazards under 1.5 m after 2 updates; demo on wired earbuds or the phone speaker if needed |
+| Tracking keeps dropping on the strap | Rigid chest mount, phone taped level; walk the demo slower |
+| Phone overheats at the demo table | Detector to 2 Hz, debug overlay off, session stopped between demos |
+| Vercel build queue lags or hits 100 deploys a day | Docs-only commits skip the build (Vercel "Ignored Build Step"); test on `localhost` over `adb reverse` |
 
-### Cut list (cut from the bottom up)
+### Cut list (cut from the top down)
 
-1. Tactile-strip detector
-2. Replay mode player UI (keep the recorder)
-3. Hour-of-day chart on the dashboard
-4. Station trend panels
-5. "Blocked path" sound switching
-6. Detector labels (depth-only sounds)
+1. Ask the data (dashboard stretch)
+2. Tactile-strip detector
+3. Headset-button Ask
+4. Camera-only mode (build it only if Phase 0 shows no depth)
+5. Service worker. A session opened while online keeps warning in airplane mode, because the sounds and model are already in memory. What is lost: starting the app with no network at all
+6. Replay mode player UI (keep the recorder)
+7. Hour-of-day chart on the dashboard
+8. Station trend panels
+9. "Blocked path" sound switching
+10. Detector labels (depth-only sounds)
 
 ### Final acceptance checklist (all must pass by 02:00)
 
 - [ ] Phone: installed app starts a session from one tap, calibrates, and stays silent in an empty hallway
 - [ ] Phone: chair, head-height board and a real step-down each produce the right sound from the right side, speeding up on approach
-- [ ] Phone: double-tap Ask speaks an answer from the object's direction in under \~3 s
+- [ ] Phone: Ask speaks an answer from the object's direction in under \~3 s
 - [ ] Phone: warnings still work in airplane mode
 - [ ] Phone: with reporting off, nothing is sent; with it on, a staged scooter produces a civic report
 - [ ] Database: migrations, compression and retention policies, four real-time continuous aggregates, fix-first view
