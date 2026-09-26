@@ -59,7 +59,8 @@ Every event lands in one hypertable, and every dashboard view reads a continuous
 
 ## ElevenLabs
 
-- **Two agents do the seeing**: a triage agent and an Ask agent, each with a Gemini model from the ElevenLabs model list and one client tool that carries its answer back. They are set up from the repo by `npm run agents` ([`lib/server/agents/config.ts`](lib/server/agents/config.ts), [`scripts/agents`](scripts/agents)). Each backend route runs one text-only turn over the agent's WebSocket, uploads the frame into the conversation, and deletes the conversation once the answer is in ([`lib/server/agents/turn.ts`](lib/server/agents/turn.ts)).
+- **Two agents do the seeing**: a triage agent and an Ask agent, each with a Gemini model from the ElevenLabs model list and one client tool that carries its answer back. They are set up from the repo by `npm run agents` ([`lib/server/agents/config.ts`](lib/server/agents/config.ts), [`scripts/agents`](scripts/agents)). Each backend route runs one text-only turn over the agent's WebSocket, uploads the frame into the conversation, and deletes the conversation once the answer is in ([`lib/server/agents/turn.ts`](lib/server/agents/turn.ts)). An Ask takes about 2.5 s from the agent, plus the voice.
+- **A third agent reads the data**: on the dashboard, "Ask the data" takes a planner's question, and the agent calls five lookup tools that the backend answers from the dashboard's own queries on the continuous aggregates, over a read-only connection. No free-form SQL. The answer lists the lookups it used ([`lib/server/agents/data.ts`](lib/server/agents/data.ts)).
 - **A designed warning-sound library** from the Sound Effects API ([`scripts/sounds`](scripts/sounds)):
 
 | Sound | Used for | Prompt | Length |
@@ -82,7 +83,7 @@ Every event lands in one hypertable, and every dashboard view reads a continuous
 
 ## Gemini
 
-Gemini is the model inside both agents.
+Gemini (`gemini-3.5-flash-lite`) is the model inside all three agents.
 
 - **Triage answers questions, and code decides**: the agent picks a category from a fixed list and answers yes or no questions about the photo. Severity and whether to report come from fixed rules tied to Ontario and Ottawa accessibility standards ([`lib/shared/reporting.ts`](lib/shared/reporting.ts)), so the same answers always give the same result.
 - **A frame gate keeps calls rare**: new things in the path, lasting obstacles, drop-offs and head-height hazards, with cooldowns and a budget of one frame per 6 s and 150 an hour ([`lib/detect/gate.ts`](lib/detect/gate.ts)). People and cars are never sent.
@@ -98,7 +99,7 @@ beluga lives at [beluga.surf](https://beluga.surf), a GoDaddy Registry domain: t
 - Reporting is off until you turn it on, and the app says what is sent and what never is.
 - Sent: the hazard type, its distance, a location rounded to about 100 m (3 decimals, on the phone and again on the server), and the time.
 - Never sent: images, audio, your exact location or who you are. There is no session id in the database.
-- Frames go only to the ElevenLabs agents, and each conversation is deleted right after its answer.
+- Frames go only to the ElevenLabs agents, and each conversation is deleted once ElevenLabs has saved it, a few seconds after the answer. Anything missed goes after a day.
 - A random device key becomes a salted hash, on civic reports only, so a spot can count different reporters without knowing who they are. A spot needs 3 of them before it shows.
 - Raw events are deleted after 180 days.
 - The seeded fortnight is labelled simulated everywhere: in the database, on the dashboard and here.
@@ -118,7 +119,7 @@ beluga lives at [beluga.surf](https://beluga.surf), a GoDaddy Registry domain: t
 2. Run `cp .env.example .env.local` and fill in the values
 3. Run `npm run db:migrate`
 4. Run `npm run seed` for the simulated fortnight
-5. Run `npm run agents` and copy the two agent ids it prints into `.env.local`
+5. Run `npm run agents` and copy the three agent ids it prints into `.env.local`
 6. Run `npm run sounds` to build the sound library
 7. Run `npm run dev`
 

@@ -926,11 +926,11 @@ The free service has no connection pooler, and every request can land on a fresh
 
 ### Stretch: ask the data
 
-Build only if the tracks are ahead at the 23:00 cut check. A planner types a question into the dashboard ("Which station had the most near-misses this week?"), and a third ElevenLabs agent answers in one or two sentences.
+Built. A planner types a question into the dashboard ("Which station had the most near-misses this week?"), and a third ElevenLabs agent answers in one or two sentences, in about 2 s.
 
-- The agent has four webhook tools that wrap the existing dashboard queries: queue, cells, stations and feed, each with typed filters (time window, category, station, source).
-- No free-form SQL. The tools run on a read-only database role (`DATABASE_URL_READONLY`).
-- The answer lists which tools it called, so judges see the agent and the continuous aggregates working together.
+- The agent has five lookup tools that wrap the existing dashboard queries: `fix_first_queue`, `check_now`, `busiest_cells`, `station_near_misses` and `recent_reports`, each with typed filters (time window, category, station, source). They are client tools, answered by `/api/dashboard/ask` over the same WebSocket as the other agents, not webhooks: no public endpoint to guard, and it works on `localhost` too (`lib/server/agents/data.ts`).
+- No free-form SQL. The lookups run on `DATABASE_URL_READONLY` when set, and in read-only transactions either way. Asked to delete data, the agent says it can't.
+- The answer lists which lookups it called, so judges see the agent and the continuous aggregates working together. Budget: `DATA_HOURLY_BUDGET`, 60 an hour.
 
 ### Done when
 

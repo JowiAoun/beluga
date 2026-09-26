@@ -20,9 +20,9 @@ An installable web app for Android Chrome that warns blind and low-vision pedest
 - `npm run phone`: sends the phone's `localhost:3000` to this laptop over USB (see Phone testing)
 - `npm run db:smoke`: Phase 0 database check, needs `DATABASE_URL` in `.env.local`
 - `npm run db:migrate`: applies `db/migrations` in order, once each. The venue network blocks the database's port, so run it from a phone hotspot
-- `npm run agents`: creates or updates the two ElevenLabs agents and prints their ids; `npm run agents -- --check photo.jpg` runs the Phase 5 image check
+- `npm run agents`: creates or updates the three ElevenLabs agents (triage, Ask, Ask the data) and prints their ids; `npm run agents -- --check photo.jpg` runs the Phase 5 image check, and `npm run agents -- --sweep` deletes any finished conversation the agents still hold
 - `npm run sounds`: generates the ElevenLabs sound library into `public/sounds`
-- `npm run seed`: filled in by Phase 8
+- `npm run seed`: loads the labelled simulated fortnight (about 424,000 rows), compresses the older week and takes a performance snapshot; `npm run seed -- --reset` replaces the simulated rows. Like the migrations, run it from a phone hotspot
 
 ## Phone testing
 
