@@ -15,6 +15,7 @@
     "db:smoke": "tsx --env-file-if-exists=.env.local db/smoke.ts",
     "db:migrate": "tsx --env-file-if-exists=.env.local db/migrate.ts",
     "seed": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/seed/index.ts",
+    "demo-spot": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/seed/demo-spot.ts",
     "sounds": "tsx --env-file-if-exists=.env.local scripts/sounds/index.ts",
     "sounds:labels": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/sounds/labels.ts",
     "agents": "tsx --conditions=react-server --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/agents/index.ts"

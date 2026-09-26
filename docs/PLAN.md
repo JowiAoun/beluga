@@ -1054,7 +1054,7 @@ The phone sits on the chest with its screen facing the wearer, and the sounds pl
 - Bring a second pair of bone-conduction earbuds for the judge. They sit outside the ear, so handing them over is quick.
 - Keep the replay player open on the laptop, ready if live depth fails.
 - Tap "New demo reporter" before each staged report.
-- Optional, labelled: seed the demo spot's cell with 2 simulated reporters for the staged category. The judge's live report is the third, so the spot jumps into the fix-first queue on screen. The row shows "includes simulated".
+- Optional, labelled: seed the demo spot's cell with 2 simulated reporters for the staged category. The judge's live report is the third, so the spot jumps into the fix-first queue on screen. The row shows "includes simulated". `npm run demo-spot -- uottawa sidewalk_obstruction` stages them at the station the phone falls back to indoors (or give a point, `45.4231,-75.6831`), and `npm run demo-spot -- --remove` takes them out.
 - Phone on a battery pack between demos. Record the backup demo video by 06:00, while people are still awake enough to redo it.
 
 ### Hardening checklist
