@@ -18,14 +18,25 @@ async function createTask(delegate: Delegate, useModule: boolean): Promise<Objec
   const fileset = await FilesetResolver.forVisionTasks(WASM_PATH, useModule);
   // GPU needs a canvas of its own for its WebGL context; the XR layer keeps the page's.
   const canvas = delegate === "GPU" ? new OffscreenCanvas(1, 1) : undefined;
-  return ObjectDetector.createFromOptions(fileset, {
+  const task = await ObjectDetector.createFromOptions(fileset, {
     baseOptions: { modelAssetPath: MODEL_PATH, delegate },
     canvas,
     runningMode: "VIDEO",
     scoreThreshold: DETECTOR.scoreThreshold,
     maxResults: DETECTOR.maxResults,
   });
+  // A task can load and still fail on its first picture (Safari's engine without WebGL in a
+  // worker). One blank picture now turns that into a failed load, so the next option gets its turn.
+  try {
+    task.detectForVideo(new ImageData(WARM_UP_PX, WARM_UP_PX), performance.now());
+  } catch (err) {
+    task.close();
+    throw err;
+  }
+  return task;
 }
+
+const WARM_UP_PX = 32;
 
 export class Detector {
   private constructor(
