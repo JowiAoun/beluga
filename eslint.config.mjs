@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Third-party files scripts/assets.ts copies into public before dev and build.
+    "public/mediapipe/**",
+    "public/maplibre/**",
   ]),
 ]);
 
