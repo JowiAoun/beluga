@@ -10,6 +10,9 @@ import { BelugaMark } from "@/components/brand/Logo";
 import { cn } from "@/lib/utils";
 import { CHECKBOX, LINK_ROW, PANEL, SECONDARY } from "../styles";
 import { speakLocalText } from "../voice";
+import VibrationControls from "../VibrationControls";
+import { DEFAULT_SETTINGS, readSettings, saveSettings } from "../settings";
+import { deviceVibrate } from "@/lib/haptics/engine";
 
 const LESSONS: { title: string; sound: SoundId; word?: ClipId; explanation: string }[] = [
   { title: "Head-height obstacle", sound: "head_chime", word: "head", explanation: "Two rising notes mean an obstacle near your head." },
@@ -33,8 +36,10 @@ export default function Practice() {
   const [loaded, setLoaded] = useState(false);
   const [message, setMessage] = useState("Preparing practice sounds…");
   const [fast, setFast] = useState(false);
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
 
   const stop = () => {
+    deviceVibrate(0);
     token.current++;
     timers.current.forEach(clearTimeout); timers.current = [];
     engine.current?.stop(); engine.current = null;
@@ -42,6 +47,7 @@ export default function Practice() {
   };
   useEffect(() => {
     let active = true;
+    queueMicrotask(() => { if (active) setSettings(readSettings()); });
     void fetchLibrary().then((library) => {
       if (!active) return;
       raw.current = library; setLoaded(true);
@@ -78,6 +84,12 @@ export default function Practice() {
     <p className="self-start rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-base font-semibold text-accent">Audio practice · Simulated examples</p>
     <p className="text-xl text-muted">Practice while standing still. Listen through your earbuds. Left and right cues indicate the obstacle’s side. Faster repeats mean it is closer.</p>
     <p className="text-lg text-muted">No camera or microphone is used in practice. These examples do not detect anything around you.</p>
+    <section className={PANEL}>
+      <VibrationControls practice settings={settings} onChange={(next) => {
+        const updated = { ...readSettings(), ...next };
+        setSettings(updated); saveSettings(updated);
+      }} />
+    </section>
     <p role="status" aria-atomic="true" className="rounded-2xl border border-sonar/30 bg-sonar/10 p-4 text-xl text-foreground">{message}</p>
     <label className="flex min-h-16 items-center gap-4 text-lg"><input type="checkbox" checked={fast} onChange={(event) => setFast(event.target.checked)} className={CHECKBOX} />Practice faster repeats (closer obstacle)</label>
     <button type="button" onClick={() => { stop(); setMessage("Practice audio stopped."); }} className={SECONDARY}><IconPlayerStopFilled aria-hidden size={22} />Stop practice audio</button>

@@ -3,8 +3,9 @@
 
 import { STATIONS, type StationId } from "@/lib/shared/stations";
 import { USER } from "@/lib/shared/params";
+import type { VibrationSettings } from "@/lib/haptics/engine";
 
-export interface Settings {
+export interface Settings extends VibrationSettings {
   // Sets the head-height top: height + 0.1 m. Changed in 5 cm steps.
   heightM: number;
   // Where events go when there is no good location fix (underground, indoors).
@@ -25,6 +26,8 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
+  vibrationOn: true,
+  vibrationStrength: "medium",
   heightM: USER.defaultHeightM,
   station: "street",
   reportedSound: true,
@@ -55,6 +58,9 @@ export function readSettings(): Settings {
   }
   const stations = new Set<string>(STATIONS.map((s) => s.id));
   return {
+    vibrationOn: typeof saved.vibrationOn === "boolean" ? saved.vibrationOn : DEFAULT_SETTINGS.vibrationOn,
+    vibrationStrength: saved.vibrationStrength === "light" || saved.vibrationStrength === "strong"
+      ? saved.vibrationStrength : "medium",
     heightM:
       typeof saved.heightM === "number"
         ? clamp(Math.round(saved.heightM / USER.heightStepM) * USER.heightStepM, HEIGHT_RANGE_M.min, HEIGHT_RANGE_M.max)

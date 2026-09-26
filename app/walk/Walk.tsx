@@ -31,6 +31,7 @@ import { CameraDeniedError, startCameraSensing } from "@/lib/xr/cameraSession";
 import { ArUnavailableError, forgetLevel, savedLevel, SESSION_LEVELS } from "@/lib/xr/request";
 import type { SensingUpdate } from "@/lib/xr/types";
 import { WalkBeluga } from "./WalkBeluga";
+import { detectionReady } from "@/lib/xr/readiness";
 import { askAboutView } from "./ask";
 import { encodeClip } from "@/lib/replay/format";
 import { CLIP_SECONDS, Recorder } from "@/lib/replay/recorder";
@@ -39,6 +40,8 @@ import ReplayPlayer from "./ReplayPlayer";
 import { Reporting } from "./reporting";
 import { DEFAULT_SETTINGS, readSettings, saveSettings, type Settings } from "./settings";
 import SettingsPanel from "./SettingsPanel";
+import VibrationControls from "./VibrationControls";
+import { HapticEngine } from "@/lib/haptics/engine";
 import AskButton from "./AskButton";
 import DebugOverlay, { type DebugView } from "./DebugOverlay";
 import { startHeadsetButton } from "./headset";
@@ -112,6 +115,7 @@ export default function Walk() {
   const sessionRef = useRef<SensingSession | null>(null);
   const audioRef = useRef<AudioContext | null>(null);
   const soundRef = useRef<AudioEngine | null>(null);
+  const hapticsRef = useRef<HapticEngine | null>(null);
   const libraryRef = useRef<RawLibrary | null>(null);
   const cleanupRef = useRef<Array<() => void>>([]);
   const debugRef = useRef(false);
@@ -121,6 +125,8 @@ export default function Walk() {
   const cameraEngineRef = useRef<CameraOnlyEngine | null>(null);
   const cameraOnlyRef = useRef(false);
   const [cameraOnly, setCameraOnly] = useState(false);
+  const estimatesConfirmedRef = useRef(false);
+  const [estimatesConfirmed, setEstimatesConfirmed] = useState(false);
   const detectRef = useRef<DetectPipeline | null>(null);
   const reportingRef = useRef<Reporting | null>(null);
 
@@ -267,10 +273,23 @@ export default function Walk() {
   const onUpdate = useCallback((update: SensingUpdate) => {
     const latest = latestRef.current;
     latest.update = update;
+    const ready = detectionReady(update, cameraOnlyRef.current, estimatesConfirmedRef.current);
+    const detect = detectRef.current;
+    detect?.setEnabled(ready, update.t);
+    if (!ready) {
+      hapticsRef.current?.stop();
+      engineRef.current?.reset();
+      cameraEngineRef.current?.reset();
+      soundRef.current?.update([], update);
+      soundRef.current?.stopAnswer();
+      latest.nearest = null;
+      latest.hazards = [];
+      latest.floorSlope = null;
+      return;
+    }
     recorderRef.current?.add(update, detectRef.current?.latestDetections() ?? []);
     // Out to the full depth range, so the tape-measure check works past the corridor's 3 m.
     latest.nearest = update.tracking ? nearestAhead(update, SENSING.depthMaxM) : null;
-    const detect = detectRef.current;
     // Called in both modes: it also hands the detector the view's width.
     const labelFor = detect?.labelFor(update);
     const result = cameraOnlyRef.current
@@ -280,8 +299,11 @@ export default function Walk() {
     const reporting = reportingRef.current;
     // A yellow edge strip plays like a drop-off, but only the sounds hear it: it never reaches the
     // frame gate or the events. While tracking is lost the list is empty, so every warning goes quiet.
-    const heard = update.tracking ? withStrip(result.hazards, detect?.stripFor(update) ?? null) : result.hazards;
+    const heard = update.tracking && !cameraOnlyRef.current
+      ? withStrip(result.hazards, detect?.stripFor(update) ?? null)
+      : result.hazards;
     soundRef.current?.update(heard, update, reporting?.blocked);
+    hapticsRef.current?.update(heard, ready, performance.now());
     const gate = detect?.check(update, result.hazards, latest.fix);
     const session = sessionRef.current;
     if (reporting) {
@@ -306,6 +328,7 @@ export default function Walk() {
 
   // Recorded clips where there is one; the phone's voice for the rest.
   const onCue = useCallback((cue: Cue) => {
+    if (cue === "calibrated") hapticsRef.current?.calibrated(performance.now());
     if (soundRef.current && isClipId(cue)) soundRef.current.say([cue]);
     else speakLocalText(LINES[cue]);
   }, []);
@@ -344,6 +367,8 @@ export default function Walk() {
     const overlay = overlayRef.current;
     const gl = glRef.current;
     if (soundsLoading) return;
+    estimatesConfirmedRef.current = false;
+    setEstimatesConfirmed(false);
     const video = videoRef.current;
     let started: SensingSession;
     // Each start call asks for the session before anything else in this tap: requestSession for
@@ -368,6 +393,15 @@ export default function Walk() {
     sound.setVolume(settingsRef.current.volumeDb);
     sound.setAliveTick(settingsRef.current.aliveTick);
     soundRef.current = sound;
+    const haptics = new HapticEngine(settingsRef.current);
+    hapticsRef.current = haptics;
+    const stopHapticsWhenHidden = () => { if (document.hidden) haptics.stop(); };
+    document.addEventListener("visibilitychange", stopHapticsWhenHidden);
+    cleanupRef.current.push(() => {
+      haptics.stop();
+      if (hapticsRef.current === haptics) hapticsRef.current = null;
+      document.removeEventListener("visibilitychange", stopHapticsWhenHidden);
+    });
     // Tones play until the library is decoded, a moment later.
     const raw = libraryRef.current;
     if (raw) void decodeLibrary(ctx, raw).then((library) => sound.useLibrary(library));
@@ -460,6 +494,8 @@ export default function Walk() {
 
   // One frame to the Ask agent; the answer plays from the object's side, under any warning.
   const ask = async () => {
+    const update = latestRef.current.update;
+    if (!detectionReady(update, cameraOnlyRef.current, estimatesConfirmedRef.current)) return;
     const session = sessionRef.current;
     const ctx = audioRef.current;
     const sound = soundRef.current;
@@ -469,6 +505,9 @@ export default function Walk() {
     const began = performance.now();
     try {
       const result = await askAboutView(session, ctx, latestRef.current.update?.fov.horizontal ?? 40);
+      if (sessionRef.current !== session || !detectionReady(
+        latestRef.current.update, cameraOnlyRef.current, estimatesConfirmedRef.current,
+      )) return;
       if (result.kind === "audio") sound.playAnswer(result.buffer, result.pan);
       else if (result.kind === "text") speakText(result.meta.answer);
       else say(result.kind === "offline" ? "ask_offline" : "sorry");
@@ -489,6 +528,7 @@ export default function Walk() {
   };
 
   const changeSettings = (next: Settings) => {
+    hapticsRef.current?.configure(next);
     settingsRef.current = next;
     setSettings(next);
     saveSettings(next);
@@ -527,10 +567,11 @@ export default function Walk() {
 
   const inAr = phase === "starting" || phase === "running";
   const update = view?.update ?? null;
+  const ready = detectionReady(update, cameraOnly, estimatesConfirmed);
   let status: string | null = null;
   if (phase === "starting") status = "Starting";
   else if (update && !update.tracking) status = "Hold steady";
-  else if (cameraOnly) status = "Camera-only mode";
+  else if (cameraOnly) status = estimatesConfirmed ? "Estimated warnings — no depth calibration" : "Camera-only setup — warnings paused";
   else if (update?.calibrating) status = "Calibrating — take three slow steps";
   else if (update?.floorSource === "calibrated") status = "Calibrated";
   else if (update && view?.granted?.depth) status = "Floor estimated — calibration unavailable";
@@ -586,17 +627,27 @@ export default function Walk() {
             )}
             {debug && <DebugOverlay view={view} session={session} />}
           </div>
-          <AskButton asking={asking} onAsk={() => void ask()} />
-          {phase === "running" && session && (
-            <VoiceAsk
-              session={session}
-              microphone={microphone}
-              getAudio={() => audioRef.current}
-              getEngine={() => soundRef.current}
-              getFov={() => latestRef.current.update?.fov.horizontal}
-            />
-          )}
-          <StopButton onStop={() => sessionRef.current?.stop()} />
+          {!ready && <p role="status" className="rounded-lg bg-black/90 p-4 text-xl font-semibold text-white">
+            {cameraOnly
+              ? "This mode cannot calibrate the floor. Detection and sounds are paused. Estimated warnings have no drop-off or head-height detection."
+              : "Obstacle detection and warning sounds are paused until calibration completes. Keep the floor in view while taking three slow steps."}
+          </p>}
+          {cameraOnly && !estimatesConfirmed && update?.tracking && <button
+            type="button"
+            onClick={() => { estimatesConfirmedRef.current = true; setEstimatesConfirmed(true); }}
+            className="min-h-24 rounded-lg bg-yellow-300 p-4 text-2xl font-bold text-black"
+          >Start estimated warnings</button>}
+          {ready && <AskButton asking={asking} onAsk={() => void ask()} />}
+          {phase === "running" && ready && session && <VoiceAsk
+            session={session} microphone={microphone}
+            getAudio={() => audioRef.current} getEngine={() => soundRef.current}
+            getFov={() => latestRef.current.update?.fov.horizontal}
+          />}
+          <details className="rounded-lg bg-black/90 p-4 text-white">
+            <summary className="min-h-16 cursor-pointer text-xl font-semibold">Vibration settings</summary>
+            <VibrationControls settings={settings ?? DEFAULT_SETTINGS} onChange={(next) => changeSettings({ ...settingsRef.current, ...next })} />
+          </details>
+          <StopButton onStop={() => { hapticsRef.current?.stop(); sessionRef.current?.stop(); }} />
         </main>
       ) : (
         <main className="mx-auto flex w-full max-w-xl flex-col gap-5 px-4 pt-10 pb-16">

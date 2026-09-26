@@ -125,6 +125,11 @@ export class HazardEngine {
   }
 
   update(update: SensingUpdate, labelFor?: LabelFor): EngineResult {
+    // Never classify points or retain hazards against an uncalibrated floor.
+    if (update.calibrating || update.floorSource !== "calibrated") {
+      this.reset();
+      return { hazards: [], events: [], floor: null };
+    }
     // Tracking lost: nothing sounds, and every hazard holds still until tracking comes back.
     if (!update.tracking) return { hazards: [], events: [], floor: null };
 

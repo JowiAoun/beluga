@@ -278,6 +278,19 @@ export const DEBUG_OVERLAY = {
   refreshMs: 250,
 } as const;
 
+export const HAPTICS = {
+  pulseMs: { light: 35, medium: 70, strong: 120 },
+  pulseGapMs: 100,
+  calibrationPulseMs: 45,
+  calibrationGapMs: 180,
+  nearM: 0.5,
+  farM: 3,
+  dropOffFarM: 3.5,
+  nearIntervalMs: 450,
+  farIntervalMs: 1500,
+  minimumRestMs: 200,
+} as const;
+
 export const VOICE_ASK = {
   recordingMaxMs: 10_000,
   recordingBitsPerSecond: 64_000,

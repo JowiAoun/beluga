@@ -43,6 +43,7 @@ export class FloorTracker {
   private lastCamera: Vec3 | null = null;
   private recent: number[] = [];
   private lastReestimate = 0;
+  private reportedUnavailable = false;
 
   constructor(guessY: number) {
     this.y = guessY;
@@ -84,24 +85,27 @@ export class FloorTracker {
 
       const timedOut = t - this.calibrationStart >= SENSING.calibrationMaxMs;
       const enough = this.pool.length >= SENSING.calibrationMinPoints;
-      const finished = timedOut || (enough && this.walked >= SENSING.calibrationMoveM);
+      // A timeout is not calibration. Keep collecting until the full sample requirement is met.
+      if (timedOut && !enough) {
+        if (!this.reportedUnavailable) {
+          this.reportedUnavailable = true;
+          return "calibration_unavailable";
+        }
+        return event;
+      }
+      const finished = enough && (timedOut || this.walked >= SENSING.calibrationMoveM);
       if (!finished) return event;
 
-      // Out of time with too few points means the floor barely shows 0.5 to 2 m ahead (a phone
-      // held level). Then use what there is, or keep the hit test's value, and follow drift from there.
-      const hasFloorSamples = enough || this.pool.length >= SENSING.floorReestimateMinPoints;
-      if (hasFloorSamples) {
-        // Median of the lowest 20%: objects standing on the floor only add points above it.
-        const sorted = this.pool.sort((a, b) => a - b);
-        const lowest = sorted.slice(0, Math.max(1, Math.floor(sorted.length * SENSING.floorCalibrationLowestShare)));
-        this.y = median(lowest);
-        this.source = "calibrated";
-      }
+      // Median of the lowest 20%: objects standing on the floor only add points above it.
+      const sorted = this.pool.sort((a, b) => a - b);
+      const lowest = sorted.slice(0, Math.max(1, Math.floor(sorted.length * SENSING.floorCalibrationLowestShare)));
+      this.y = median(lowest);
+      this.source = "calibrated";
       this.calibrating = false;
       this.calibrationDone = true;
       this.pool = [];
       this.lastReestimate = t;
-      return hasFloorSamples ? "calibrated" : "calibration_unavailable";
+      return "calibrated";
     }
 
     for (const y of candidates) {
