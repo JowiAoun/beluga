@@ -6,18 +6,18 @@
 
 ### The product in one paragraph
 
-The user wears the phone on a chest mount (camera forward) and bone-conduction earbuds (ears stay open to traffic). beluga runs a WebXR augmented-reality session in Chrome that uses ARCore depth to measure distance to everything in front of the user. It stays silent until something enters a narrow walking corridor, then plays a short sound placed on the hazard's side that repeats faster as the user gets closer. Head-height obstacles and drop-offs (platform edges, stairs down) have their own distinct sounds. A tap on the Ask button sends one camera frame to Gemini, and the answer is spoken with an ElevenLabs voice from the direction of the object described. When the user meets a lasting civic hazard (a scooter left across the sidewalk, a construction barrier, a head-height sign), Gemini decides whether to report it; with consent, an anonymous, coarsened report is stored in Tiger Data, where continuous aggregates drive a live fix-first map and ranked queue for the City of Ottawa and OC Transpo.
+The user wears the phone on a chest mount (camera forward) and bone-conduction earbuds (ears stay open to traffic). beluga runs a WebXR augmented-reality session in Chrome that uses ARCore depth to measure distance to everything in front of the user. It stays silent until something enters a narrow walking corridor, then plays a short sound placed on the hazard's side that repeats faster as the user gets closer. Head-height obstacles and drop-offs (platform edges, stairs down) have their own distinct sounds. A tap on the Ask button sends one camera frame to an ElevenLabs agent that sees with Gemini, and the answer is spoken with an ElevenLabs voice from the side of the object described. When the user meets a lasting civic hazard (a scooter left across the sidewalk, a construction barrier, a head-height sign), a second agent answers questions about it and the backend decides whether to report it; with consent, an anonymous, coarsened report is stored in Tiger Data, where continuous aggregates drive a live fix-first map and ranked queue for the City of Ottawa and OC Transpo.
 
 ### Non-negotiable rules
 
 1. **The name is "beluga", always lowercase**, in the UI, page titles, manifest, spoken lines, README and database names.
 2. **Platform:** Android + Chrome only, delivered as an installable web app over HTTPS. No iOS, no native app.
-3. **The safety loop never touches the network.** Depth → hazard → sound runs entirely on the phone. Gemini, ElevenLabs and Tiger Data may fail or be slow without silencing any warning.
-4. **Warnings are decided by depth, not by labels.** The object detector and Gemini only change which sound or words are used.
-5. **No image ever reaches the database.** Frames go only to Gemini, are not stored, and never leave the backend in any other direction.
+3. **The safety loop never touches the network.** Depth → hazard → sound runs entirely on the phone. The ElevenLabs agents and Tiger Data may fail or be slow without silencing any warning.
+4. **Warnings are decided by depth, not by labels.** The object detector and the agents only change which sound or words are used.
+5. **No image ever reaches the database.** Frames go only to the ElevenLabs agents (which see with Gemini). beluga never stores them, and deletes each agent conversation, frame included, right after its answer.
 6. **Reporting is off until the user turns it on.** Locations are rounded to \~100 m on the phone and again on the backend.
 7. **Never tell the user it is safe to cross a road**, anywhere, in any string, prompt or spoken line.
-8. **API keys live only on the backend.** The phone app never holds a Gemini, ElevenLabs or database secret.
+8. **API keys live only on the backend.** The phone app never holds an ElevenLabs, Gemini or database secret; at most a signed agent URL that expires in 15 minutes.
 9. **All simulated data is labelled as simulated**, in the database, the dashboard and the README.
 10. **beluga works alongside the white cane or guide dog.** Onboarding says so aloud; the landing page says it is a research prototype and not a medical device.
 
@@ -26,8 +26,8 @@ The user wears the phone on a chest mount (camera forward) and bone-conduction e
 | Prize | What must be visible in the product |
 | --- | --- |
 | Best Use of Tiger Data | Hypertable of events; four continuous aggregates (one stacked on another) in real-time mode powering every dashboard view; compression and retention policies; on-screen raw-vs-aggregate query times and compression ratio |
-| Best Use of Gemini API | Civic triage with a fixed rubric and structured JSON output; Ask with object boxes turned into a sound direction |
-| Best Use of ElevenLabs | A designed warning-sound library made with the Sound Effects API; live Flash v2.5 voice for Ask, placed in space |
+| Best Use of ElevenLabs (first) | Two ElevenLabs agents do civic triage and Ask, each seeing the frame and answering through a tool call; a designed warning-sound library made with the Sound Effects API; live Flash v2.5 voice for Ask, placed left or right |
+| Best Use of Gemini API (second) | Gemini is the model inside both agents: triage with a fixed rubric, Ask with object boxes turned into a sound direction. Check whether the prize accepts Gemini used through ElevenLabs |
 | Best Domain Name from GoDaddy Registry | Landing page and dashboard served from the team's registered domain |
 
 ### Deadline
@@ -76,11 +76,13 @@ Devpost submission closes **10:00 EDT, Sunday Sept 27, 2026**, with a public Git
 
 | Risk | Level | What we do |
 | --- | --- | --- |
-| Gemini's free limits are low and no longer published. On the free tier Google may use frames to improve its products and humans may read them, which clashes with rule 5. | High | Billing key for every live frame. The README says what Google keeps (abuse logs for 55 days on the paid tier). |
-| Gemini 3 Flash thinks at `high` by default, which alone can push Ask past 3 s. The plan's temperature 0.2 goes against Google's advice for Gemini 3. | Medium | `thinking_level: minimal` and the default temperature (Phase 5). |
+| An agent keeps each uploaded frame with its conversation, and the Gemini inside it runs under ElevenLabs' terms with Google. Rule 5 promises frames are not kept. | High | Delete each conversation right after its answer, set the shortest retention the agents allow, and check in the image check that a deleted file is gone (Phase 5). The README says what ElevenLabs and Google may keep. |
+| Image input is only documented for chat sessions, and the docs don't say which models take images. | High | A 15-minute image check opens Phase 5. If it fails, triage and Ask call Gemini directly with the billing key (Fallbacks). |
+| An agent turn adds a WebSocket connect, a file upload and a tool call, and ElevenLabs publishes no end-to-end time. Ask has a 3 s target. | Medium | The image check measures it. Flash-Lite for triage, Flash for Ask, default temperature (Phase 5). If Ask is slow, get the signed URL while the phone captures the frame. |
+| Agents have no JSON output mode. | Medium | Each agent answers through one client tool whose parameters are a JSON schema with enums; the backend checks them with zod, retries once, then fails safe (Phase 5). |
 | Tiger's free service turns read-only at 750 MB and has no connection pooler. Reloading the seed a few times, or many cold function connections, can hit a limit. | Medium | Smoke test in Phase 0, size check before reloads (Phase 8), small client pool (Phase 6). The trial service is the fallback. |
-| Giving Gemini database tools (MCP or function calling) in triage or Ask would add a round trip and let text in a frame steer database access. | Medium | Gemini gets no tools on the phone paths; the backend runs every query (Phase 5, "Gemini and the database"). |
-| Anyone can call `/api/ask` and `/api/triage`, and a loop bug could drain ElevenLabs credits. | Low | Hourly budgets on both routes (Phase 5). |
+| Giving the agents database tools (MCP or webhook tools) in triage or Ask would add a round trip and let text in a frame steer database access. | Medium | Each agent's only tool carries its answer back; the backend runs every query (Phase 5, "Agents and the database"). |
+| Anyone can call `/api/ask` and `/api/triage`, and a loop bug could drain ElevenLabs credits (agent turns, frame uploads and voice). | Low | Hourly budgets on both routes (Phase 5). |
 
 ### Privacy
 
@@ -121,13 +123,13 @@ Coding agents write most of the code. Each of the four people takes one track an
 | Track | Phases | Owns | Hands-on work for the person |
 | --- | --- | --- | --- |
 | A. Phone sensing | 0, 1, 2, 4 (detector) | `app/walk`, `lib/xr`, `lib/hazard`, `lib/detect` | Every phone test, tape-measure checks, walking tests, replay clips |
-| B. Sound & AI | 3, 4 (frame gate), 5 | `lib/audio`, `lib/server/gemini`, `lib/server/elevenlabs`, `app/api/triage`, `app/api/ask`, `scripts/sounds`, `public/sounds` | Picking sounds by ear, left/right blindfold test, test photos |
+| B. Sound & AI | 3, 4 (frame gate), 5 | `lib/audio`, `lib/server/agents`, `lib/server/elevenlabs`, `app/api/triage`, `app/api/ask`, `scripts/sounds`, `scripts/agents`, `public/sounds` | Picking sounds by ear, left/right blindfold test, test photos |
 | C. Data & dashboard | 6, 7, 8 | `db`, `lib/server/db`, `app/api/events`, `app/api/dashboard`, `app/map`, `scripts/seed` | Tiger console, checking the dashboard numbers make sense |
 | D. Shell & ship | domain, 9, 10, 11 | `app/page`, `lib/events`, manifest, service worker, `docs`, README | DNS at the registrar, Vercel settings, chest mount, props, TalkBack test, demo video |
 
 | Time | Checkpoint |
 | --- | --- |
-| 12:00 to 14:00 | Phase 0 on the phone. In parallel: domain DNS, database smoke test, sound generation, Gemini limits. |
+| 12:00 to 14:00 | Phase 0 on the phone. In parallel: domain DNS, database smoke test, sound generation, the agent image check. |
 | 14:00 | Decide: depth or camera-only, portrait or landscape, camera access or not. |
 | 18:00 | Thin slice: walking toward a chair plays a tick from its side; Ask speaks an answer; `/map` shows seeded data from the real database; the domain serves the landing page. |
 | 20:00 | Cut check 1: each track says what is left, and the team cuts from the cut list until it fits. |
@@ -146,7 +148,8 @@ Settled on Sept 26:
 - Phone: Samsung Galaxy S22 with Android 16 and Chrome. Phase 0 measured a portrait view of 38° × 74°, depth at 160 × 90 and 30 frames a second.
 - Earbuds: AfterShokz Trekz Air, Bluetooth bone conduction, one pair. Judges hear through the `scrcpy` mirror. Phase 3 is built around them.
 - Domain: `beluga.surf`, served by Vercel at `www.beluga.surf`.
-- Accounts: domain registered, Gemini key with billing, ElevenLabs credits applied, Tiger Cloud service created. The Phase 0 database smoke test still runs.
+- AI: every model call goes through ElevenLabs agents using a Gemini model from the ElevenLabs list, not the Gemini API, to be strongest on the ElevenLabs prize (Phase 5).
+- Accounts: domain registered, Gemini key with billing (now the fallback only), ElevenLabs credits applied, Tiger Cloud service created. The Phase 0 database smoke test still runs.
 - Judging: judges visit our table.
 
 Still open. Each one has a default, so no track waits for the answer.
@@ -173,8 +176,8 @@ Still open. Each one has a default, so no track waits for the answer.
 | Audio | Web Audio API: one AudioContext, a gain and a delay per ear for each sound, a limiter | No HRTF: bone conduction skips the outer ear. All sounds pre-decoded at start |
 | Offline + install | Web app manifest + service worker | Caches app shell, sound library and detector model |
 | Backend | Next.js route handlers (Node runtime, not Edge, for the database driver) | Holds all keys |
-| Gemini | Google Gen AI SDK for JavaScript | Structured JSON output with a response schema |
-| ElevenLabs | REST calls from the backend | Sound Effects (build time), Text to Speech streaming (runtime) |
+| AI | ElevenLabs Agents with a Gemini model from their list | Text-only sessions over WebSocket from the backend; answers come back as client tool calls |
+| ElevenLabs | REST and agent WebSocket calls from the backend | Sound Effects (build time), Agents and Text to Speech (runtime) |
 | Database | Tiger Cloud free service (TimescaleDB + PostGIS) | Plain Postgres driver (postgres.js), SSL required |
 | Dashboard map | MapLibre GL JS with the OpenFreeMap basemap (`https://tiles.openfreemap.org/styles/liberty`), cells drawn by MapLibre itself | No paid map keys, no deck.gl (see Phase 7) |
 | Dashboard charts | Lightweight SVG charts or Recharts | Small line charts and a bar chart |
@@ -191,8 +194,8 @@ Still open. Each one has a default, so no track waits for the answer.
 | `app/page` | Landing page: what beluga is, disclaimer, links to the app, dashboard and repo |
 | `app/walk` | The phone app (Walk, Ask, consent, settings, debug overlay) |
 | `app/map` | City dashboard (fix-first queue, map, stations, live feed, performance panel) |
-| `app/api/triage` | Gemini civic triage |
-| `app/api/ask` | Gemini Ask + ElevenLabs voice |
+| `app/api/triage` | Civic triage through the triage agent |
+| `app/api/ask` | Ask through the Ask agent + ElevenLabs voice |
 | `app/api/events` | Batch intake of near-misses and civic reports into Tiger Data |
 | `app/api/dashboard/*` | Read-only endpoints for queue, map cells, station trends, live feed, performance numbers |
 | `lib/xr` | AR session start/stop, depth reading, camera frame reading, floor tracking |
@@ -200,7 +203,7 @@ Still open. Each one has a default, so no track waits for the answer.
 | `lib/audio` | Sound loading, spatial playback, repeat scheduler, voice clips, ducking |
 | `lib/detect` | Detector wrapper, label mapping, frame gate |
 | `lib/events` | On-phone event queue, batching, offline persistence, coarsening, grid cells |
-| `lib/server/gemini` | Prompts, response schemas, calls, validation |
+| `lib/server/agents` | Agent configs (prompts, models, client tools), the one-turn session helper, validation |
 | `lib/server/elevenlabs` | Voice calls |
 | `lib/server/db` | Database client and queries |
 | `lib/shared` | Types and constants shared by phone, backend and dashboard (the contracts section) |
@@ -209,6 +212,7 @@ Still open. Each one has a default, so no track waits for the answer.
 | `public/manifest` + service worker | Install and offline |
 | `db/migrations` | Ordered database setup files |
 | `scripts/sounds` | ElevenLabs generation + ffmpeg processing |
+| `scripts/agents` | Creates or updates the two ElevenLabs agents from `lib/server/agents` |
 | `scripts/seed` | Simulated-week generator and bulk loader |
 | `docs` | Contracts, parameters, demo script, architecture notes |
 
@@ -229,14 +233,14 @@ Still open. Each one has a default, so no track waits for the answer.
 | --- | --- | --- |
 | `DATABASE_URL` | Backend, seed script, migrations | Tiger Cloud service connection string (SSL required) |
 | `DATABASE_URL_READONLY` | Backend ("Ask the data" stretch only) | Connection string for a read-only database role |
-| `GEMINI_API_KEY` | Backend | Google AI Studio key |
-| `GEMINI_TRIAGE_MODEL` | Backend | Current Flash-Lite model id, `gemini-3.5-flash-lite` as of Sept 2026 (check AI Studio; do not use 2.5 models) |
-| `GEMINI_ASK_MODEL` | Backend | Current Flash model id, `gemini-3.8-flash` as of Sept 2026 |
-| `ELEVENLABS_API_KEY` | Backend, sound script | ElevenLabs account with event credits applied |
+| `ELEVENLABS_API_KEY` | Backend, sound and agent scripts | ElevenLabs account with event credits applied |
+| `ELEVENLABS_TRIAGE_AGENT_ID` | Backend | Printed by `npm run agents` |
+| `ELEVENLABS_ASK_AGENT_ID` | Backend | Printed by `npm run agents` |
+| `GEMINI_API_KEY` | Backend, fallback only | Google AI Studio key with billing. Unused unless the agents can't see images (Fallbacks) |
 | `ELEVENLABS_VOICE_ID` | Backend, sound script | One calm, clear English voice chosen once and used everywhere |
 | `ELEVENLABS_TTS_MODEL` | Backend | `eleven_flash_v2_5` |
 | `DEVICE_HASH_SALT` | Backend | Random string; rotating it is what rotates device hashes. Rotate every 28 days at most often, and never during the event: a rotation inside the 14-day fix-first window counts one person as two reporters |
-| `GEMINI_HOURLY_BUDGET` | Backend | Default 150 triage calls per hour across all devices |
+| `TRIAGE_HOURLY_BUDGET` | Backend | Default 150 triage calls per hour across all devices |
 | `ASK_HOURLY_BUDGET` | Backend | Default 120 Ask calls per hour across all devices, so a bug or a stranger can't drain ElevenLabs credits |
 | `DASHBOARD_SHOW_SIMULATED` | Dashboard | Default true (demo); the toggle still works |
 | `NEXT_PUBLIC_SITE_NAME` | Everywhere | `beluga` |
@@ -244,7 +248,8 @@ Still open. Each one has a default, so no track waits for the answer.
 ### Service setup notes
 
 - **Tiger Cloud:** free service (no card, up to 2 per account, us-east-1, shared CPU; 750 MB of storage, then it turns read-only; no connection pooler). Enable the PostGIS extension. If a free-service limit blocks a needed feature, create a 30-day trial service instead and change only `DATABASE_URL`.
-- **Gemini:** check the project's real per-model daily limits in AI Studio before building the gate; Google no longer publishes fixed numbers, and free limits were cut hard in late 2025. Use a key with billing enabled for every live frame: on the free tier Google may use the content to improve its products and human reviewers may read it, which breaks the privacy story for camera frames with bystanders in them. The paid tier does not train on prompts and keeps abuse logs for 55 days.
+- **ElevenLabs Agents:** run the image check at the top of Phase 5 as soon as the API key is in. Agents bill the Gemini model's cost from ElevenLabs credits, plus a small charge per file.
+- **Gemini (fallback only):** check the project's real per-model daily limits in AI Studio before building the gate; Google no longer publishes fixed numbers, and free limits were cut hard in late 2025. Use a key with billing enabled for every live frame: on the free tier Google may use the content to improve its products and human reviewers may read it, which breaks the privacy story for camera frames with bystanders in them. The paid tier does not train on prompts and keeps abuse logs for 55 days.
 - **ElevenLabs:** apply the event credit code before generating sounds; sound effects and TTS both draw on it.
 - **Domain:** the team's GoDaddy Registry domain points at the Vercel project; the dashboard is also reachable at a `map.` subdomain that routes to `/map`.
 
@@ -310,7 +315,7 @@ Response: accepted count and rejected count. The backend rejects the whole batch
 
 Request: one JPEG frame (long edge ≤ 768 px, quality \~0.7, base64), the triggering hazard (kind, distance, angle, height band, blocking share, detector class), scene hint if known, and deviceKey (for rate limiting only).
 
-Response (validated against the schema before returning). The yes/no answers come from Gemini; severity and the report decision come from the backend (see "What gets reported"):
+Response (validated against the schema before returning). The yes/no answers come from the triage agent; severity and the report decision come from the backend (see "What gets reported"):
 
 | Field | Type | Notes |
 | --- | --- | --- |
@@ -333,7 +338,7 @@ Response (validated against the schema before returning). The yes/no answers com
 
 Request: one JPEG frame (same limits), optional question text (MVP always "What's in front of me?").
 
-Response: answer text (≤ 2 sentences), target box or null, target label, and the spoken audio. Return the whole MP3 as the response body, with the answer, box and label in response headers (URL-encoded JSON). The phone decodes it and plays it through the panner. Web Audio can't decode half an MP3, and an `<audio>` element can't send a POST, so a streamed MP3 would not start any sooner. If Ask misses 3 s, the upgrade is to stream `pcm_24000` from ElevenLabs and play each chunk as its own audio buffer. If voice generation fails, return the text with a flag so the phone can fall back to its cached "Sorry, I couldn't see that" line.
+Response: answer text (≤ 2 sentences), target box or null, target label, and the spoken audio. Return the whole MP3 as the response body, with the answer, box and label in response headers (URL-encoded JSON). The phone decodes it and plays it through the stereo engine. Web Audio can't decode half an MP3, and an `<audio>` element can't send a POST, so a streamed MP3 would not start any sooner. If Ask misses 3 s, the upgrade is to stream `pcm_24000` from ElevenLabs and play each chunk as its own audio buffer. If voice generation fails, return the text with a flag so the phone can fall back to its cached "Sorry, I couldn't see that" line.
 
 ### Dashboard read endpoints (browser → `/api/dashboard/*`)
 
@@ -350,7 +355,7 @@ Every dashboard response includes `includesSimulated` so the banner can show.
 
 ## What gets reported
 
-**A fixed list says what can be reported, a fixed table says how bad it is, and Gemini only answers questions about what it sees.** Code makes every decision, so the same answers always give the same severity, and the dashboard can say why. The rules live once in `lib/shared/reporting` and are used by triage, the seed generator and the dashboard.
+**A fixed list says what can be reported, a fixed table says how bad it is, and the triage agent only answers questions about what it sees.** Code makes every decision, so the same answers always give the same severity, and the dashboard can say why. The rules live once in `lib/shared/reporting` and are used by triage, the seed generator and the dashboard.
 
 ### The four tests
 
@@ -407,9 +412,9 @@ The phone can't measure to the centimetre, so a report means a spot likely break
 | Piece | Decided by | Why |
 | --- | --- | --- |
 | In the path, how far, how wide, how high, any drop | Phone depth | Measured |
-| Category, the yes/no answers, description | Gemini, from a schema of enums and yes/no fields only | It can see what a thing is; it can't measure |
+| Category, the yes/no answers, description | The triage agent (Gemini), through a tool whose fields are only enums and yes/no | It can see what a thing is; it can't measure |
 | Severity | Code, from the tables above | Same input, same answer, and the "why" line can quote the rule |
-| Report or not | Code: four tests, confidence, no duplicate, budget left | Gemini's confidence number is a weak signal on its own |
+| Report or not | Code: four tests, confidence, no duplicate, budget left | The model's confidence number is a weak signal on its own |
 | Place in the queue | The fix-first score (Phase 6) | Severity is one report; the queue is a place over 14 days |
 
 The real check on a report is the 3-reporter rule: a spot only reaches the queue once 3 different phones have reported it.
@@ -452,7 +457,7 @@ None of these need the phone, and each one is slow to fix late.
 - **Domain:** point the domain at Vercel today (steps in Phase 10). DNS can take hours.
 - **Database smoke test:** on the free Tiger service, turn on PostGIS, then create a tiny hypertable, a real-time continuous aggregate with a second one stacked on it, a columnstore policy and a retention policy. If any step fails, move to the trial service now.
 - **Sound library:** Phase 3a needs nothing else; generate it now.
-- **Gemini:** read the project's real limits in AI Studio and set up the billing key.
+- **Agents:** run the image check from Phase 5 (15 minutes). Its answer decides how triage and Ask are built.
 - **Hardware:** a chest mount (there is none yet; a bike phone clamp on a backpack shoulder strap is a quick option), battery pack, USB cable, and a bike or scooter to stage.
 
 ### Done when
@@ -484,7 +489,7 @@ None of these need the phone, and each one is slow to fix late.
 ### Camera frames
 
 - With camera access granted, get the camera image as a WebGL texture from the XR WebGL binding each processed frame.
-- Two consumers, each at its own rate: the detector (small frame, default 320 × 240, 4 Hz) and Gemini (up to 768 px long edge, JPEG \~0.7, only on request).
+- Two consumers, each at its own rate: the detector (small frame, default 320 × 240, 4 Hz) and the agents (up to 768 px long edge, JPEG \~0.7, only on request).
 - Render the texture into a small offscreen framebuffer, read pixels, and hand over an image object. Never read the full-resolution texture every frame.
 - Record the camera's horizontal field of view (from the projection matrix) for turning box positions into angles.
 
@@ -497,7 +502,7 @@ None of these need the phone, and each one is slow to fix late.
 
 ### Debug overlay (DOM overlay, toggled by a three-finger tap or a settings switch)
 
-Shows processing rate, valid sample count, floor height, tracking state, nearest corridor distance, current hazards, detector labels, last triage/Ask latency, event queue length, Gemini budget left.
+Shows processing rate, valid sample count, floor height, tracking state, nearest corridor distance, current hazards, detector labels, last triage/Ask latency, event queue length, triage budget left.
 
 ### Done when
 
@@ -632,7 +637,7 @@ Voice clips (one calm voice): "edge", "step down", "head", "pole", "bike", "scoo
 
 ## Phase 4: on-device detector and frame gate
 
-**Goal: name what the depth hazards are (so the right sound plays) and decide, sparingly, when a frame is worth sending to Gemini for civic triage.**
+**Goal: name what the depth hazards are (so the right sound plays) and decide, sparingly, when a frame is worth sending to the triage agent.**
 
 ### Detector
 
@@ -658,7 +663,7 @@ Voice clips (one calm voice): "edge", "step down", "head", "pole", "bike", "scoo
 | bench, chair, potted\_plant, suitcase, unknown | tick | none |
 | any head\_height hazard | head\_chime | "head" |
 | any drop\_off hazard | edge\_pulse | "edge" (or "stairs" if the last triage context was stairs) |
-| Gemini said the path is blocked (Phase 5) | taps | "blocked" + side |
+| Triage said the path is blocked (Phase 5) | taps | "blocked" + side |
 
 ### Frame gate (triage runs only when reporting is on)
 
@@ -685,55 +690,95 @@ When a trigger fires, capture the larger JPEG at that moment and call `/api/tria
 - Walking a 2-minute route with 4 staged hazards produces 4–6 triage calls, not dozens.
 - With the detector running, the safety loop still holds \~10 updates per second.
 
-## Phase 5: backend — Gemini triage, Ask, ElevenLabs voice
+## Phase 5: triage and Ask through ElevenLabs agents
 
-**Goal: two backend routes that turn one camera frame into a validated civic decision or a spoken answer, with strict limits on time, cost and privacy.** Frames are never logged or stored.
+**Goal: two backend routes that turn one camera frame into a validated civic decision or a spoken answer, through two ElevenLabs agents that see with a Gemini model, with strict limits on time, cost and privacy.** beluga never logs or stores a frame, and deletes each agent conversation right after its answer.
 
-### Gemini and the database
+Every AI call goes through ElevenLabs Agents, using a Gemini model from the ElevenLabs model list, so no Google key is needed. That puts the ElevenLabs prize first: agents with tool calls, the Sound Effects library and the Flash voice. The Gemini API key stays only for the fallback in "Fallbacks".
 
-Gemini never connects to Tiger Data, and needs no MCP server or tools. It is one step in the middle: a frame and a note go in, validated JSON comes out. The backend route does all database work with plain SQL: the 15-minute dedup check and the budget count in `/api/triage`, then the insert later through `/api/events`.
+### First: the image check (15 minutes, before anything else here)
 
-- Faster: a tool call adds at least one more Gemini round trip, and triage has 6 s.
-- Safer: text in a camera frame (a sign, a sticker) can steer a model. With no tools, the worst it can do is return a bad answer, and the backend rule still decides.
+The docs show images in chat (text-only) sessions, and don't list which models take them. Check before building on it:
 
-MCP suits apps and agents that find their tools at runtime. The backend knows exactly which queries it runs, so it calls them directly. Tiger Data's MCP server is still handy for the team's coding agents, to look at the database while building; it is never part of the app. The one place where Gemini reads the database is the optional "Ask the data" stretch in Phase 7.
+1. Create a throwaway text-only agent with `gemini-3.5-flash` and file input on.
+2. From a Node script: get a signed URL, open the WebSocket, upload one test photo to the conversation, and send a `multimodal_message` asking what is in it.
+3. Pass if the answer describes the photo. Write down the time from connect to answer.
+4. Delete the conversation, then check the file is gone.
+5. Try the same in a voice session (not text-only): does it take the image, and do `audio` events come back? This picks the Ask design below.
+
+If Gemini in the agent can't see the photo, use the fallback: call Gemini directly with the billing key, and say so in the README.
+
+### Agents and the database
+
+The agents never connect to Tiger Data, and get no MCP server or webhook tools. Each agent has one client tool, and all it does is carry the answer back to our backend. The backend does all database work with plain SQL: the 15-minute dedup check and the budget count in `/api/triage`, then the insert later through `/api/events`.
+
+- Faster: a database tool adds at least one more model round trip, and triage has 6 s.
+- Safer: text in a camera frame (a sign, a sticker) can steer a model. With no real tools, the worst it can do is return a bad answer, and the backend rule still decides.
+
+MCP suits apps and agents that find their tools at runtime. The backend knows exactly which queries it runs, so it calls them directly. Tiger Data's MCP server is still handy for the team's coding agents, to look at the database while building; it is never part of the app. The one place where an agent reads the database is the optional "Ask the data" stretch in Phase 7.
+
+### Setting up the agents
+
+`npm run agents` (in `scripts/agents`) creates both agents through the API (`POST /v1/convai/agents/create`), or updates them when their ids are already set. The prompts, models and tools live in `lib/server/agents`, so a prompt change is a commit and not a dashboard click. The script prints the agent ids for `.env.local` and Vercel.
+
+| Setting | Triage agent | Ask agent |
+| --- | --- | --- |
+| Mode | text-only | text-only (design B below needs voice) |
+| LLM | `gemini-3.5-flash-lite` | `gemini-3.5-flash` |
+| Temperature | default | default |
+| File input | on, 1 file | on, 1 file |
+| Client tool | `triage_answer`, fields below | `ask_answer`: answer, target label (nullable), box (nullable) |
+| Longest conversation | 30 s | 30 s |
+| Privacy | shortest retention allowed, no audio recording | same |
+
+Temperature stays at the default: Google says values below 1.0 on Gemini 3 models can cause looping or worse output.
+
+### How a route runs one agent turn
+
+One helper in `lib/server/agents` does this and closes:
+
+1. Get a signed URL for the agent (`GET /v1/convai/conversation/get-signed-url`) with the API key.
+2. Open the WebSocket with Node's built-in `WebSocket`. Wait for `conversation_initiation_metadata`, which carries the conversation id. Answer every `ping` with a `pong`.
+3. Upload the JPEG (`POST /v1/convai/conversations/{id}/files`) and keep the `file_id`.
+4. Send a `multimodal_message` with the phone's note as text and the `file_id`.
+5. Wait for the `client_tool_call`. Check its `parameters` with the zod schema from `lib/shared/contracts`, reply with a `client_tool_result`, then close.
+6. Delete the conversation (`DELETE /v1/convai/conversations/{id}`), also after a failure or timeout.
 
 ### Shared rules for both routes
 
 - Node runtime. Reject frames over 400 KB or not JPEG.
-- Call Gemini with a system instruction, the image, a short text part, JSON response type and a response schema.
-- Leave temperature at the default 1.0. Google says values below 1.0 on Gemini 3 models can cause looping or worse output.
-- Set `thinking_level` to `minimal`. Flash defaults to `high`, which costs seconds on every call.
-- Set `media_resolution` to `medium` (560 tokens per image) for triage. Try `high` for Ask if answers miss small things.
 - Before any text is returned or spoken, check it for crossing advice ("safe to cross", "you can cross", "okay to cross", "clear to cross", "go ahead and cross"). Replace a match with "I can't judge traffic. Cross the way you normally do." This backs up rule 7 when the model ignores its prompt.
-- Validate the JSON against the same schema on the backend; on invalid output, retry once, then fail safe (triage: report = false; Ask: cached apology).
+- Agents have no JSON mode, so the answer comes as the tool call's parameters: a JSON schema with enums (`allowed_values` makes ElevenLabs reject anything else). Check it again with zod; on invalid output, retry once, then fail safe (triage: report = false; Ask: cached apology).
 - Timeouts: triage 6 s, Ask 8 s end to end.
-- Log only: route, model, latency, outcome, category. Never the image or the description of people.
-- Gemini's box format is four integers, top, left, bottom, right, scaled 0–1000.
+- Log only: route, agent, latency, outcome, category. Never the image or the description of people.
+- Boxes are four integers, top, left, bottom, right, scaled 0 to 1000: Gemini's own order, which the prompt asks for.
+- A failed delete logs the conversation id (never the image) and is tried again on the next call.
 
 ### `/api/triage`
 
-System instruction (use this wording):
+System prompt (use this wording):
 
-> You are the civic triage step of beluga, an app used by blind and low-vision pedestrians together with a white cane or guide dog. You see one forward-facing chest-height photo and a short note about the hazard the phone detected. Say what the hazard is and answer questions about it. You do not decide whether it is reported or how severe it is. Pick the category from this list, or none: sidewalk\_obstruction (scooter, bike or object left across the walking path), construction\_barrier, head\_height\_hazard (sign, branch, awning sticking out between 0.68 m and 2.1 m high, with nothing below for a cane to hit), surface\_damage (hole, broken curb, heaved slab), blocked\_curb\_cut, tactile\_strip\_issue (missing, worn or covered warning strip at a platform edge, the top of stairs, or a curb ramp at a crossing), snow\_ice, other\_fixed. People, vehicles in the road, animals and things being carried are always none. Then answer: is the place open to the public; is the thing left or fixed in place, and not moving, held or in use; how much path is left to get past it (clear: 1.5 m or more, about two people side by side; narrow: less; none); is there a warning a cane or foot can find, such as a solid barrier with a rail or edge at or below 0.68 m, or an intact tactile strip; is there a lip, hole, trench or drop that can catch a foot. If unsure, lower your confidence. Describe only what is visible in 15 words or fewer. Never mention faces, licence plates or anything that identifies a person. Never say a road is safe to cross. Also classify the scene context. Return JSON only.
+> You are the civic triage step of beluga, an app used by blind and low-vision pedestrians together with a white cane or guide dog. You see one forward-facing chest-height photo and a short note about the hazard the phone detected. Say what the hazard is and answer questions about it. You do not decide whether it is reported or how severe it is. Pick the category from this list, or none: sidewalk\_obstruction (scooter, bike or object left across the walking path), construction\_barrier, head\_height\_hazard (sign, branch, awning sticking out between 0.68 m and 2.1 m high, with nothing below for a cane to hit), surface\_damage (hole, broken curb, heaved slab), blocked\_curb\_cut, tactile\_strip\_issue (missing, worn or covered warning strip at a platform edge, the top of stairs, or a curb ramp at a crossing), snow\_ice, other\_fixed. People, vehicles in the road, animals and things being carried are always none. Then answer: is the place open to the public; is the thing left or fixed in place, and not moving, held or in use; how much path is left to get past it (clear: 1.5 m or more, about two people side by side; narrow: less; none); is there a warning a cane or foot can find, such as a solid barrier with a rail or edge at or below 0.68 m, or an intact tactile strip; is there a lip, hole, trench or drop that can catch a foot. If unsure, lower your confidence. Describe only what is visible in 15 words or fewer. Never mention faces, licence plates or anything that identifies a person. Never say a road is safe to cross. Also classify the scene context. Answer only by calling triage\_answer, once.
 
-Text part: the phone's note, e.g. "Hazard: head\_height, 1.6 m ahead, 10° right, blocking 0.3, detector label unknown, scene hint sidewalk."
+Message text: the phone's note, e.g. "Hazard: head\_height, 1.6 m ahead, 10° right, blocking 0.3, detector label unknown, scene hint sidewalk."
 
-Schema fields: category (enum, including none), isPublic, leftOrFixed, wayAround (enum), caneWarning, tripOrDrop, confidence, description, context, box (nullable). Enums in the schema keep the category inside the list.
+`triage_answer` fields: category (enum, including none), isPublic, leftOrFixed, wayAround (enum), caneWarning, tripOrDrop, confidence, description, context, box (nullable). Enums keep the category inside the list.
 
 Backend decision (overrides the model): the backend works out severity from the category table in "What gets reported", then sets report to true only if all four tests pass, the category is not none, and confidence is at least 0.7 (0.85 for `other_fixed`). Also false if the same device hash reported the same category in the same grid cell in the last 15 minutes (checked in the database), or if the hourly budget is spent.
 
-Hourly budget: a tiny `api_budget` table (hour, route, count) incremented per call; refuse triage above `GEMINI_HOURLY_BUDGET`. Ask gets its own row in the same table and stops at `ASK_HOURLY_BUDGET`; past it, the phone speaks the offline line.
+Hourly budget: a tiny `api_budget` table (hour, route, count) incremented per call; refuse triage above `TRIAGE_HOURLY_BUDGET`. Ask gets its own row in the same table and stops at `ASK_HOURLY_BUDGET`; past it, the phone speaks the offline line.
 
 ### `/api/ask`
 
-System instruction:
+System prompt:
 
-> You are beluga's describe-the-scene helper for a blind or low-vision pedestrian. Answer the user's question about one forward-facing chest-height photo in at most two short sentences, the most safety-relevant thing first, using left, right or straight ahead and rough metres. If your answer is about one main object, return its box. For traffic or walk signals say only what the signal appears to show; never say it is safe to cross. Never describe people's faces or identities. Return JSON only.
+> You are beluga's describe-the-scene helper for a blind or low-vision pedestrian. Answer the user's question about one forward-facing chest-height photo in at most two short sentences, the most safety-relevant thing first, using left, right or straight ahead and rough metres. If your answer is about one main object, return its box. For traffic or walk signals say only what the signal appears to show; never say it is safe to cross. Never describe people's faces or identities. Answer only by calling ask\_answer, once.
 
-Schema fields: answer, target label (nullable), box (nullable).
+Design A (build this first): the route runs the Ask agent as above, then calls ElevenLabs Text to Speech with the answer, the configured voice and Flash v2.5, MP3 output. Send the whole file back as the response body, with answer, label and box in response headers (see the Ask contract). If the voice fails, return the JSON with a voice-failed flag; the phone speaks the cached apology.
 
-Then call ElevenLabs Text to Speech with the answer, the configured voice and Flash v2.5, MP3 output. Send the whole file back as the response body, with answer, label and box in response headers (see the Ask contract). If ElevenLabs fails, return the JSON with a voice-failed flag; the phone speaks the cached apology.
+Design B (only if the image check passed in a voice session): the Ask agent speaks for itself. The route gives the phone a signed URL, and the phone runs the session with `@elevenlabs/client` over WebSocket (WebRTC gives no raw audio). It uploads the frame and sends the question with `uploadFile` and `sendMultimodalMessage`, sets the SDK's own volume to 0, and plays each `onAudio` PCM chunk through the stereo engine at the target angle. The backend deletes the conversation after. Switch to B only if it is at least as fast as A.
+
+Never open the earbuds' mic. On the Trekz Air, a mic switches Bluetooth to call mode, which is mono, so the warnings lose left and right until it ends. Ask stays a tap with a fixed question.
 
 ### Test set (commit it under `docs/test-frames`)
 
@@ -877,11 +922,11 @@ The free service has no connection pooler, and every request can land on a fresh
 
 ### Stretch: ask the data
 
-Build only if the tracks are ahead at the 23:00 cut check. A planner types a question into the dashboard ("Which station had the most near-misses this week?"), and Gemini answers in one or two sentences.
+Build only if the tracks are ahead at the 23:00 cut check. A planner types a question into the dashboard ("Which station had the most near-misses this week?"), and a third ElevenLabs agent answers in one or two sentences.
 
-- Gemini uses function calling with four fixed functions that wrap the existing dashboard queries: queue, cells, stations and feed, each with typed filters (time window, category, station, source).
-- No free-form SQL. The functions run on a read-only database role (`DATABASE_URL_READONLY`).
-- The answer lists which functions it called, so judges see Gemini and the continuous aggregates working together.
+- The agent has four webhook tools that wrap the existing dashboard queries: queue, cells, stations and feed, each with typed filters (time window, category, station, source).
+- No free-form SQL. The tools run on a read-only database role (`DATABASE_URL_READONLY`).
+- The answer lists which tools it called, so judges see the agent and the continuous aggregates working together.
 
 ### Done when
 
@@ -1028,8 +1073,8 @@ The phone sits on the chest with its screen facing the wearer, and the sounds pl
 2. **Demo** — video link, domain link, dashboard link.
 3. **How it works** — the two-speed architecture (on-phone safety loop vs slower cloud paths) as a short diagram image plus five bullets.
 4. **Tiger Data** — the hypertable, the four continuous aggregates (with bucket and refresh), the stacked aggregate, compression and retention as privacy tools, the fix-first score formula, and a screenshot of the performance panel with real numbers. Link to the migrations folder.
-5. **Gemini** — the triage rubric, the backend decision rule, the frame gate and budget, Ask with boxes turned into sound direction. Link to the prompts and schema files.
-6. **ElevenLabs** — the sound library table (id, use, prompt, length), how files were processed, and the live Flash v2.5 Ask voice. Link to the sound script.
+5. **ElevenLabs**: the two agents (triage and Ask, Gemini inside, answers through tool calls), the sound library table (id, use, prompt, length), how files were processed for bone conduction, and the live Flash v2.5 Ask voice. Link to the agent configs and the sound script.
+6. **Gemini**: the model inside the agents: the triage rubric, the backend decision rule, the frame gate and budget, Ask with boxes turned into sound direction. Link to the prompts and tool schemas.
 7. **Domain** — the GoDaddy Registry domain and what it serves.
 8. **Privacy** — consent default off, what is and isn't sent, coarsening, rotating ids, k-anonymity, 180-day deletion, simulated data labelling.
 9. **Run it yourself** — accounts needed, environment variables, migrations, seed, sound generation, deploy, and "open `/walk` in Chrome on an ARCore-depth Android phone".
@@ -1041,7 +1086,7 @@ The phone sits on the chest with its screen facing the wearer, and the sounds pl
 - Screenshots: phone in Walk mode with debug overlay, fix-first queue, map, station panel, performance panel, consent screen.
 - A 20-second screen recording of a live report appearing on the dashboard.
 - The final numbers: rows loaded, load seconds, raw vs aggregate milliseconds, compression ratio, average triage and Ask latency.
-- Built-with list: webxr, arcore, chrome, android, pwa, web-audio, mediapipe, gemini-api, elevenlabs, tiger-data, timescaledb, postgresql, postgis, next.js, vercel, maplibre, godaddy-registry.
+- Built-with list: webxr, arcore, chrome, android, pwa, web-audio, mediapipe, elevenlabs, elevenlabs-agents, gemini, tiger-data, timescaledb, postgresql, postgis, next.js, vercel, maplibre, godaddy-registry.
 
 ### Done when
 
@@ -1121,7 +1166,7 @@ Drop-offs: same table shifted one band outward (start 3.5 m, continuous under 1.
 | Detector input / rate | 320 × 240 / 4 Hz |
 | Detector score threshold | 0.35 |
 | Label match window | ±10°, label held 1 s |
-| Gemini frame size | ≤ 768 px long edge, JPEG 0.7, ≤ 400 KB |
+| Agent frame size | ≤ 768 px long edge, JPEG 0.7, ≤ 400 KB |
 | Gate: new thing | active ≥ 1 s, 20 s cooldown per label + side |
 | Gate: lasting obstacle / drop-off / head-height | 30 s cooldown each |
 | Gate: skip if turning faster than | 60°/s |
@@ -1161,7 +1206,8 @@ Drop-offs: same table shifted one band outward (start 3.5 m, continuous under 1.
 | Camera access not granted inside AR | Use depth-only sounds and disable Ask and triage (no frames to send); warnings still work. Say so in the limitations |
 | Detector too slow | Drop to 2 Hz, then disable; depth-only sounds |
 | Left and right still weak on the bone-conduction earbuds (under 8 of 10 in the blindfold test) | Full pan from 0.3 m off the walking line; say the side for every obstacle, not only named ones; try wired earbuds to tell a sound design problem from a bone conduction limit |
-| Gemini quota runs out | Switch to the billing-enabled key (env var only); raise gate cooldowns |
+| The agents can't see images, or are too slow for Ask | Call Gemini directly with the billing key for that route (`GEMINI_API_KEY`, the older Phase 5 design); say so in the README |
+| ElevenLabs credits run low | Raise gate cooldowns; lower the budgets; Ask speaks the offline line |
 | ElevenLabs down during Ask | Cached apology line; sounds unaffected (pre-generated) |
 | Tiger free service hits a limit | Trial service; change `DATABASE_URL`; re-run migrations and seed |
 | Continuous aggregate features differ by version | Keep the same four aggregates; use the older compression names; if stacking fails, build `cell_daily` from the hypertable directly and say so |

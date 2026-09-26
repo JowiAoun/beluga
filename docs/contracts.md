@@ -55,7 +55,7 @@ Response: accepted count and rejected count. The backend rejects the whole batch
 
 Request: one JPEG frame (long edge ≤ 768 px, quality \~0.7, base64), the triggering hazard (kind, distance, angle, height band, blocking share, detector class), scene hint if known, and deviceKey (for rate limiting only).
 
-Response (validated against the schema before returning). The yes/no answers come from Gemini; severity and the report decision come from the backend (see "What gets reported"):
+Response (validated against the schema before returning). The yes/no answers come from the triage agent; severity and the report decision come from the backend (see "What gets reported"):
 
 | Field | Type | Notes |
 | --- | --- | --- |
@@ -78,7 +78,7 @@ Response (validated against the schema before returning). The yes/no answers com
 
 Request: one JPEG frame (same limits), optional question text (MVP always "What's in front of me?").
 
-Response: answer text (≤ 2 sentences), target box or null, target label, and the spoken audio. Return the whole MP3 as the response body, with the answer, box and label in response headers (URL-encoded JSON). The phone decodes it and plays it through the panner. Web Audio can't decode half an MP3, and an `<audio>` element can't send a POST, so a streamed MP3 would not start any sooner. If Ask misses 3 s, the upgrade is to stream `pcm_24000` from ElevenLabs and play each chunk as its own audio buffer. If voice generation fails, return the text with a flag so the phone can fall back to its cached "Sorry, I couldn't see that" line.
+Response: answer text (≤ 2 sentences), target box or null, target label, and the spoken audio. Return the whole MP3 as the response body, with the answer, box and label in response headers (URL-encoded JSON). The phone decodes it and plays it through the stereo engine. Web Audio can't decode half an MP3, and an `<audio>` element can't send a POST, so a streamed MP3 would not start any sooner. If Ask misses 3 s, the upgrade is to stream `pcm_24000` from ElevenLabs and play each chunk as its own audio buffer. If voice generation fails, return the text with a flag so the phone can fall back to its cached "Sorry, I couldn't see that" line.
 
 ## Dashboard read endpoints (browser → `/api/dashboard/*`)
 

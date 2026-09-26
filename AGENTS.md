@@ -19,7 +19,7 @@ An installable web app for Android Chrome that warns blind and low-vision pedest
 - `npm run build`: production build, the same one Vercel runs
 - `npm run phone`: sends the phone's `localhost:3000` to this laptop over USB (see Phone testing)
 - `npm run db:smoke`: Phase 0 database check, needs `DATABASE_URL` in `.env.local`
-- `npm run db:migrate`, `npm run seed`, `npm run sounds`: filled in by Phases 6, 8 and 3
+- `npm run db:migrate`, `npm run seed`, `npm run sounds`, `npm run agents`: filled in by Phases 6, 8, 3 and 5
 
 ## Phone testing
 
@@ -33,7 +33,8 @@ An installable web app for Android Chrome that warns blind and low-vision pedest
 
 - The name is "beluga", always lowercase.
 - The safety loop (depth, hazard, sound) never touches the network.
-- No image ever reaches the database. Frames go only to Gemini and are never stored.
+- No image ever reaches the database. Frames go only to the ElevenLabs agents (which see with Gemini), are never stored by beluga, and each agent conversation is deleted right after its answer.
+- Every model call goes through ElevenLabs agents, not the Gemini API. Calling Gemini directly is only the fallback in `docs/PLAN.md`.
 - Reporting is off until the user turns it on. Locations are rounded to 3 decimals on the phone and again on the backend.
 - Never tell the user it is safe to cross a road, in any string, prompt or spoken line.
 - API keys live only on the backend. Files under `lib/server` start with `import "server-only"`.

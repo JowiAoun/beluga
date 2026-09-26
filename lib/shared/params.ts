@@ -192,7 +192,7 @@ export const FRAMES = {
 export const NETWORK = {
   triageTimeoutMs: 6000,
   askTimeoutMs: 8000,
-  // Defaults for GEMINI_HOURLY_BUDGET and ASK_HOURLY_BUDGET.
+  // Defaults for TRIAGE_HOURLY_BUDGET and ASK_HOURLY_BUDGET.
   triageHourlyBudget: 150,
   askHourlyBudget: 120,
   eventBatchIntervalMs: 10_000,
