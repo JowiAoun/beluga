@@ -134,6 +134,7 @@ To deploy, import the repository into Vercel and set the same variables there.
 ## Limitations and next steps
 
 - Depth needs a phone with ARCore depth and a little motion. Glass, dark and shiny floors leave holes in it.
+- Without depth, camera-only mode warns about the things the detector can name and about yellow edge strips, but finds no steps or drop-offs. The strip check goes by colour alone, so a yellow mat counts too.
 - Bone conduction gives weaker left and right than headphones, and no up or down.
 - The detector knows common objects only: there is no scooter class, so a scooter shows up as a bike, a motorcycle or nothing.
 - Ask and reporting need a network. Warnings don't.
