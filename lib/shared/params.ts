@@ -14,11 +14,12 @@ export const SENSING = {
   corridorAheadMaxM: 3.0,
   dropOffAheadMaxM: 3.5,
 
-  // Heights are above the fitted floor line.
-  floorBandM: { low: -0.25, high: 0.15 },
+  // Heights are above the fitted floor line. A single step or curb is 15 to 18 cm, so anything
+  // more than 15 cm below the floor counts as a drop-off.
+  floorBandM: { low: -0.15, high: 0.15 },
   obstacleBandM: { low: 0.15, high: 1.4 },
   headHeightBottomM: 1.4,
-  dropOffBelowFloorM: 0.25,
+  dropOffBelowFloorM: 0.15,
   floorSlopeClamp: 0.1,
 
   lateralBuckets: 5,
@@ -66,6 +67,13 @@ export const SENSING = {
   floorReestimateMinPoints: 50,
   // Under this, the camera points nearly straight up or down, and its flattened forward is noise.
   forwardMinFlat: 0.2,
+
+  // The sloped floor line needs this many floor points in the corridor, else the floor counts as flat.
+  floorLineMinPoints: 20,
+  // Near points must spread this far ahead for the line to have a slope.
+  floorLineMinSpreadM: 0.3,
+  // An obstacle covering at least this share of the corridor gets the "blocked" priority (3).
+  blockedMinBlocking: 0.6,
 } as const;
 
 export const USER = {

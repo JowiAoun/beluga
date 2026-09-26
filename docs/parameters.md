@@ -13,13 +13,13 @@ Copied from `docs/PLAN.md` on Sept 26, 2026. When this file and `lib/shared` dif
 | Valid depth range | 0.2–5.0 m |
 | Corridor half-width | 0.45 m |
 | Corridor ahead range | 0.3–3.0 m (drop-off 3.5 m) |
-| Floor band | −0.25 to +0.15 m |
+| Floor band | −0.15 to +0.15 m |
 | Obstacle band | 0.15–1.4 m above floor |
 | Head-height band | 1.4 m up to the user's height + 0.1 m (default 1.95 m) |
 | Floor line slope clamp | ±10% |
 | Out-of-view memory | until passed, at most 3 s |
 | Travel-direction blend | above 0.3 m/s, weight 0.5 |
-| Drop-off threshold | more than 0.25 m below floor |
+| Drop-off threshold | more than 0.15 m below floor (a single step is 15 to 18 cm) |
 | Lateral buckets | 5 |
 | Minimum points per hit | 6 |
 | Merge distance for adjacent buckets | 0.3 m |
@@ -32,6 +32,8 @@ Copied from `docs/PLAN.md` on Sept 26, 2026. When this file and `lib/shared` dif
 | First floor value | median of 5 hit tests on flat ground 0.5 to 2 m below the phone, ray 45° below straight ahead |
 | Floor calibration | ends after 1.5 m of walking or 8 s, once it has 200 floor points |
 | Floor drift | every 5 s, 30% of the way to the median of floor points within ±0.1 m (at least 50) |
+| Floor line | needs 20 floor points spread at least 0.3 m ahead, else the floor counts as flat |
+| Blocked priority (3) | an obstacle covering 60% of the corridor or more |
 
 ## Audio
 

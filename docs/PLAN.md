@@ -513,11 +513,11 @@ For each world point, relative to the camera position: ahead = distance along th
 | Band | Rule | Result |
 | --- | --- | --- |
 | Outside corridor | lateral beyond ±0.45 m, or ahead under 0.3 m, or ahead over 3.0 m (3.5 m for drop-off candidates) | ignore |
-| Walkable floor | height between −0.25 m and +0.15 m | ignore |
+| Walkable floor | height between −0.15 m and +0.15 m | ignore |
 | Obstacle | height over 0.15 m up to 1.4 m | obstacle candidate |
 | Head-height | height over 1.4 m up to the head-height top (user's height + 0.1 m, default 1.95 m) | head\_height candidate |
 | Overhead | above the head-height top | ignore |
-| Drop-off | height under −0.25 m | drop\_off candidate |
+| Drop-off | height under −0.15 m (a single step is 15 to 18 cm) | drop\_off candidate |
 
 The head-height top follows the user's height (asked in settings). Door frames sit at 2.03 m and exit signs hang near 2.1 m, so a fixed 2.2 m top would ring the head chime at every doorway.
 
@@ -529,6 +529,10 @@ Heights are measured from a floor line that can slope. Each update, fit height a
 - A kind × bucket is a raw hit only if it has at least 6 points (rejects depth noise).
 - Merge adjacent buckets of the same kind whose nearest distances are within 0.3 m into one hazard; its angle comes from its nearest point; its blocking share = merged width ÷ corridor width.
 - Also flag "pole-like": an obstacle hit narrower than one bucket whose points span more than 1.0 m of height.
+- A bucket's nearest distance is the nearest point with 5 more within 0.3 m behind it, so one stray depth point in front of a real hazard doesn't count.
+- A head-height hit with an obstacle under it in the same bucket is dropped. A pole, a person or a wall is found by the cane, so it is an obstacle. Head-height hazards are the ones with nothing below.
+- A drop-off's distance is the last floor point before it: the edge. From chest height the lower floor only shows further out (about 3.2 m for a 0.8 m drop 2 m ahead).
+- A hazard's side comes from the middle of its nearest points, so a wall reads as straight ahead.
 
 ### Smoothing and identity
 
@@ -536,6 +540,7 @@ Heights are measured from a floor line that can slope. Each update, fit height a
 - A hazard becomes active after appearing in 3 consecutive updates, and inactive after 6 consecutive updates without it.
 - Distance and angle are smoothed with a short exponential average (weight 0.5 on the new value) to stop sound jitter.
 - Out-of-view memory: a hazard that leaves the camera's view (off the bottom or side edge) keeps its last world position. It keeps sounding, placed from the user's current pose, until the user has passed it or 3 s go by. It deactivates early only when its position is back in view and empty. Without this, a knee-high box drops out of view at about 1 m and the warning stops right when it matters most.
+- The remembered position is the part that stays in view longest: the top of an obstacle, the bottom of a head-height board. When the near part has left the view but the far part still shows (the top of a low box), the nearer remembered spot wins, or the distance would stop falling right before impact.
 
 ### Priorities and output
 
@@ -545,7 +550,7 @@ Heights are measured from a floor line that can slope. Each update, fit height a
 ### Events produced here
 
 - `hazard_seen` once when a hazard first becomes active.
-- `near_miss` once per hazard when its distance first drops below 1.0 m. Skip hazards that cover the whole corridor (blocking above 0.9, like a wall or a closed door), or every door the user walks up to becomes a near-miss.
+- `near_miss` once per hazard when its distance first drops below 1.0 m. Skip obstacles that cover the whole corridor (blocking above 0.9, like a wall or a closed door), or every door the user walks up to becomes a near-miss. A drop-off across the whole path still counts.
 - Both go to the event queue (Phase 9 decides whether they are sent).
 
 ### Tests (synthetic point clouds)
@@ -1047,13 +1052,13 @@ The repo is public, the README renders with working links and images, no secret 
 | Valid depth range | 0.2–5.0 m |
 | Corridor half-width | 0.45 m |
 | Corridor ahead range | 0.3–3.0 m (drop-off 3.5 m) |
-| Floor band | −0.25 to +0.15 m |
+| Floor band | −0.15 to +0.15 m |
 | Obstacle band | 0.15–1.4 m above floor |
 | Head-height band | 1.4 m up to the user's height + 0.1 m (default 1.95 m) |
 | Floor line slope clamp | ±10% |
 | Out-of-view memory | until passed, at most 3 s |
 | Travel-direction blend | above 0.3 m/s, weight 0.5 |
-| Drop-off threshold | more than 0.25 m below floor |
+| Drop-off threshold | more than 0.15 m below floor (a single step is 15 to 18 cm) |
 | Lateral buckets | 5 |
 | Minimum points per hit | 6 |
 | Merge distance for adjacent buckets | 0.3 m |
@@ -1066,6 +1071,8 @@ The repo is public, the README renders with working links and images, no secret 
 | First floor value | median of 5 hit tests on flat ground 0.5 to 2 m below the phone, ray 45° below straight ahead |
 | Floor calibration | ends after 1.5 m of walking or 8 s, once it has 200 floor points |
 | Floor drift | every 5 s, 30% of the way to the median of floor points within ±0.1 m (at least 50) |
+| Floor line | needs 20 floor points spread at least 0.3 m ahead, else the floor counts as flat |
+| Blocked priority (3) | an obstacle covering 60% of the corridor or more |
 
 ### Audio
 
