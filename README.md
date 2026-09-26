@@ -55,7 +55,7 @@ Every event lands in one hypertable, and every dashboard view reads a continuous
 
 - **Compression and retention as privacy tools**: chunks older than 7 days turn columnar, and raw events are dropped after 180 days while the aggregates keep their counts
 - **The fix-first score**, in [`fix_first_for(sources)`](db/migrations/010_fix_first.sql): severity weight (1, 2, 4, 8) × log₂(1 + reporters) × (1 + log₁₀(1 + near-misses)) × recency (1.5 within 48 hours, then halving every 7 days) × 1.3 near a station. A spot needs 3 different reporters before it shows.
-- **Performance panel**: the same question, "events and near-misses per cell over the last 7 days", timed by the database on the raw hypertable and on `cell_15m`, next to the compression ratio. With the 424,000-row seed on a local TimescaleDB 2.30: 74 ms raw, 14 ms from the aggregate, compressed chunks 10 times smaller, loaded in 11 s.
+- **Performance panel**: the same question, "events and near-misses per cell over the last 7 days", timed by the database on the raw hypertable and on `cell_15m`, next to the compression ratio. On Tiger Cloud's free service with the 429,000-row seed: about 390 ms raw and 17 to 92 ms from the aggregate, compressed chunks 10.4 times smaller, loaded in 53 s.
 
 ## ElevenLabs
 

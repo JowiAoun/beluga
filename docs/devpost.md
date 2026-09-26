@@ -1,6 +1,6 @@
 # Devpost draft
 
-Text for the beluga submission, ready to paste. The numbers marked "local" come from a local TimescaleDB 2.30 and change once the seed runs on Tiger Cloud: take them from the dashboard's performance panel.
+Text for the beluga submission, ready to paste. The database numbers come from the dashboard's performance panel on Tiger Cloud, Sept 26.
 
 **Tagline**: Short sounds from the side of each obstacle for blind and low-vision pedestrians, and a fix-first list for the city.
 
@@ -36,7 +36,7 @@ Belugas find their way by echolocation: they listen to sound bouncing back from 
 
 - Ask answers in about 2.5 s from the agent, and Ask the data in under 2 s.
 - The triage agent names a "sidewalk closed" barrier as a construction barrier with 0.95 confidence, and the conversation holding the frame is gone a few seconds later.
-- 429,000 labelled simulated events load in 11 s. The same 7-day question takes 47 ms on the raw table and 14 ms from the continuous aggregate, and compressed chunks are 10 times smaller (local).
+- 429,000 labelled simulated events load into Tiger Cloud in 53 s. The same 7-day question takes about 390 ms on the raw table and 17 to 92 ms from the continuous aggregate, and compressed chunks are 10.4 times smaller.
 - A judge's live report joins the fix-first queue within seconds.
 - 185 automated tests.
 
