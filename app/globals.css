@@ -176,6 +176,17 @@
   color: var(--foreground);
 }
 
+/* Clears the status bar and the camera cutout on a phone, in the installed app and in AR. The
+   /walk pages ask for viewport-fit=cover, which reports those insets and lets the page's own
+   colour fill the strip at the top. The minimum still holds where a browser reports 0. */
+@utility pt-safe {
+  padding-top: max(3rem, calc(env(safe-area-inset-top) + 0.75rem));
+}
+
+@utility pb-safe {
+  padding-bottom: max(0.75rem, calc(env(safe-area-inset-bottom) + 0.75rem));
+}
+
 html {
   scroll-behavior: smooth;
   scroll-padding-top: 6rem;

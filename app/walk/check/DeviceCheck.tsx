@@ -328,7 +328,7 @@ export default function DeviceCheck() {
         </div>
       )}
 
-      <main className="relative mx-auto flex max-w-xl flex-col gap-5 px-4 pt-8 pb-12">
+      <main className="relative mx-auto flex max-w-xl flex-col gap-5 px-4 pt-safe pb-12">
         {!inAr && (
           <header className="flex flex-col gap-4">
             <div className="flex items-center gap-3">

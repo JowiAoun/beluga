@@ -226,7 +226,7 @@ export default function Sounds() {
 
   if (testing) {
     return (
-      <main className="flex min-h-dvh flex-col gap-3 bg-background p-3 text-foreground">
+      <main className="flex min-h-dvh flex-col gap-3 bg-background px-3 pt-safe pb-safe text-foreground">
         <p role="status" className="px-2 pt-3 text-center text-xl font-semibold">
           Cue {test.answers.length + 1} of {test.cues.length}. Tap the side you heard.
         </p>
@@ -261,7 +261,7 @@ export default function Sounds() {
   }
 
   return (
-    <main className="group/sounds mx-auto flex w-full max-w-xl flex-col gap-5 bg-background px-4 pt-8 pb-12 text-foreground">
+    <main className="group/sounds mx-auto flex w-full max-w-xl flex-col gap-5 bg-background px-4 pt-safe pb-12 text-foreground">
       <header className="flex flex-col gap-4">
         <div className="flex items-center gap-3">
           <BelugaMark size={64} className="size-14" />
@@ -277,7 +277,7 @@ export default function Sounds() {
         </p>
       </header>
 
-      <div className="sticky top-0 z-10 -mx-4 border-b border-line bg-background px-4 pt-8 pb-3">
+      <div className="sticky top-0 z-10 -mx-4 border-b border-line bg-background px-4 pt-safe pb-3">
         <HeadFromAbove />
       </div>
 

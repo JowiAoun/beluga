@@ -80,7 +80,7 @@ export default function Practice() {
     } catch { setMessage("Audio could not start. Tap a sound to try again."); }
   };
 
-  return <main className="mx-auto flex min-h-dvh max-w-2xl flex-col gap-5 px-4 pt-8 pb-12">
+  return <main className="mx-auto flex min-h-dvh max-w-2xl flex-col gap-5 px-4 pt-safe pb-12">
     <div className="flex items-center gap-3"><BelugaMark size={64} className="size-14" /><h1 className={cn(DISPLAY, "text-4xl sm:text-5xl")}>Learn <Name /><span className="normal-case">’s</span> sounds</h1></div>
     <p className="self-start rounded-md bg-accent px-3 py-1 text-base font-bold text-on-accent">Audio practice · Simulated examples</p>
     <p className="text-xl text-muted">Practice while standing still. Listen through your earbuds. Left and right cues indicate the obstacle’s side. Faster repeats mean it is closer.</p>

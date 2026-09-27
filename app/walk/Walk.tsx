@@ -602,7 +602,7 @@ export default function Walk() {
         className={inAr && mode === "camera" ? "fixed inset-0 h-full w-full object-cover" : "hidden"}
       />
       {inAr ? (
-        <main className="relative z-10 flex min-h-dvh flex-col justify-between gap-3 p-3">
+        <main className="relative z-10 flex min-h-dvh flex-col justify-between gap-3 px-3 pt-safe pb-safe">
           <div className="flex flex-col gap-2">
             {status && (
               <p
@@ -657,7 +657,7 @@ export default function Walk() {
           <StopButton onStop={() => { hapticsRef.current?.stop(); sessionRef.current?.stop(); }} />
         </main>
       ) : (
-        <main className="mx-auto flex w-full max-w-xl flex-col gap-5 px-4 pt-10 pb-16">
+        <main className="mx-auto flex w-full max-w-xl flex-col gap-5 px-4 pt-safe pb-16">
           <header className="relative isolate flex flex-col items-center gap-2 text-center">
             <Contours variant="a" className="-inset-x-4 -top-10 -z-10 h-96" />
             <WalkBeluga className="w-64 max-w-full" />
