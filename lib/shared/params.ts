@@ -97,6 +97,12 @@ export const SENSING = {
   // height, for this many updates in a row with at least this many floor points.
   floorMoveAfterUpdates: 3,
   floorMoveMinPoints: 30,
+  // Chrome hands back the last depth image when ARCore sends no new one. Depth that hasn't changed
+  // for this long while the phone moved 5 cm or turned 3° is stale, and placed with the new pose
+  // it would put things in the wrong spot, so it counts as no depth.
+  depthFrozenAfterMs: 500,
+  depthFrozenMoveM: 0.05,
+  depthFrozenTurnDeg: 3,
 } as const;
 
 export const USER = {

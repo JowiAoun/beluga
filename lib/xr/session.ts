@@ -3,7 +3,7 @@
 
 import { DETECTOR, FRAMES, SENSING } from "@/lib/shared/params";
 import { createCameraReader, encodeJpeg, fitLongEdge, type CameraReader, type SmallImage } from "./cameraImage";
-import { gridFor, NO_DEPTH, sampleDepth, type DepthSample } from "./depth";
+import { gridFor, NO_DEPTH, sampleDepth, StaleDepth, type DepthSample } from "./depth";
 import { FloorTracker, type FloorEvent } from "./floor";
 import { xrReady } from "./gl";
 import { forwardOf, upOf } from "./geometry";
@@ -34,6 +34,8 @@ export interface LiveStats {
   processingMs: number;
   depthError: string | null;
   cameraError: string | null;
+  // Depth has stopped changing while the phone moves, so it isn't used.
+  depthFrozen: boolean;
 }
 
 // Which setup the phone took: an AR level from lib/xr/request.ts, or "camera mode".
@@ -56,6 +58,8 @@ export interface SessionSummary {
   depthValidShare: number | null;
   // Share of depth cells left out because their readings didn't agree.
   depthUnsteadyShare?: number | null;
+  // Seconds of stale depth, left out because it stopped changing while the phone moved.
+  depthFrozenS?: number;
   fov: FieldOfView | null;
   floor: {
     source: FloorSource;
@@ -154,7 +158,14 @@ export function startSensing(options: SensingOptions): SensingSession {
   // ARCore takes a moment to start tracking. That is not a loss, so the monitor waits for the first pose.
   let everTracked = false;
 
-  const live: LiveStats = { frameRate: 0, updateRate: 0, processingMs: 0, depthError: null, cameraError: null };
+  const live: LiveStats = {
+    frameRate: 0,
+    updateRate: 0,
+    processingMs: 0,
+    depthError: null,
+    cameraError: null,
+    depthFrozen: false,
+  };
   let windowStart = startedAt;
   let windowFrames = 0;
   let windowUpdates = 0;
@@ -167,6 +178,8 @@ export function startSensing(options: SensingOptions): SensingSession {
   let lastTrackedT: number | null = null;
   let validShareSum = 0;
   let unsteadyShareSum = 0;
+  const staleDepth = new StaleDepth();
+  let frozenUpdates = 0;
   let depthUpdates = 0;
   let calibratedAt: number | null = null;
   let floorMin = Infinity;
@@ -308,6 +321,11 @@ export function startSensing(options: SensingOptions): SensingSession {
       } catch (err) {
         live.depthError = errorText(err);
       }
+      live.depthFrozen = staleDepth.update(t, depth, camera, forwardOf(worldFromView));
+      if (live.depthFrozen) {
+        depth = NO_DEPTH;
+        frozenUpdates++;
+      }
     }
 
     const moving = motion.update(t, camera, forwardOf(worldFromView));
@@ -378,6 +396,7 @@ export function startSensing(options: SensingOptions): SensingSession {
       trackingLostShare: frames > 0 ? lostFrames / frames : 0,
       depthValidShare: depthUpdates > 0 ? validShareSum / depthUpdates : null,
       depthUnsteadyShare: depthUpdates > 0 ? unsteadyShareSum / depthUpdates : null,
+      depthFrozenS: frozenUpdates / SENSING.updatesPerSecond,
       fov: last?.fov ?? null,
       floor: {
         source: floor?.source ?? "guess",

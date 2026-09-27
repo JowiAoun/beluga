@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fitLongEdge } from "./cameraImage";
-import { gridFor, sampleDepth, type DepthReader } from "./depth";
+import { gridFor, sampleDepth, StaleDepth, type DepthReader, type DepthSample } from "./depth";
 import { IDENTITY, perspective, yaw } from "./testFixtures";
 
 const constant = (metres: number): DepthReader => ({ getDepthInMeters: () => metres });
@@ -56,6 +56,41 @@ describe("sampleDepth", () => {
     expect(sample.points[0]).toBeCloseTo(-2, 5);
     expect(sample.points[1]).toBeCloseTo(1.5, 5);
     expect(sample.points[2]).toBeCloseTo(0, 5);
+  });
+});
+
+describe("StaleDepth", () => {
+  const grid = { cols: 2, rows: 2 };
+  const sample = (fingerprint: number): DepthSample => ({
+    ...sampleDepth(constant(2), perspective(40, 55), IDENTITY, grid),
+    fingerprint,
+  });
+  const ahead = { x: 0, y: 0, z: -1 };
+
+  it("keeps depth that changes, and a still phone's repeated depth", () => {
+    const stale = new StaleDepth();
+    for (let i = 0; i < 20; i++) {
+      expect(stale.update(i * 100, sample(i), { x: 0, y: 1.3, z: -i * 0.14 }, ahead)).toBe(false);
+    }
+    for (let i = 0; i < 20; i++) expect(stale.update(2000 + i * 100, sample(7), { x: 0, y: 1.3, z: 0 }, ahead)).toBe(false);
+  });
+
+  it("drops depth that repeats for half a second while the phone walks on", () => {
+    const stale = new StaleDepth();
+    const walked = (t: number) => stale.update(t, sample(5), { x: 0, y: 1.3, z: (-1.4 * t) / 1000 }, ahead);
+    expect(walked(0)).toBe(false);
+    expect(walked(400)).toBe(false);
+    expect(walked(600)).toBe(true);
+    // A new depth image is trusted again at once.
+    expect(stale.update(700, sample(6), { x: 0, y: 1.3, z: -1 }, ahead)).toBe(false);
+  });
+
+  it("drops repeated depth after a turn, even standing still", () => {
+    const stale = new StaleDepth();
+    const camera = { x: 0, y: 1.3, z: 0 };
+    stale.update(0, sample(5), camera, ahead);
+    const turned = { x: Math.sin(0.1), y: 0, z: -Math.cos(0.1) };
+    expect(stale.update(600, sample(5), camera, turned)).toBe(true);
   });
 });
 

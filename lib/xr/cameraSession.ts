@@ -151,7 +151,14 @@ export function startCameraSensing(options: CameraSensingOptions): SensingSessio
   const heightM = options.userHeightM * CAMERA_MODE.chestShare;
   const detectorSinks = new Set<DetectorSink>();
   const setup: SessionSetup = { name: "camera mode", refused: [] };
-  const live: LiveStats = { frameRate: 0, updateRate: 0, processingMs: 0, depthError: null, cameraError: null };
+  const live: LiveStats = {
+    frameRate: 0,
+    updateRate: 0,
+    processingMs: 0,
+    depthError: null,
+    cameraError: null,
+    depthFrozen: false,
+  };
   const frameCanvas = document.createElement("canvas");
   const frameContext = frameCanvas.getContext("2d", { willReadFrequently: true });
 

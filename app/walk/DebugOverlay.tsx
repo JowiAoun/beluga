@@ -220,6 +220,7 @@ export default function DebugOverlay({ view, session }: { view: DebugView | null
             Depth {update.validCount} of {update.sampleCount} points
             {update.unsteadyCount ? `, ${update.unsteadyCount} left out as unsteady` : ""}
             {stats?.depthError && `, error: ${stats.depthError}`}
+            {stats?.depthFrozen && ", frozen: the same depth while the phone moves, so it isn't used"}
           </p>
           <p>
             Phone {(update.camera.y - update.floorY).toFixed(2)} m above the floor (
