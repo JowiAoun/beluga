@@ -22,6 +22,8 @@ export interface SensingUpdate {
   t: number;
   // False while tracking is lost: points is empty and the hazard engine should hold still.
   tracking: boolean;
+  // The camera is covered or pitch dark, so no depth is used and tracking reads false.
+  dark?: boolean;
   // World points from depth, x y z one after another.
   points: Float32Array;
   sampleCount: number;

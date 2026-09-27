@@ -4,6 +4,8 @@
 import { DETECTOR, FRAMES, SENSING } from "@/lib/shared/params";
 import { createCameraReader, encodeJpeg, fitLongEdge, type CameraReader, type SmallImage } from "./cameraImage";
 import { gridFor, NO_DEPTH, sampleDepth, StaleDepth, type DepthSample } from "./depth";
+import { meanBrightness } from "@/lib/detect/detections";
+import { DarkCamera } from "./dark";
 import { FloorTracker, type FloorEvent } from "./floor";
 import { xrReady } from "./gl";
 import { forwardOf, upOf } from "./geometry";
@@ -14,7 +16,7 @@ import { TrackingMonitor } from "./tracking";
 import type { FloorSource, SensingUpdate, Vec3 } from "./types";
 
 // Voice lines the session asks for. The app decides how they sound.
-export type Cue = "take_steps" | "calibrated" | "hold_steady" | "tap_camera";
+export type Cue = "take_steps" | "calibrated" | "hold_steady" | "tap_camera" | "camera_dark" | "camera_light";
 
 // stop: the Stop button. hidden: the app left the screen. error: something threw.
 // ended: Chrome ended the session, for example on the back button.
@@ -60,6 +62,8 @@ export interface SessionSummary {
   depthUnsteadyShare?: number | null;
   // Seconds of stale depth, left out because it stopped changing while the phone moved.
   depthFrozenS?: number;
+  // Seconds with the camera covered or pitch dark.
+  darkS?: number;
   fov: FieldOfView | null;
   floor: {
     source: FloorSource;
@@ -180,6 +184,8 @@ export function startSensing(options: SensingOptions): SensingSession {
   let unsteadyShareSum = 0;
   const staleDepth = new StaleDepth();
   let frozenUpdates = 0;
+  const darkCamera = new DarkCamera();
+  let darkUpdates = 0;
   let depthUpdates = 0;
   let calibratedAt: number | null = null;
   let floorMin = Infinity;
@@ -231,6 +237,9 @@ export function startSensing(options: SensingOptions): SensingSession {
       lastDetectorT = t;
       const size = fitLongEdge(width, height, Math.max(DETECTOR.inputWidth, DETECTOR.inputHeight));
       const image = reader.read(texture, size.width, size.height);
+      // The same small frame tells a covered or pitch-dark camera.
+      const change = darkCamera.update(t, meanBrightness(image));
+      if (change) onCue(change === "dark" ? "camera_dark" : "camera_light");
       for (const sink of detectorSinks) sink(image, t);
     }
     for (const capture of captures.splice(0)) {
@@ -303,8 +312,11 @@ export function startSensing(options: SensingOptions): SensingSession {
     const projection = view.projectionMatrix;
     const worldFromView = view.transform.matrix;
     const fov = fieldOfView(projection);
+    // Depth from a covered or pitch-dark camera is noise: none of it is used until the camera sees.
+    const dark = darkCamera.dark;
+    if (dark) darkUpdates++;
     let depth: DepthSample = NO_DEPTH;
-    if (features.depth) {
+    if (features.depth && !dark) {
       try {
         const info = frame.getDepthInformation(view);
         // Depth that needn't match the view comes with its own camera; otherwise it is the view's.
@@ -330,7 +342,7 @@ export function startSensing(options: SensingOptions): SensingSession {
 
     const moving = motion.update(t, camera, forwardOf(worldFromView));
     let floorEvent: FloorEvent | null = null;
-    if (features.depth) floorEvent = floor.update(t, depth.points, camera, moving.forward, moving.right);
+    if (features.depth && !dark) floorEvent = floor.update(t, depth.points, camera, moving.forward, moving.right);
     if (floorEvent === "calibration_started") onCue("take_steps");
     if (floorEvent === "calibrated") {
       calibratedAt = t;
@@ -361,7 +373,9 @@ export function startSensing(options: SensingOptions): SensingSession {
 
     emit({
       t,
-      tracking: true,
+      // Dark counts as lost tracking downstream, so every warning holds still and goes quiet.
+      tracking: !dark,
+      dark,
       points: depth.points,
       sampleCount: depth.sampleCount,
       validCount: depth.validCount,
@@ -397,6 +411,7 @@ export function startSensing(options: SensingOptions): SensingSession {
       depthValidShare: depthUpdates > 0 ? validShareSum / depthUpdates : null,
       depthUnsteadyShare: depthUpdates > 0 ? unsteadyShareSum / depthUpdates : null,
       depthFrozenS: frozenUpdates / SENSING.updatesPerSecond,
+      darkS: darkUpdates / SENSING.updatesPerSecond,
       fov: last?.fov ?? null,
       floor: {
         source: floor?.source ?? "guess",

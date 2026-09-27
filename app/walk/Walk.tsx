@@ -639,6 +639,7 @@ export default function Walk() {
   const ready = detectionReady(update, cameraOnly, estimatesConfirmed);
   let status: string | null = null;
   if (phase === "starting") status = "Starting";
+  else if (update?.dark) status = "Camera covered or too dark";
   else if (update && !update.tracking) status = "Hold steady";
   else if (cameraOnly) status = estimatesConfirmed ? "Estimated warnings — no depth calibration" : "Camera-only setup — warnings paused";
   else if (update?.calibrating) status = "Calibrating — take three slow steps";
@@ -970,6 +971,7 @@ function Summary({ summary, health }: { summary: SessionSummary; health: HealthC
         {summary.depthValidShare === null ? "never" : `${Math.round(summary.depthValidShare * 100)}% of points`}
         {summary.depthUnsteadyShare ? `, ${Math.round(summary.depthUnsteadyShare * 100)}% left out as unsteady` : ""}
         {summary.depthFrozenS ? `, frozen for ${summary.depthFrozenS.toFixed(1)} s` : ""}
+        {summary.darkS ? `, camera dark for ${summary.darkS.toFixed(1)} s` : ""}
       </p>
       <p>
         Floor {floor.source.replace("_", " ")}

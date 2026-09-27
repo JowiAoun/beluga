@@ -1130,6 +1130,7 @@ The repo is public, the README renders with working links and images, no secret 
 | Stale depth | the same depth image for 0.5 s while the phone moved 5 cm or turned 3° counts as no depth |
 | Detector stall | a frame not back from the detector in 3 s is let go, and the next one goes |
 | Warnings stopped | no update for 3 s, no trusted depth for 3 s, or sound paused for 2 s: a red banner, spoken once, counted in the summary |
+| Dark camera | frames darker than 10 of 255 for 0.5 s: no depth is used and warnings go quiet; brighter than 20 for 0.5 s: back on |
 | Smoothing weight | 0.5 |
 | Near-miss distance | 1.0 m |
 | Stationary | < 0.1 m moved in 5 s |

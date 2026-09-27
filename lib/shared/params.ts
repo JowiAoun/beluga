@@ -103,6 +103,11 @@ export const SENSING = {
   depthFrozenAfterMs: 500,
   depthFrozenMoveM: 0.05,
   depthFrozenTurnDeg: 3,
+  // A covered or pitch-dark camera (lib/xr/dark.ts). Frames darker than this, 0 to 255, for half a
+  // second turn depth and warnings off; brighter than `cameraLightAbove` for half a second, back on.
+  cameraDarkBelow: 10,
+  cameraLightAbove: 20,
+  cameraDarkAfterMs: 500,
 } as const;
 
 export const USER = {

@@ -16,6 +16,8 @@ export const LINES = {
   camera_only:
     "Camera-only mode. It warns about things it can name, like people, bikes and chairs, and yellow edge strips. No step warnings.",
   tap_camera: "Tap the screen once to start the camera.",
+  camera_dark: "The camera is covered or it's too dark. Warnings are off until it can see.",
+  camera_light: "The camera can see again.",
   camera_denied: "beluga needs the camera. Allow it in the browser's settings for this site, then tap Start again.",
 } as const;
 
