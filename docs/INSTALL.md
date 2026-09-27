@@ -38,7 +38,7 @@ Import the repository into Vercel and set the same variables there. Pushes don't
 
 1. Run `npm run lint`
 2. Run `npm run typecheck`
-3. Run `npm test` for the 284 tests
+3. Run `npm test` for the 287 tests
 
 ## Limitations & next steps
 

@@ -51,7 +51,7 @@ beluga turns a phone into a hands-free obstacle warning. You wear the phone on a
 - The triage agent names a "sidewalk closed" barrier as a construction barrier with 0.95 confidence, and the conversation holding the frame is gone a few seconds later.
 - 429,093 labelled simulated events load into Tiger Cloud in 53 s. The same 7-day question takes about 390 ms on the raw table and 17 to 92 ms from the continuous aggregate, and compressed chunks are 10.4 times smaller.
 - A judge's live report joins the fix-first queue within seconds.
-- Every voice clip in all five voices checked with Scribe, and 284 automated tests.
+- Every voice clip in all five voices checked with Scribe, and 287 automated tests.
 
 ## What we learned
 
