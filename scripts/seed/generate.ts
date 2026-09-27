@@ -266,8 +266,18 @@ function spotIndex(spots: number, rand: () => number): number {
   return Math.min(spots - 1, Math.floor(spots * rand() ** 2));
 }
 
+// The description on the reporters `npm run demo-spot` stages. A reload of the fortnight keeps them.
+export const STAGED_DESCRIPTION = "Staged demo reporter (simulated)";
+
 // September and October in Ottawa are UTC-4.
 const LOCAL_OFFSET_H = -4;
+const HOUR_MS = 3_600_000;
+
+// Midnight in Ottawa on the day of `time`, as a timestamp.
+function localMidnight(time: Date): number {
+  const local = time.getTime() + LOCAL_OFFSET_H * HOUR_MS;
+  return local - (local % 86_400_000) - LOCAL_OFFSET_H * HOUR_MS;
+}
 const DEVICES_PER_STATION = 400;
 
 export interface GenerateOptions {
@@ -296,9 +306,11 @@ export function* generate(options: GenerateOptions = {}): Generator<SeedRow> {
         () => `sim-${story.station}-${Math.floor(rand() * DEVICES_PER_STATION)}`,
       ),
     );
+    // The last day is the one the seed runs on, filled up to `end`, so the dashboard's 1 hour and
+    // 24 hour windows have simulated rows right after a seed.
+    const today = localMidnight(end);
     for (let d = days - 1; d >= 0; d--) {
-      const dayStart = new Date(end.getTime() - (d + 1) * 86_400_000);
-      dayStart.setUTCHours(-LOCAL_OFFSET_H, 0, 0, 0);
+      const dayStart = new Date(today - d * 86_400_000);
       const weekday = (dayStart.getUTCDay() + 6) % 7 < 5;
       const sessions = Math.round((minSessions + rand() * (maxSessions - minSessions)) * (weekday ? 1 : 0.5));
       const weights = Array.from({ length: 24 }, (_, h) => ({ hour: h, weight: story.hourWeight(h, weekday) }));

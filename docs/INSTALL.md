@@ -34,6 +34,8 @@ Import the repository into Vercel and set the same variables there. Pushes don't
 3. Push your commits to GitHub
 4. Run `npm run deploy`
 
+Each deploy also runs the migrations, and replaces the simulated fortnight once its newest row is 6 hours old. That keeps simulated rows in the dashboard's 1 hour and 24 hour windows. To do it by hand, run `npm run seed -- --reset` from a network that reaches the database.
+
 ## Test
 
 1. Run `npm run lint`

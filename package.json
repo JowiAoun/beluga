@@ -14,7 +14,7 @@
     "phone": "tsx scripts/phone.ts",
     "db:smoke": "tsx --env-file-if-exists=.env.local db/smoke.ts",
     "db:migrate": "tsx --env-file-if-exists=.env.local db/migrate.ts",
-    "db:deploy": "tsx --env-file-if-exists=.env.local db/migrate.ts && tsx --conditions=react-server --env-file-if-exists=.env.local scripts/seed/index.ts --if-empty",
+    "db:deploy": "tsx --env-file-if-exists=.env.local db/migrate.ts && tsx --conditions=react-server --env-file-if-exists=.env.local scripts/seed/index.ts --if-stale",
     "seed": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/seed/index.ts",
     "demo-spot": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/seed/demo-spot.ts",
     "sounds": "tsx --env-file-if-exists=.env.local scripts/sounds/index.ts",

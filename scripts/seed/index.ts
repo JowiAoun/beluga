@@ -1,8 +1,10 @@
 // Tiger Data prize: loads the simulated fortnight (scripts/seed/generate.ts) with COPY, refreshes
 // the four continuous aggregates, compresses the older week, and stores a performance snapshot.
 //
-// Run `npm run seed`. `npm run seed -- --reset` deletes simulated rows first (live rows stay), and
-// `--if-empty` loads only when no simulated rows are there yet (Vercel builds run it).
+// Run `npm run seed`. `npm run seed -- --reset` deletes simulated rows first (live rows and staged
+// demo reporters stay). `--if-empty` loads only when no simulated rows are there yet, and
+// `--if-stale` also replaces them once the newest is SEED.staleAfterHours old, so the fortnight
+// ends near now again (Vercel builds run it).
 // Needs the migrations (`npm run db:migrate`) and DATABASE_URL in .env.local.
 
 import { Readable } from "node:stream";
@@ -13,7 +15,7 @@ import { deviceHash } from "@/lib/server/events";
 import { measurePerf } from "@/lib/server/db/perf";
 import { CONSENT_VERSION } from "@/lib/shared/enums";
 import { DATABASE, SEED } from "@/lib/shared/params";
-import { generate, type SeedRow } from "./generate";
+import { generate, STAGED_DESCRIPTION, type SeedRow } from "./generate";
 
 const COLUMNS = [
   "time",
@@ -103,19 +105,32 @@ async function main(): Promise<number> {
       return 1;
     }
 
-    const [existing] = await sql<Array<{ n: number }>>`
-      select count(*)::int as n from hazard_events where source = 'simulated'`;
+    const [existing] = await sql<Array<{ n: number; newest: Date | null }>>`
+      select count(*)::int as n, max(time) as newest from hazard_events
+      where source = 'simulated' and description is distinct from ${STAGED_DESCRIPTION}`;
     if (existing.n > 0 && process.argv.includes("--if-empty")) {
       console.log(`${existing.n} simulated rows are already loaded. Nothing to do.`);
       return 0;
     }
-    if (existing.n > 0 && !process.argv.includes("--reset")) {
+    if (existing.n > 0 && existing.newest && process.argv.includes("--if-stale")) {
+      const hours = (Date.now() - existing.newest.getTime()) / 3_600_000;
+      if (hours < SEED.staleAfterHours) {
+        console.log(`The newest simulated row is ${hours.toFixed(1)} h old. Nothing to do.`);
+        return 0;
+      }
+      console.log(`The newest simulated row is ${hours.toFixed(0)} h old, so the fortnight is replaced to end now.`);
+    } else if (existing.n > 0 && !process.argv.includes("--reset")) {
       console.error(`${existing.n} simulated rows are already loaded. Run npm run seed -- --reset to replace them.`);
       return 1;
     }
     if (existing.n > 0) {
       const began = Date.now();
-      await sql`delete from hazard_events where source = 'simulated'`;
+      // The older week sits in compressed chunks, and deleting from them decompresses every row.
+      // TimescaleDB stops a statement at 100,000 of those unless this session lifts the limit.
+      await sql`set timescaledb.max_tuples_decompressed_per_dml_transaction = 0`;
+      await sql`delete from hazard_events where source = 'simulated' and description is distinct from ${STAGED_DESCRIPTION}`;
+      // Frees the deleted rows' space for the new ones, so each reload doesn't grow the database.
+      await sql`vacuum hazard_events`;
       console.log(`Deleted ${existing.n} simulated rows in ${((Date.now() - began) / 1000).toFixed(1)} s.`);
     }
 

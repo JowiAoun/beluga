@@ -339,6 +339,9 @@ export const SEED = {
   days: 14,
   minRows: 300_000,
   maxRows: 500_000,
+  // `--if-stale` replaces the fortnight once its newest row is this old, so the dashboard's 1 hour
+  // and 24 hour windows keep simulated rows.
+  staleAfterHours: 6,
 } as const;
 
 export const DEBUG_OVERLAY = {

@@ -13,9 +13,10 @@ import { deviceHash } from "@/lib/server/events";
 import { CIVIC_CATEGORIES, CONSENT_VERSION, type CivicCategory, type Severity } from "@/lib/shared/enums";
 import { cellOf, coarsen } from "@/lib/shared/geo";
 import { STATIONS } from "@/lib/shared/stations";
+import { STAGED_DESCRIPTION } from "./generate";
 
 // The staged reports say what they are, so --remove finds exactly them.
-const DESCRIPTION = "Staged demo reporter (simulated)";
+const DESCRIPTION = STAGED_DESCRIPTION;
 const REPORTERS = 2;
 // What the reporting rules give each category in its usual case.
 const SEVERITY: Record<CivicCategory, Severity> = {

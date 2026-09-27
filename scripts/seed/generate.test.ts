@@ -36,6 +36,15 @@ describe("seed generator", () => {
     }
   });
 
+  it("runs up to the end time, so the newest windows have rows", () => {
+    const rows = [...generate({ days: 2, end: END })];
+    const newest = Math.max(...rows.map((r) => r.time.getTime()));
+    expect(newest).toBeLessThanOrEqual(END.getTime());
+    expect(END.getTime() - newest).toBeLessThan(2 * 3_600_000);
+    const lastDay = rows.filter((r) => r.time.getTime() > END.getTime() - 24 * 3_600_000);
+    expect(lastDay.length).toBeGreaterThan(1000);
+  });
+
   it("keeps civic reports to a few percent, on a few spots", () => {
     const rows = [...generate({ days: 2, end: END })];
     const reports = rows.filter((r) => r.eventKind === "civic_report");
