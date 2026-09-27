@@ -2,12 +2,16 @@
 
 import {
   IconAlertTriangle,
+  IconArrowBigDown,
+  IconArrowBigUp,
   IconBellOff,
   IconChevronRight,
   IconHeadphones,
   IconInfoCircle,
   IconMapPin,
   IconPlayerPlayFilled,
+  IconRotate,
+  IconRotateClockwise,
 } from "@tabler/icons-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -30,6 +34,7 @@ import {
 } from "@/lib/xr/session";
 import { CameraDeniedError, startCameraSensing } from "@/lib/xr/cameraSession";
 import { ArUnavailableError, forgetLevel, savedLevel, SESSION_LEVELS } from "@/lib/xr/request";
+import { tiltOf, TiltWatch, type TiltFix } from "@/lib/xr/tilt";
 import type { SensingUpdate } from "@/lib/xr/types";
 import { WalkBeluga } from "./WalkBeluga";
 import { detectionReady } from "@/lib/xr/readiness";
@@ -99,7 +104,17 @@ interface Latest {
   floorSlope: number | null;
   // The last Ask, for the debug overlay.
   lastAsk: { ms: number; outcome: string } | null;
+  // How to fix the phone's tilt, while it leans too far to see the path.
+  tilt: TiltFix | null;
 }
+
+// The banner for a phone that leans too far. Pointing lower means tipping its top away from you.
+const TILT_FIX: Record<TiltFix, { text: string; Icon: typeof IconRotate }> = {
+  lower: { text: "Point the phone a little lower", Icon: IconArrowBigDown },
+  higher: { text: "Point the phone a little higher", Icon: IconArrowBigUp },
+  clockwise: { text: "Turn the phone upright", Icon: IconRotateClockwise },
+  counterclockwise: { text: "Turn the phone upright", Icon: IconRotate },
+};
 
 const RECENT_EVENTS = 5;
 const CAMERA_HELP =
@@ -109,7 +124,17 @@ const CAMERA_HELP =
 const SOUNDS_WAIT_MS = 8000;
 
 function freshLatest(fix: Fix | null = null): Latest {
-  return { update: null, nearest: null, fix, granted: null, hazards: [], events: [], floorSlope: null, lastAsk: null };
+  return {
+    update: null,
+    nearest: null,
+    fix,
+    granted: null,
+    hazards: [],
+    events: [],
+    floorSlope: null,
+    lastAsk: null,
+    tilt: null,
+  };
 }
 
 export default function Walk() {
@@ -123,6 +148,8 @@ export default function Walk() {
   const cleanupRef = useRef<Array<() => void>>([]);
   const debugRef = useRef(false);
   const latestRef = useRef<Latest>(freshLatest());
+  const tiltRef = useRef<TiltWatch | null>(null);
+  const [tilt, setTilt] = useState<TiltFix | null>(null);
   const engineRef = useRef<HazardEngine | null>(null);
   // Camera-only mode (Phase 10) swaps the depth engine for one that reads detector boxes.
   const cameraEngineRef = useRef<CameraOnlyEngine | null>(null);
@@ -269,6 +296,7 @@ export default function Walk() {
         detect: detectRef.current?.stats() ?? null,
         reporting: reportingRef.current?.stats() ?? null,
       });
+      setTilt(latestRef.current.tilt);
     }, DEBUG_OVERLAY.refreshMs);
     return () => window.clearInterval(id);
   }, [phase]);
@@ -276,6 +304,9 @@ export default function Walk() {
   const onUpdate = useCallback((update: SensingUpdate) => {
     const latest = latestRef.current;
     latest.update = update;
+    // Also during calibration, which needs the floor in view.
+    const tilts = (tiltRef.current ??= new TiltWatch());
+    latest.tilt = update.tracking ? tilts.update(update.t, tiltOf(update.worldFromView)) : null;
     const ready = detectionReady(update, cameraOnlyRef.current, estimatesConfirmedRef.current);
     const detect = detectRef.current;
     detect?.setEnabled(ready, update.t);
@@ -433,6 +464,8 @@ export default function Walk() {
     }
 
     latestRef.current = freshLatest(latestRef.current.fix);
+    tiltRef.current?.reset();
+    setTilt(null);
     // The head-height top follows the user's height.
     engineRef.current = new HazardEngine(settingsRef.current.heightM);
     cameraEngineRef.current = new CameraOnlyEngine();
@@ -613,6 +646,22 @@ export default function Walk() {
                 }`}
               >
                 {status}
+              </p>
+            )}
+            {tilt && (
+              <p
+                role="status"
+                className="flex items-center gap-3 rounded-md bg-accent px-4 py-3 text-2xl font-bold text-on-accent"
+              >
+                {(() => {
+                  const { Icon, text } = TILT_FIX[tilt];
+                  return (
+                    <>
+                      <Icon aria-hidden size={40} className="shrink-0" />
+                      {text}
+                    </>
+                  );
+                })()}
               </p>
             )}
             {message && (

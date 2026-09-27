@@ -395,3 +395,17 @@ export const CAMERA_MODE = {
   idealWidth: 1280,
   idealHeight: 720,
 } as const;
+
+// The tilt banner on the walking screen (lib/xr/tilt.ts). Chest-high in portrait, with Chrome's
+// 74° tall view, the phone sees the floor ahead and up to head height while the camera points
+// between 25° down and 10° up. Past 10° up the floor only shows past about 2.6 m, so edges come
+// late; past 25° down, little at head height shows; turned past 20°, the path slides out of view.
+export const TILT = {
+  upMaxDeg: 10,
+  downMaxDeg: 25,
+  sideMaxDeg: 20,
+  // The banner goes once the phone is back inside the limits by this much.
+  clearMarginDeg: 5,
+  // Past the limits this long before the banner shows, so a sway never flashes it.
+  showAfterMs: 1000,
+} as const;
