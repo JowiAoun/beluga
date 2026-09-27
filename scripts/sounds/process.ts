@@ -42,7 +42,8 @@ function normalisePeak(tmp: string, out: string, codec: string[]): void {
 }
 
 const WAV = ["-c:a", "pcm_s16le"];
-const MP3 = ["-c:a", "libmp3lame", "-q:a", "4"];
+// The best VBR setting, so re-encoding keeps what the 192 kbps download has.
+const MP3 = ["-c:a", "libmp3lame", "-q:a", "0"];
 
 // Effects stay WAV: an MP3 starts with a few milliseconds of padding, and warnings need every one.
 export function processEffect(raw: string, out: string, seconds: number): void {
@@ -70,10 +71,48 @@ export function processLoop(raw: string, out: string): void {
   normalisePeak(tmp, out, WAV);
 }
 
+// Eleven v3 often ends a clip with a breath or room tone a little above the trim's silence level.
+// A quiet stretch of at least this long that runs to the end of the clip is cut, keeping enough
+// after the last loud part for a soft ending. Trimming harder at the
+// edges instead cut soft starts and endings: "bike" came out as "pike".
+const TAIL_DB = -38;
+const TAIL_MIN_S = 0.45;
+const TAIL_KEEP_S = 0.25;
+
+// When the clip ends in a quiet stretch, the time it starts; otherwise null.
+function quietTailStart(file: string): number | null {
+  const run = spawnSync(
+    "ffmpeg",
+    ["-hide_banner", "-nostats", "-i", file, "-af", `silencedetect=noise=${TAIL_DB}dB:d=${TAIL_MIN_S}`, "-f", "null", "-"],
+    { encoding: "utf8" },
+  );
+  const starts = [...run.stderr.matchAll(/silence_start: ([\d.]+)/g)].map((m) => Number(m[1]));
+  const ends = [...run.stderr.matchAll(/silence_end: ([\d.]+)/g)].map((m) => Number(m[1]));
+  const start = starts.at(-1);
+  if (start === undefined || start === 0) return null;
+  // The last quiet stretch has no end before the file does.
+  const end = ends.length === starts.length ? ends.at(-1)! : Infinity;
+  return end >= durationS(file) - 0.02 ? start : null;
+}
+
+// Voices start softly: the "p" in "pole" rises from about -47 dB over 20 ms, and the effects' trim
+// cut into it, so "pole" played as "oh". This one trims lower and keeps 50 ms before the word. At
+// the end it keeps 200 ms, since a word like "stopped" ends in a pause and then a soft "t".
+const CLIP_TRIM_START = "silenceremove=start_periods=1:start_threshold=-50dB:start_silence=0.05";
+const CLIP_TRIM_END = "silenceremove=start_periods=1:start_threshold=-50dB:start_silence=0.2";
+
 export function processClip(raw: string, out: string): void {
   const tmp = `${out}.tmp.wav`;
-  const trimBothEnds = `${TRIM_START},areverse,${TRIM_START},areverse`;
+  const trimBothEnds = `${CLIP_TRIM_START},areverse,${CLIP_TRIM_END},areverse`;
   ffmpeg("-i", raw, "-af", `${HIGH_PASS},${trimBothEnds}`, "-ac", "1", "-ar", "44100", ...WAV, tmp);
+  const tail = quietTailStart(tmp);
+  if (tail !== null) {
+    const cut = `${out}.cut.wav`;
+    const end = tail + TAIL_KEEP_S;
+    ffmpeg("-i", tmp, "-af", `atrim=0:${end.toFixed(3)},afade=t=out:st=${(end - FADE_S).toFixed(3)}:d=${FADE_S}`, ...WAV, cut);
+    rmSync(tmp);
+    execFileSync("mv", [cut, tmp]);
+  }
   if (durationS(tmp) < 0.5) {
     normalisePeak(tmp, out, MP3);
     return;

@@ -5,6 +5,7 @@
 
 import type { SoundId } from "@/lib/shared/enums";
 import { cachedSound, soundCache } from "./cache";
+import type { VoiceKey } from "./voices";
 
 export const SOUNDS_PATH = "/sounds";
 
@@ -25,10 +26,19 @@ export interface LibraryClip {
   text: string;
 }
 
+export interface LibraryVoice {
+  clips: Partial<Record<ClipId, LibraryClip>>;
+  // The line played when the user taps Play in the voice picker.
+  sample: string | null;
+}
+
 export interface LibraryManifest {
   generatedAt: string;
   sounds: Partial<Record<SoundId, LibrarySound>>;
+  // The default voice's clips, for pages that don't let the user pick.
   clips: Partial<Record<ClipId, LibraryClip>>;
+  // Every voice's clips, when the library has more than one voice.
+  voices?: Partial<Record<VoiceKey, LibraryVoice>>;
 }
 
 // Every spoken clip. Hazard words and sides use the same ids as `wordFor` and `sideOf`.
@@ -84,12 +94,14 @@ export interface DecodedLibrary {
 }
 
 // Null when there is no library yet or the network is down: the tones cover both.
-export async function fetchLibrary(): Promise<RawLibrary | null> {
+export async function fetchLibrary(voice?: VoiceKey): Promise<RawLibrary | null> {
   try {
     const cache = await soundCache();
     const response = await cachedSound(`${SOUNDS_PATH}/manifest.json`, cache, true);
     if (!response?.ok) return null;
-    const manifest = (await response.json()) as LibraryManifest;
+    const full = (await response.json()) as LibraryManifest;
+    // Only the chosen voice's clips download, in the place the default voice's would be.
+    const manifest: LibraryManifest = { ...full, clips: (voice && full.voices?.[voice]?.clips) || full.clips };
     const paths = new Set<string>();
     for (const sound of Object.values(manifest.sounds)) {
       if (!sound) continue;

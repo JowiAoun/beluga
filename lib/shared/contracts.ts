@@ -160,6 +160,9 @@ export const AskRequestSchema = z.object({
   frame: FrameSchema,
   // The MVP always asks "What's in front of me?".
   question: z.string().trim().max(200).optional(),
+  // The voice the user picked (lib/audio/voices.ts). The route falls back to the default for any
+  // other value, so an old app still gets an answer.
+  voice: z.string().max(20).optional(),
 });
 export type AskRequest = z.infer<typeof AskRequestSchema>;
 

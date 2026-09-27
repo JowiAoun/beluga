@@ -238,8 +238,6 @@ Still open. Each one has a default, so no track waits for the answer.
 | `ELEVENLABS_TRIAGE_AGENT_ID` | Backend | Printed by `npm run agents` |
 | `ELEVENLABS_ASK_AGENT_ID` | Backend | Printed by `npm run agents` |
 | `GEMINI_API_KEY` | Backend, fallback only | Google AI Studio key with billing. Unused unless the agents can't see images (Fallbacks) |
-| `ELEVENLABS_VOICE_ID` | Backend, sound script | One calm, clear English voice chosen once and used everywhere |
-| `ELEVENLABS_TTS_MODEL` | Backend | `eleven_flash_v2_5` |
 | `DEVICE_HASH_SALT` | Backend | Random string; rotating it is what rotates device hashes. Rotate every 28 days at most often, and never during the event: a rotation inside the 14-day fix-first window counts one person as two reporters |
 | `TRIAGE_HOURLY_BUDGET` | Backend | Default 150 triage calls per hour across all devices |
 | `ASK_HOURLY_BUDGET` | Backend | Default 120 Ask calls per hour across all devices, so a bug or a stranger can't drain ElevenLabs credits |

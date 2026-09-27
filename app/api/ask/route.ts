@@ -5,6 +5,7 @@ import { AGENTS, ASK_QUESTION } from "@/lib/server/agents/config";
 import { takeBudget } from "@/lib/server/budget";
 import { boundedBody, admit, failure, RequestError } from "@/lib/server/elevenlabs/request";
 import { speak } from "@/lib/server/elevenlabs/tts";
+import { DEFAULT_VOICE, isVoiceKey } from "@/lib/audio/voices";
 import { withoutCrossingAdvice } from "@/lib/server/safety";
 import { ASK_META_HEADER, AskRequestSchema, encodeAskMeta, type AskMeta } from "@/lib/shared/contracts";
 import { FRAMES, NETWORK, VOICE_ASK } from "@/lib/shared/params";
@@ -13,7 +14,8 @@ import { FRAMES, NETWORK, VOICE_ASK } from "@/lib/shared/params";
 // ElevenLabs has saved it, which can take 10 s.
 export const maxDuration = 30;
 
-const VOICE_RESERVE_MS = 1500;
+// Eleven v3 takes about 2 s for a two-sentence answer, so the voice keeps that much of the time.
+const VOICE_RESERVE_MS = 2500;
 
 function log(outcome: string, began: number, detail?: string): void {
   console.info(JSON.stringify({ route: "ask", agent: AGENTS.ask.name, latencyMs: Date.now() - began, outcome, detail }));
@@ -44,6 +46,7 @@ export async function POST(request: Request): Promise<Response> {
     const parsed = AskRequestSchema.safeParse(body);
     if (!parsed.success) throw new RequestError("Invalid image or question.", 400);
     const { frame, question } = parsed.data;
+    const voice = isVoiceKey(parsed.data.voice) ? parsed.data.voice : DEFAULT_VOICE;
 
     if ((await takeBudget("ask")) === null) {
       log("budget_spent", began);
@@ -70,7 +73,7 @@ export async function POST(request: Request): Promise<Response> {
     };
     try {
       const left = Math.max(500, began + NETWORK.askTimeoutMs - Date.now());
-      const mp3 = await speak(meta.answer, AbortSignal.timeout(left));
+      const mp3 = await speak(meta.answer, voice, AbortSignal.timeout(left));
       log("answered", began);
       return new Response(mp3, {
         headers: { "content-type": "audio/mpeg", [ASK_META_HEADER]: encodeAskMeta(meta), "cache-control": "no-store" },
