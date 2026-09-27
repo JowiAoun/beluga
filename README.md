@@ -1,5 +1,3 @@
-<a href="https://beluga.surf"><img src="images/hero.gif" alt="The beluga home page: a 3D beluga in sunglasses surfs a wave next to the words Hear what's in your way" width="100%"></a>
-
 <h1 align="center">beluga 🐋</h1>
 
 <p align="center"><strong>Hear what's in your way.</strong></p>
@@ -19,6 +17,8 @@
   <a href="https://www.youtube.com/watch?v=Pz9jS8v5VJ8"><strong>Demo video</strong></a> ·
   <a href="https://devpost.com/software/beluga-p495j3"><strong>Devpost</strong></a>
 </p>
+
+<a href="https://beluga.surf"><img src="images/hero.gif" alt="The beluga home page: a 3D beluga in sunglasses surfs a wave next to the words Hear what's in your way" width="100%"></a>
 
 > [!NOTE]
 > beluga is a research prototype built at Hack the Hill III. It is not a medical device. Use it alongside your white cane or guide dog, never in place of them.
