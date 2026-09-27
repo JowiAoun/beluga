@@ -64,6 +64,8 @@ export class Scheduler {
   private lastSaid = new Map<string, number>();
   // One sound for every warning, with no words and no centre marker, when the user picks it.
   private oneSound: SoundId | null = null;
+  // Names like "pole" as a hazard comes near. The user can turn them off in Settings.
+  private words = true;
 
   constructor(
     private sounds: Readonly<Record<SoundId, SoundInfo>>,
@@ -72,6 +74,10 @@ export class Scheduler {
 
   setOneSound(sound: SoundId | null): void {
     this.oneSound = sound;
+  }
+
+  setWords(on: boolean): void {
+    this.words = on;
   }
 
   // When the recorded library replaces the tones, lengths and loops change.
@@ -220,7 +226,7 @@ export class Scheduler {
       }
 
       // Its word, once, as it comes into the 1.5 to 2.0 m band.
-      const word = this.oneSound ? null : wordFor(hazard, blocked);
+      const word = this.oneSound || !this.words ? null : wordFor(hazard, blocked);
       const inClipBand = distance >= AUDIO.voiceClipBandM.from && distance <= AUDIO.voiceClipBandM.to;
       if (word && inClipBand && !this.spoken.has(hazard.id)) {
         this.spoken.add(hazard.id);

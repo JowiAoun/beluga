@@ -1,6 +1,7 @@
 "use client";
 
-// Settings outside the walk (Phase 9): height, starting station, sounds, volume and camera-only mode.
+// Settings outside the walk (Phase 9): height, starting station, sounds, which warnings play, volume
+// and camera-only mode. Every change is saved on the phone right away.
 
 import { IconChevronDown, IconMinus, IconPlus, IconRefresh, IconSettings } from "@tabler/icons-react";
 import type { OneSound } from "@/lib/audio/sounds";
@@ -8,10 +9,49 @@ import { STATIONS, type StationId } from "@/lib/shared/stations";
 import { cn } from "@/lib/utils";
 import { heightText, stepHeight, VOLUME_RANGE_DB, type Settings } from "./settings";
 import { CHECKBOX, PANEL, SECONDARY, SELECT } from "./styles";
+import { DEPTH_WARNINGS, OBJECT_WARNINGS, type WarningGroup, type WarningId } from "./warnings";
 import VibrationControls from "./VibrationControls";
 
 const TOGGLE = "flex min-h-16 items-center gap-4 text-lg";
 const STEP_BUTTON = cn(SECONDARY, "flex-col gap-1 px-2 py-2 text-lg text-balance");
+
+// One checkbox per kind of warning. Ticked means it plays.
+function WarningList({
+  legend,
+  note,
+  groups,
+  off,
+  showSound,
+  onToggle,
+}: {
+  legend: string;
+  note: string;
+  groups: readonly WarningGroup[];
+  off: readonly WarningId[];
+  showSound: boolean;
+  onToggle: (id: WarningId, on: boolean) => void;
+}) {
+  return (
+    <fieldset className="flex flex-col gap-1">
+      <legend className="text-lg font-semibold">{legend}</legend>
+      <p className="mb-1 text-base text-muted">{note}</p>
+      {groups.map((group) => (
+        <label key={group.id} className={cn(TOGGLE, "min-h-14 border-t border-line pt-2")}>
+          <input
+            type="checkbox"
+            checked={!off.includes(group.id)}
+            onChange={(e) => onToggle(group.id, e.target.checked)}
+            className={CHECKBOX}
+          />
+          <span className="flex flex-col">
+            {group.name}
+            {showSound && <span className="text-base text-muted">{group.sound}</span>}
+          </span>
+        </label>
+      ))}
+    </fieldset>
+  );
+}
 
 export default function SettingsPanel({
   settings,
@@ -26,6 +66,8 @@ export default function SettingsPanel({
   noDepth?: boolean;
 }) {
   const set = (patch: Partial<Settings>) => onChange({ ...settings, ...patch });
+  const toggleWarning = (id: WarningId, on: boolean) =>
+    set({ warningsOff: on ? settings.warningsOff.filter((w) => w !== id) : [...settings.warningsOff, id] });
   return (
     <details className={cn(PANEL, "group p-0")}>
       <summary className="flex min-h-16 cursor-pointer items-center gap-3 rounded-md px-5 text-xl font-semibold [&::-webkit-details-marker]:hidden">
@@ -100,6 +142,35 @@ export default function SettingsPanel({
               : "Each kind of hazard has its own sound, and names like \"pole, left\" are spoken as it comes near."}
           </span>
         </label>
+
+        <label className={TOGGLE}>
+          <input
+            type="checkbox"
+            checked={settings.spokenNames}
+            disabled={settings.oneSound !== null}
+            onChange={(e) => set({ spokenNames: e.target.checked })}
+            className={CHECKBOX}
+          />
+          Say what it is as it comes near, like &quot;pole, left&quot;
+        </label>
+
+        <WarningList
+          legend="Things beluga names"
+          note="Untick one to stop its own sound and name. With depth, beluga still warns about it with the plain wooden tick, since it is still in your path. In camera-only mode it gives no warning for it at all."
+          groups={OBJECT_WARNINGS}
+          off={settings.warningsOff}
+          showSound={settings.oneSound === null}
+          onToggle={toggleWarning}
+        />
+
+        <WarningList
+          legend="Depth warnings"
+          note="Untick one and beluga gives no warning for it at all, by sound or vibration. Drop-offs include yellow edge strips."
+          groups={DEPTH_WARNINGS}
+          off={settings.warningsOff}
+          showSound={settings.oneSound === null}
+          onToggle={toggleWarning}
+        />
 
         <label className={TOGGLE}>
           <input

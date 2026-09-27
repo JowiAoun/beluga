@@ -143,6 +143,14 @@ describe("Scheduler", () => {
     expect(right.map((a) => a.type === "say" && a.words)).toEqual([["pole", "right"]]);
   });
 
+  it("keeps the sound but says no word once names are turned off", () => {
+    const s = new Scheduler(INFO);
+    s.setWords(false);
+    const actions = run(s, 0, 1, scene([hazard("p1", 1.8, -0.3, { label: "pole_like" })]));
+    expect(actions.filter((a) => a.type === "say")).toEqual([]);
+    expect(hitTimes(actions).length).toBeGreaterThan(0);
+  });
+
   it("uses the distance the user will be at when Bluetooth plays it", () => {
     // 2.05 m is in the 2.0 to 2.5 m band, but 1.4 m/s × 0.25 s takes it to 1.7 m.
     const actions = run(new Scheduler(INFO), 0, 0.1, scene([hazard("a", 2.05)], { speed: 1.4, leadS: 0.25 }));

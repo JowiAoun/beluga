@@ -249,6 +249,10 @@ export class AudioEngine {
     this.scheduler.setOneSound(sound);
   }
 
+  setWords(on: boolean): void {
+    this.scheduler.setWords(on);
+  }
+
   // A soft tick after 30 s with no other sound, so the user knows beluga is still running.
   setAliveTick(on: boolean): void {
     this.aliveTick = on;

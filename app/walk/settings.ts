@@ -5,6 +5,7 @@ import { ONE_SOUNDS, type OneSound } from "@/lib/audio/sounds";
 import { STATIONS, type StationId } from "@/lib/shared/stations";
 import { USER } from "@/lib/shared/params";
 import type { VibrationSettings } from "@/lib/haptics/engine";
+import { cleanWarningsOff, type WarningId } from "./warnings";
 
 export interface Settings extends VibrationSettings {
   // Sets the head-height top: height + 0.1 m. Changed in 5 cm steps.
@@ -26,6 +27,10 @@ export interface Settings extends VibrationSettings {
   yellowStrip: boolean;
   // Every warning plays this one sound, with no words. Null plays a sound per kind of hazard.
   oneSound: OneSound | null;
+  // Names like "pole, left" as a hazard comes near.
+  spokenNames: boolean;
+  // The kinds of warning turned off in Settings (see warnings.ts).
+  warningsOff: WarningId[];
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -41,6 +46,8 @@ export const DEFAULT_SETTINGS: Settings = {
   headsetAsk: true,
   yellowStrip: true,
   oneSound: null,
+  spokenNames: true,
+  warningsOff: [],
 };
 
 export const HEIGHT_RANGE_M = { min: 1.2, max: 2.1 } as const;
@@ -81,6 +88,8 @@ export function readSettings(): Settings {
     headsetAsk: typeof saved.headsetAsk === "boolean" ? saved.headsetAsk : DEFAULT_SETTINGS.headsetAsk,
     yellowStrip: typeof saved.yellowStrip === "boolean" ? saved.yellowStrip : DEFAULT_SETTINGS.yellowStrip,
     oneSound: ONE_SOUNDS.find((sound) => sound === saved.oneSound) ?? null,
+    spokenNames: typeof saved.spokenNames === "boolean" ? saved.spokenNames : DEFAULT_SETTINGS.spokenNames,
+    warningsOff: cleanWarningsOff(saved.warningsOff),
   };
 }
 

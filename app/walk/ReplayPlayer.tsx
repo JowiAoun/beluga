@@ -23,6 +23,7 @@ import DebugOverlay, { type DebugView } from "./DebugOverlay";
 import { readSettings } from "./settings";
 import { CHECKBOX, DANGER, LINK_ROW, PANEL, PRIMARY } from "./styles";
 import { speakText } from "./voice";
+import { heardHazards } from "./warnings";
 
 const RECENT_EVENTS = 5;
 
@@ -84,6 +85,7 @@ export default function ReplayPlayer({ src }: { src: string }) {
     sound.start();
     sound.setVolume(settings.volumeDb);
     sound.setOneSound(settings.oneSound);
+    sound.setWords(settings.spokenNames);
     const raw = libraryRef.current;
     if (raw) void decodeLibrary(ctx, raw).then((library) => sound.useLibrary(library));
     const engine = new HazardEngine(settings.heightM);
@@ -117,7 +119,7 @@ export default function ReplayPlayer({ src }: { src: string }) {
       const result = cameraEngine
         ? cameraEngine.update(update, boxes)
         : engine.update(update, (q) => matcher.labelFor(q, update.t, hfov));
-      sound.update(result.hazards, update);
+      sound.update(heardHazards(result.hazards, settings.warningsOff, !cameraEngine), update);
       if (result.events.length > 0) events = [...result.events.reverse(), ...events].slice(0, RECENT_EVENTS);
       setView({
         update,

@@ -2,6 +2,7 @@
 
 import {
   IconAlertTriangle,
+  IconBellOff,
   IconChevronRight,
   IconHeadphones,
   IconInfoCircle,
@@ -40,6 +41,7 @@ import ReplayPlayer from "./ReplayPlayer";
 import { Reporting } from "./reporting";
 import { DEFAULT_SETTINGS, readSettings, saveSettings, type Settings } from "./settings";
 import SettingsPanel from "./SettingsPanel";
+import { heardHazards, offText } from "./warnings";
 import VibrationControls from "./VibrationControls";
 import { HapticEngine } from "@/lib/haptics/engine";
 import AskButton from "./AskButton";
@@ -300,9 +302,11 @@ export default function Walk() {
     const reporting = reportingRef.current;
     // A yellow edge strip plays like a drop-off, but only the sounds hear it: it never reaches the
     // frame gate or the events. While tracking is lost the list is empty, so every warning goes quiet.
-    const heard = update.tracking && !cameraOnlyRef.current
+    const found = update.tracking && !cameraOnlyRef.current
       ? withStrip(result.hazards, detect?.stripFor(update) ?? null)
       : result.hazards;
+    // Leaves out the warnings turned off in Settings. Reports still see every hazard.
+    const heard = heardHazards(found, settingsRef.current.warningsOff, !cameraOnlyRef.current);
     soundRef.current?.update(heard, update, reporting?.blocked);
     hapticsRef.current?.update(heard, ready, performance.now());
     const gate = detect?.check(update, result.hazards, latest.fix);
@@ -394,6 +398,7 @@ export default function Walk() {
     sound.setVolume(settingsRef.current.volumeDb);
     sound.setAliveTick(settingsRef.current.aliveTick);
     sound.setOneSound(settingsRef.current.oneSound);
+    sound.setWords(settingsRef.current.spokenNames);
     soundRef.current = sound;
     const haptics = new HapticEngine(settingsRef.current);
     hapticsRef.current = haptics;
@@ -726,6 +731,14 @@ export default function Walk() {
               <p role="status" className="-mt-1 text-center text-lg text-muted">
                 {soundStatus}
               </p>
+              {settings && settings.warningsOff.length > 0 && (
+                <p className="flex gap-3 rounded-md border border-line-strong p-4 text-lg">
+                  <IconBellOff aria-hidden size={24} className="mt-0.5 shrink-0 text-sonar" />
+                  <span>
+                    Warnings off: {offText(settings.warningsOff)}. Turn them back on in Settings.
+                  </span>
+                </p>
+              )}
               <Link href="/walk/practice" className={SECONDARY}>
                 <IconHeadphones aria-hidden size={24} />
                 Learn the warning sounds
