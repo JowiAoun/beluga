@@ -91,12 +91,15 @@ function StepDots({ step }: { step: Step }) {
 export default function FirstRun({
   heightM: startHeight,
   voice: startVoice = DEFAULT_VOICE,
+  again = false,
   locationGranted,
   onAllowLocation,
   onDone,
 }: {
   heightM: number;
   voice?: VoiceKey;
+  // Opened again from Settings, far down the page: it moves focus and the view to its heading.
+  again?: boolean;
   locationGranted: boolean;
   onAllowLocation: () => Promise<void>;
   onDone: (result: FirstRunResult) => void;
@@ -111,6 +114,13 @@ export default function FirstRun({
     if (step) headingRef.current?.focus();
   }, [step]);
 
+  const introRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (!again) return;
+    introRef.current?.focus({ preventScroll: true });
+    introRef.current?.scrollIntoView({ block: "center" });
+  }, [again]);
+
   const go = (next: Step) => {
     setStep(next);
     playRecording(`${SOUNDS_PATH}/${setupPath(voice, next)}`, PROMPTS[next]);
@@ -121,7 +131,7 @@ export default function FirstRun({
   if (step === null) {
     return (
       <section className={cn(PANEL, "flex flex-col gap-5")}>
-        <h2 className={HEADING}>
+        <h2 ref={introRef} tabIndex={-1} className={HEADING}>
           Set up <Name />
         </h2>
         <p className="text-xl text-muted">Six short steps, spoken aloud. They take about a minute.</p>

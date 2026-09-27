@@ -142,6 +142,11 @@ export default function SettingsPanel({
         />
       </summary>
       <div className="flex flex-col gap-5 border-t border-line p-5">
+        {/* First, so it's easy to find, like when showing the setup in a demo. */}
+        <button type="button" onClick={onRunSetup} className={SECONDARY}>
+          <IconRefresh aria-hidden size={24} />
+          Run setup again
+        </button>
         <VibrationControls settings={settings} onChange={set} />
         <div className="flex flex-col gap-3">
           <p className="text-lg">
@@ -329,10 +334,6 @@ export default function SettingsPanel({
             : "Camera-only mode, for a phone without depth: warns about things it can name, like people, bikes and chairs, and yellow edge strips, with no step warnings. It turns on by itself when depth is missing."}
         </label>
 
-        <button type="button" onClick={onRunSetup} className={SECONDARY}>
-          <IconRefresh aria-hidden size={24} />
-          Run the setup steps again
-        </button>
       </div>
     </details>
   );

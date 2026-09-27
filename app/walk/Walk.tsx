@@ -207,6 +207,8 @@ export default function Walk() {
     download(blob);
   };
   const [microphone, setMicrophone] = useState("");
+  // The setup steps were opened again from Settings, not shown to a first-time user.
+  const [setupAgain, setSetupAgain] = useState(false);
   const [soundsLoading, setSoundsLoading] = useState(true);
   const [soundStatus, setSoundStatus] = useState("Preparing offline sounds…");
 
@@ -889,6 +891,7 @@ export default function Walk() {
             <FirstRun
               heightM={settings.heightM}
               voice={settings.voice}
+              again={setupAgain}
               locationGranted={locationGranted}
               onAllowLocation={allowLocation}
               onDone={finishFirstRun}
@@ -982,6 +985,7 @@ export default function Walk() {
                     // Setup again also tries every AR setup again, on a phone that refused some.
                     forgetLevel();
                     setSupport(supportFor(arSupportedRef.current));
+                    setSetupAgain(true);
                     changeSettings({ ...settings, firstRunDone: false });
                   }}
                 />
