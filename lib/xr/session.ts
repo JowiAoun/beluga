@@ -106,6 +106,8 @@ export interface SensingSession {
   stats(): LiveStats;
   // Null until the session has started.
   setup(): SessionSetup | null;
+  // Calibrates the floor again from the next update, when the user asks. Never called by itself.
+  recalibrate(): void;
 }
 
 // The spec makes these getters throw when depth sensing wasn't granted.
@@ -389,6 +391,7 @@ export function startSensing(options: SensingOptions): SensingSession {
       floorY: floor.y,
       floorSource: floor.source,
       calibrating: floor.calibrating,
+      floorDoubtful: floor.doubtful,
       forward: moving.forward,
       right: moving.right,
       speed: moving.speed,
@@ -547,5 +550,6 @@ export function startSensing(options: SensingOptions): SensingSession {
     },
     stats: () => ({ ...live }),
     setup: () => setup,
+    recalibrate: () => floor?.recalibrate(),
   };
 }

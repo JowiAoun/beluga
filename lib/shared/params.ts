@@ -108,6 +108,12 @@ export const SENSING = {
   cameraDarkBelow: 10,
   cameraLightAbove: 20,
   cameraDarkAfterMs: 500,
+  // After calibration, most floor points showing away from the floor height for this long, while
+  // the user walks this far, means the calibration may be off. The walk then suggests calibrating
+  // again, and never starts it by itself. The floor showing at its height for 2 s takes it back.
+  floorDoubtAfterMs: 5000,
+  floorDoubtWalkM: 1.0,
+  floorDoubtClearMs: 2000,
 } as const;
 
 export const USER = {

@@ -354,5 +354,7 @@ export function startCameraSensing(options: CameraSensingOptions): SensingSessio
     },
     stats: () => ({ ...live }),
     setup: () => setup,
+    // Camera mode takes the floor from the user's height, so there is nothing to calibrate.
+    recalibrate: () => {},
   };
 }

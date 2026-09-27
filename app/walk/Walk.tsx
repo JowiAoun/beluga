@@ -637,6 +637,12 @@ export default function Walk() {
   const inAr = phase === "starting" || phase === "running";
   const update = view?.update ?? null;
   const ready = detectionReady(update, cameraOnly, estimatesConfirmed);
+  // Warnings wait for the first calibration, or in camera-only mode for the user to accept estimates.
+  // Lost tracking and a dark camera pause them too, and the status line says why.
+  const waitingForCalibration =
+    !cameraOnly && update?.tracking === true && (update.calibrating || update.floorSource !== "calibrated");
+  const waitingForEstimates = cameraOnly && !estimatesConfirmed;
+  const suggestCalibration = !cameraOnly && update?.floorDoubtful === true && !update.calibrating;
   let status: string | null = null;
   if (phase === "starting") status = "Starting";
   else if (update?.dark) status = "Camera covered or too dark";
@@ -705,6 +711,17 @@ export default function Walk() {
                 })()}
               </p>
             )}
+            {suggestCalibration && (
+              <div role="status" className="flex flex-col gap-3 rounded-md border-2 border-accent bg-abyss p-4">
+                <p className="text-xl font-bold">
+                  The floor looks off, so warnings may be wrong. On flat ground, tap Calibrate again and take three slow
+                  steps.
+                </p>
+                <button type="button" onClick={() => sessionRef.current?.recalibrate()} className={PRIMARY}>
+                  Calibrate again
+                </button>
+              </div>
+            )}
             {message && (
               <p role="alert" className="rounded-md bg-danger px-4 py-3 text-xl text-white">
                 {message}
@@ -724,7 +741,7 @@ export default function Walk() {
             )}
             {debug && <DebugOverlay view={view} session={session} />}
           </div>
-          {!ready && <p role="status" className="rounded-lg bg-black/90 p-4 text-xl font-semibold text-white">
+          {(waitingForCalibration || waitingForEstimates) && <p role="status" className="rounded-lg bg-black/90 p-4 text-xl font-semibold text-white">
             {cameraOnly
               ? "This mode cannot calibrate the floor. Detection and sounds are paused. Estimated warnings have no drop-off or head-height detection."
               : "Obstacle detection and warning sounds are paused until calibration completes. Keep the floor in view while taking three slow steps."}

@@ -40,6 +40,8 @@ export interface SensingUpdate {
   floorY: number;
   floorSource: FloorSource;
   calibrating: boolean;
+  // The floor has looked wrong for a while: the walk suggests calibrating again.
+  floorDoubtful?: boolean;
   // Walking direction and its right-hand side, unit length on the floor plane.
   forward: Flat;
   right: Flat;

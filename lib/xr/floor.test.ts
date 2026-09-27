@@ -157,6 +157,47 @@ describe("FloorTracker", () => {
     expect(floor.moves).toBe(0);
   });
 
+  it("suggests calibrating again when the floor stays off while walking, and never starts it", () => {
+    const floor = new FloorTracker(0);
+    walk(floor, 0, 4000, 0.5, 0, noise(16));
+    // From here every floor point shows 0.3 m lower with the phone at the same height: an error
+    // that moving the floor can't fix, like a calibration taken on a step.
+    const lower = (from: number, to: number, rand: () => number) => {
+      const events: string[] = [];
+      for (let t = from; t <= to; t += 100) {
+        const camera = { x: 0, y: 1.3, z: -t / 2000 };
+        const event = floor.update(t, scene(camera, -0.3, rand), camera, forward, right);
+        if (event) events.push(event);
+      }
+      return events;
+    };
+    expect(lower(4100, 8000, noise(17))).toEqual([]);
+    expect(floor.doubtful).toBe(false);
+    expect(lower(8100, 12_000, noise(18))).toEqual([]);
+    expect(floor.doubtful).toBe(true);
+    expect(floor.calibrating).toBe(false);
+    expect(floor.y).toBeCloseTo(0, 1);
+
+    // The user taps "Calibrate again" and takes three slow steps.
+    floor.recalibrate();
+    expect(lower(12_100, 16_000, noise(19))).toEqual(["calibration_started", "calibrated"]);
+    expect(floor.y).toBeCloseTo(-0.3, 1);
+    expect(floor.doubtful).toBe(false);
+  });
+
+  it("drops the suggestion once the floor shows at its height again", () => {
+    const floor = new FloorTracker(0);
+    walk(floor, 0, 4000, 0.5, 0, noise(20));
+    const rand = noise(21);
+    for (let t = 4100; t <= 12_000; t += 100) {
+      const camera = { x: 0, y: 1.3, z: -t / 2000 };
+      floor.update(t, scene(camera, -0.3, rand), camera, forward, right);
+    }
+    expect(floor.doubtful).toBe(true);
+    walk(floor, 12_100, 2500, 0.5, 0, noise(22));
+    expect(floor.doubtful).toBe(false);
+  });
+
   it("ignores hits after calibration", () => {
     const floor = new FloorTracker(0);
     walk(floor, 0, 4000, 0.5, 0, noise(10));

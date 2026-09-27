@@ -38,6 +38,8 @@ export class FloorTracker {
   calibrating = false;
   // Times the floor moved to a new height after calibration.
   moves = 0;
+  // The floor has looked wrong for a while as the user walked: worth calibrating again.
+  doubtful = false;
 
   private hits: number[] = [];
   private pool: number[] = [];
@@ -52,6 +54,9 @@ export class FloorTracker {
   private cameraYs: number[] = [];
   private aboveFloor: number | null = null;
   private moveVotes = 0;
+  private offSince: number | null = null;
+  private offFrom: Vec3 | null = null;
+  private fineSince: number | null = null;
 
   constructor(guessY: number) {
     this.y = guessY;
@@ -120,6 +125,7 @@ export class FloorTracker {
     }
 
     if (this.moved(t, candidates, camera)) return null;
+    this.checkDoubt(t, candidates, camera);
 
     for (const y of candidates) {
       if (Math.abs(y - this.y) <= SENSING.floorReestimateBandM) this.recent.push(y);
@@ -136,6 +142,46 @@ export class FloorTracker {
       this.lastReestimate = t;
     }
     return null;
+  }
+
+  // Starts calibration again on the next update, when the user asks. The old floor stays until it finishes.
+  recalibrate(): void {
+    this.calibrationDone = false;
+    this.calibrating = false;
+    this.pool = [];
+    this.cameraYs = [];
+    this.reportedUnavailable = false;
+    this.clearDoubt();
+  }
+
+  // Most floor points sit away from the floor height, update after update, while the user walks on.
+  // Moving the floor can't fix that when the calibration itself was off (taken on a step, say), so
+  // it becomes a suggestion for the user.
+  private checkDoubt(t: number, candidates: number[], camera: Vec3): void {
+    if (candidates.length < SENSING.floorMoveMinPoints) return;
+    const here = candidates.filter((y) => Math.abs(y - this.y) <= SENSING.floorReestimateBandM).length;
+    if (here * 4 < candidates.length) {
+      this.fineSince = null;
+      if (this.offSince === null || this.offFrom === null) {
+        this.offSince = t;
+        this.offFrom = { ...camera };
+      }
+      const walked = Math.hypot(camera.x - this.offFrom.x, camera.z - this.offFrom.z);
+      if (t - this.offSince >= SENSING.floorDoubtAfterMs && walked >= SENSING.floorDoubtWalkM) this.doubtful = true;
+      return;
+    }
+    this.offSince = null;
+    this.offFrom = null;
+    if (!this.doubtful) return;
+    this.fineSince ??= t;
+    if (t - this.fineSince >= SENSING.floorDoubtClearMs) this.clearDoubt();
+  }
+
+  private clearDoubt(): void {
+    this.doubtful = false;
+    this.offSince = null;
+    this.offFrom = null;
+    this.fineSince = null;
   }
 
   // Depth shows a floor where the phone's height says it should be, and hardly any at the tracked
@@ -155,6 +201,7 @@ export class FloorTracker {
     this.y = median(there);
     this.moves++;
     this.moveVotes = 0;
+    this.clearDoubt();
     this.recent = [];
     this.lastReestimate = t;
     return true;

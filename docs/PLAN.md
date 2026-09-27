@@ -1131,6 +1131,7 @@ The repo is public, the README renders with working links and images, no secret 
 | Detector stall | a frame not back from the detector in 3 s is let go, and the next one goes |
 | Warnings stopped | no update for 3 s, no trusted depth for 3 s, or sound paused for 2 s: a red banner, spoken once, counted in the summary |
 | Dark camera | frames darker than 10 of 255 for 0.5 s: no depth is used and warnings go quiet; brighter than 20 for 0.5 s: back on |
+| Calibration | once, at the start of a walk. After that, most floor points away from the floor height for 5 s while walking 1 m shows a "Calibrate again" suggestion; it never starts by itself |
 | Smoothing weight | 0.5 |
 | Near-miss distance | 1.0 m |
 | Stationary | < 0.1 m moved in 5 s |
