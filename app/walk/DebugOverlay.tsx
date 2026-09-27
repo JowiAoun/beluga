@@ -218,6 +218,7 @@ export default function DebugOverlay({ view, session }: { view: DebugView | null
         <>
           <p>
             Depth {update.validCount} of {update.sampleCount} points
+            {update.unsteadyCount ? `, ${update.unsteadyCount} left out as unsteady` : ""}
             {stats?.depthError && `, error: ${stats.depthError}`}
           </p>
           <p>

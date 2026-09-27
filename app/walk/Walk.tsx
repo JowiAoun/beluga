@@ -869,6 +869,7 @@ function Summary({ summary }: { summary: SessionSummary }) {
       <p>
         Depth valid{" "}
         {summary.depthValidShare === null ? "never" : `${Math.round(summary.depthValidShare * 100)}% of points`}
+        {summary.depthUnsteadyShare ? `, ${Math.round(summary.depthUnsteadyShare * 100)}% left out as unsteady` : ""}
       </p>
       <p>
         Floor {floor.source.replace("_", " ")}

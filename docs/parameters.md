@@ -9,7 +9,7 @@ Copied from `docs/PLAN.md` on Sept 26, 2026. When this file and `lib/shared` dif
 | Parameter | Default |
 | --- | --- |
 | Processing rate | 10 updates/s |
-| Depth sample grid | 48 × 36 |
+| Depth sample grid | 48 × 36, each cell read at 5 depth pixels and kept when 3 agree within 8 cm or 6% |
 | Valid depth range | 0.2–5.0 m |
 | Corridor half-width | 0.45 m |
 | Corridor ahead range | 0.3–3.0 m (drop-off 3.5 m) |

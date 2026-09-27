@@ -54,6 +54,8 @@ export interface SessionSummary {
   updateRate: number;
   trackingLostShare: number;
   depthValidShare: number | null;
+  // Share of depth cells left out because their readings didn't agree.
+  depthUnsteadyShare?: number | null;
   fov: FieldOfView | null;
   floor: {
     source: FloorSource;
@@ -162,6 +164,7 @@ export function startSensing(options: SensingOptions): SensingSession {
   let trackedMs = 0;
   let lastTrackedT: number | null = null;
   let validShareSum = 0;
+  let unsteadyShareSum = 0;
   let depthUpdates = 0;
   let calibratedAt: number | null = null;
   let floorMin = Infinity;
@@ -248,7 +251,7 @@ export function startSensing(options: SensingOptions): SensingSession {
       // While lost, updates keep coming with no points, so the hazard engine knows to hold.
       if (tracking.lost && last && t - lastUpdateT >= interval * 0.9) {
         lastUpdateT = t;
-        emit({ ...last, t, tracking: false, points: NO_DEPTH.points, sampleCount: 0, validCount: 0 });
+        emit({ ...last, t, tracking: false, points: NO_DEPTH.points, sampleCount: 0, validCount: 0, unsteadyCount: 0 });
       }
       return;
     }
@@ -326,6 +329,7 @@ export function startSensing(options: SensingOptions): SensingSession {
     trackedUpdates++;
     if (depth.sampleCount > 0) {
       validShareSum += depth.validCount / depth.sampleCount;
+      unsteadyShareSum += depth.unsteadyCount / depth.sampleCount;
       depthUpdates++;
     }
     if (floor.calibrated) {
@@ -341,6 +345,7 @@ export function startSensing(options: SensingOptions): SensingSession {
       points: depth.points,
       sampleCount: depth.sampleCount,
       validCount: depth.validCount,
+      unsteadyCount: depth.unsteadyCount,
       camera,
       // Copies: Chrome may reuse these arrays after the frame.
       worldFromView: Float32Array.from(worldFromView),
@@ -370,6 +375,7 @@ export function startSensing(options: SensingOptions): SensingSession {
       updateRate: trackedMs > 0 ? ((trackedUpdates - 1) * 1000) / trackedMs : 0,
       trackingLostShare: frames > 0 ? lostFrames / frames : 0,
       depthValidShare: depthUpdates > 0 ? validShareSum / depthUpdates : null,
+      depthUnsteadyShare: depthUpdates > 0 ? unsteadyShareSum / depthUpdates : null,
       fov: last?.fov ?? null,
       floor: {
         source: floor?.source ?? "guess",

@@ -27,6 +27,30 @@ describe("sampleDepth", () => {
     expect(sample.points.length).toBe(6);
   });
 
+  it("outvotes a speck of noise in a cell", () => {
+    // One cell; its centre reads 5 m, the four spots around it 2 m.
+    const speck: DepthReader = { getDepthInMeters: (u, v) => (u === 0.5 && v === 0.5 ? 5 : 2) };
+    const sample = sampleDepth(speck, perspective(40, 55), IDENTITY, { cols: 1, rows: 1 });
+    expect(sample.validCount).toBe(1);
+    expect(sample.points[2]).toBeCloseTo(-2, 5);
+  });
+
+  it("takes the surface most of a cell sees on an object's edge", () => {
+    // A pole 1.5 m away covers the left of the cell; the floor behind it reads 3 m.
+    const edge: DepthReader = { getDepthInMeters: (u) => (u < 0.5 ? 1.5 : 3) };
+    const sample = sampleDepth(edge, perspective(40, 55), IDENTITY, { cols: 1, rows: 1 });
+    expect(sample.points[2]).toBeCloseTo(-3, 5);
+  });
+
+  it("leaves out a cell whose readings don't agree, and counts it", () => {
+    const readings = [1, 1.6, 2.2, 2.8, 3.4];
+    let i = 0;
+    const scattered: DepthReader = { getDepthInMeters: () => readings[i++ % readings.length] };
+    const sample = sampleDepth(scattered, perspective(40, 55), IDENTITY, { cols: 1, rows: 1 });
+    expect(sample.validCount).toBe(0);
+    expect(sample.unsteadyCount).toBe(1);
+  });
+
   it("places points with the camera pose", () => {
     const sample = sampleDepth(constant(2), perspective(40, 55), yaw(90, 0, 1.5, 0), { cols: 1, rows: 1 });
     expect(sample.points[0]).toBeCloseTo(-2, 5);

@@ -26,6 +26,8 @@ export interface SensingUpdate {
   points: Float32Array;
   sampleCount: number;
   validCount: number;
+  // Grid cells left out because their depth readings didn't agree. Missing in older replays.
+  unsteadyCount?: number;
   camera: Vec3;
   // Column-major 4 × 4 matrices of this update's view. Phase 2 uses them to tell if a point is in view.
   worldFromView: Float32Array;

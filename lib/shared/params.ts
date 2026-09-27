@@ -77,6 +77,14 @@ export const SENSING = {
   // A hazard no longer seen stops once it sits this far outside the corridor: the user turned
   // away from it or stepped around it.
   forgetOutsideCorridorM: 0.25,
+
+  // Trusting depth (lib/xr/depth.ts). Each grid cell reads five depth pixels this far from its
+  // centre (a share of the cell), and keeps a depth only when at least 3 of them agree to within
+  // 8 cm or 6% of the depth, whichever is more.
+  depthReadSpread: 0.3,
+  depthAgreeMin: 3,
+  depthAgreeM: 0.08,
+  depthAgreeShare: 0.06,
 } as const;
 
 export const USER = {
