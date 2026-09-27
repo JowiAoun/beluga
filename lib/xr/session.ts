@@ -63,6 +63,8 @@ export interface SessionSummary {
     // Highest minus lowest floor height after calibration. The Phase 1 target is ±0.1 m, so 0.2 m at most.
     driftM: number | null;
     phoneAboveFloorM: number | null;
+    // Times the floor moved to a new height (stairs, or ARCore shifting its world).
+    moves?: number;
   };
 }
 
@@ -382,6 +384,7 @@ export function startSensing(options: SensingOptions): SensingSession {
         calibratedAfterS: calibratedAt === null ? null : calibratedAt / 1000,
         driftM: floorMax >= floorMin ? floorMax - floorMin : null,
         phoneAboveFloorM: aboveFloorCount > 0 ? aboveFloorSum / aboveFloorCount : null,
+        moves: floor?.moves ?? 0,
       },
     };
   }

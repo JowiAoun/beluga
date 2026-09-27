@@ -27,6 +27,7 @@ Copied from `docs/PLAN.md` on Sept 26, 2026. When this file and `lib/shared` dif
 | Activate / deactivate | 3 updates on / 6 updates off; drop-offs 5 updates on, one miss allowed |
 | Track match | within 0.6 m of where the hazard was |
 | Drop-off edge | at least 6 floor points before it in the same lane |
+| Floor move | 3 updates with 30 floor points at the phone's usual height above the floor, and few at the old floor |
 | Smoothing weight | 0.5 |
 | Near-miss distance | 1.0 m |
 | Stationary | < 0.1 m moved in 5 s |

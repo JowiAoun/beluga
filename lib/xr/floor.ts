@@ -29,11 +29,15 @@ export function floorCandidates(points: Float32Array, camera: Vec3, forward: Fla
 
 // Floor height in the reference space. Chrome's local-floor on a phone is a fixed guess, so this
 // starts from the guess, takes its first real value from hit tests against ARCore's floor plane,
-// calibrates from depth while the user takes three slow steps, then follows slow drift.
+// calibrates from depth while the user takes three slow steps, then follows slow drift. When the
+// floor under the user moves (stairs, an escalator, or ARCore shifting its world after it lost
+// tracking), it moves with it.
 export class FloorTracker {
   y: number;
   source: FloorSource = "guess";
   calibrating = false;
+  // Times the floor moved to a new height after calibration.
+  moves = 0;
 
   private hits: number[] = [];
   private pool: number[] = [];
@@ -44,6 +48,10 @@ export class FloorTracker {
   private recent: number[] = [];
   private lastReestimate = 0;
   private reportedUnavailable = false;
+  // How high the phone rides above the floor, from calibration. Walking keeps it about the same.
+  private cameraYs: number[] = [];
+  private aboveFloor: number | null = null;
+  private moveVotes = 0;
 
   constructor(guessY: number) {
     this.y = guessY;
@@ -81,6 +89,7 @@ export class FloorTracker {
     if (this.calibrating) {
       if (this.lastCamera) this.walked += Math.hypot(camera.x - this.lastCamera.x, camera.z - this.lastCamera.z);
       this.lastCamera = { ...camera };
+      this.cameraYs.push(camera.y);
       for (const y of candidates) this.pool.push(y);
 
       const timedOut = t - this.calibrationStart >= SENSING.calibrationMaxMs;
@@ -100,13 +109,17 @@ export class FloorTracker {
       const sorted = this.pool.sort((a, b) => a - b);
       const lowest = sorted.slice(0, Math.max(1, Math.floor(sorted.length * SENSING.floorCalibrationLowestShare)));
       this.y = median(lowest);
+      this.aboveFloor = median(this.cameraYs) - this.y;
       this.source = "calibrated";
       this.calibrating = false;
       this.calibrationDone = true;
       this.pool = [];
+      this.cameraYs = [];
       this.lastReestimate = t;
       return "calibrated";
     }
+
+    if (this.moved(t, candidates, camera)) return null;
 
     for (const y of candidates) {
       if (Math.abs(y - this.y) <= SENSING.floorReestimateBandM) this.recent.push(y);
@@ -114,10 +127,36 @@ export class FloorTracker {
     if (t - this.lastReestimate >= SENSING.floorReestimateMs) {
       if (this.recent.length >= SENSING.floorReestimateMinPoints) {
         this.y += SENSING.floorReestimateWeight * (median(this.recent) - this.y);
+        // A strap that slips changes the phone's height too.
+        if (this.aboveFloor !== null) {
+          this.aboveFloor += SENSING.floorReestimateWeight * (camera.y - this.y - this.aboveFloor);
+        }
       }
       this.recent = [];
       this.lastReestimate = t;
     }
     return null;
+  }
+
+  // Depth shows a floor where the phone's height says it should be, and hardly any at the tracked
+  // height, for a few updates in a row: the floor moves there at once. A phone held up higher,
+  // or a platform ahead, shows no floor at that height, so neither moves it.
+  private moved(t: number, candidates: number[], camera: Vec3): boolean {
+    if (this.aboveFloor === null) return false;
+    const band = SENSING.floorReestimateBandM;
+    const expected = camera.y - this.aboveFloor;
+    const there = Math.abs(expected - this.y) > band ? candidates.filter((y) => Math.abs(y - expected) <= band) : [];
+    const here = candidates.filter((y) => Math.abs(y - this.y) <= band).length;
+    if (there.length < SENSING.floorMoveMinPoints || here * 4 > there.length) {
+      this.moveVotes = 0;
+      return false;
+    }
+    if (++this.moveVotes < SENSING.floorMoveAfterUpdates) return false;
+    this.y = median(there);
+    this.moves++;
+    this.moveVotes = 0;
+    this.recent = [];
+    this.lastReestimate = t;
+    return true;
   }
 }

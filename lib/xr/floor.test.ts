@@ -107,7 +107,7 @@ describe("FloorTracker", () => {
     expect(floor.calibrated).toBe(false);
   });
 
-  it("follows slow drift near the floor and ignores anything outside the band", () => {
+  it("follows slow drift near the floor and ignores a raised floor ahead", () => {
     const floor = new FloorTracker(0);
     walk(floor, 0, 4000, 0.5, 0, noise(6));
     const calibrated = floor.y;
@@ -120,11 +120,41 @@ describe("FloorTracker", () => {
     walk(floor, 9200, 60_000, 0.5, 0.05, noise(8));
     expect(floor.y).toBeCloseTo(0.05, 1);
 
-    // A step 0.3 m up is outside the band, so the floor never follows it. Points from just
-    // before the step still count once, which moves it by under a millimetre.
+    // A platform 0.3 m up fills the view while the phone stays at the same height. Points from
+    // just before it still count once, which moves the floor by under a millimetre.
     const before = floor.y;
-    walk(floor, 70_000, 20_000, 0.5, 0.35, noise(9));
+    const rand = noise(9);
+    for (let t = 70_000; t <= 90_000; t += 100) {
+      const camera = { x: 0, y: 1.35, z: -t / 2000 };
+      floor.update(t, scene(camera, 0.35, rand), camera, forward, right);
+    }
     expect(Math.abs(floor.y - before)).toBeLessThan(0.005);
+    expect(floor.moves).toBe(0);
+  });
+
+  it("moves with the floor up stairs, and when ARCore shifts its world", () => {
+    const floor = new FloorTracker(0);
+    walk(floor, 0, 4000, 0.5, 0, noise(11));
+    // Up a flight of stairs: the phone and the floor ahead both end up 1.7 m higher.
+    walk(floor, 4100, 500, 0.5, 1.7, noise(12));
+    expect(floor.y).toBeCloseTo(1.7, 1);
+    // After lost tracking ARCore shifts its world 0.4 m down: the phone and every point with it.
+    walk(floor, 4700, 500, 0.5, 1.3, noise(13));
+    expect(floor.y).toBeCloseTo(1.3, 1);
+    expect(floor.moves).toBe(2);
+  });
+
+  it("keeps the floor when the phone is held 25 cm higher", () => {
+    const floor = new FloorTracker(0);
+    walk(floor, 0, 4000, 0.5, 0, noise(14));
+    const y = floor.y;
+    const rand = noise(15);
+    for (let t = 4100; t <= 8000; t += 100) {
+      const camera = { x: 0, y: 1.55, z: -t / 2000 };
+      floor.update(t, scene(camera, 0, rand), camera, forward, right);
+    }
+    expect(Math.abs(floor.y - y)).toBeLessThan(0.01);
+    expect(floor.moves).toBe(0);
   });
 
   it("ignores hits after calibration", () => {

@@ -92,6 +92,11 @@ export const SENSING = {
   // this many updates, with one miss allowed between them, before it sounds.
   dropOffMinFloorPoints: 6,
   dropOffActivateAfterUpdates: 5,
+  // After calibration the floor moves to where the phone's height says it is (after stairs, an
+  // escalator, or ARCore shifting its world) once depth shows it there, and not at the old
+  // height, for this many updates in a row with at least this many floor points.
+  floorMoveAfterUpdates: 3,
+  floorMoveMinPoints: 30,
 } as const;
 
 export const USER = {

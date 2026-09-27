@@ -875,6 +875,7 @@ function Summary({ summary }: { summary: SessionSummary }) {
         Floor {floor.source.replace("_", " ")}
         {floor.calibratedAfterS !== null && ` after ${floor.calibratedAfterS.toFixed(1)} s`}, moved{" "}
         {metres(floor.driftM)} since (target 0.20 m or less)
+        {floor.moves ? `, moved to a new height ${floor.moves} ${floor.moves === 1 ? "time" : "times"}` : ""}
       </p>
       <p>Phone {metres(floor.phoneAboveFloorM)} above the floor on average</p>
     </section>
