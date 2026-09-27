@@ -347,10 +347,9 @@ export default function Walk() {
           lastDepthAt: lastDepthAtRef.current,
           soundRunning: !ctx || ctx.state === "running",
         });
-        // A short alert, and nothing on screen. A paused sound can't play it, so the phone's voice
-        // speaks instead.
+        // Nothing on screen and no tone, which could be taken for a hazard: problems are counted.
+        // A paused sound is fixed with a tap, so the phone's voice says so.
         if (checked.started && checked.problem === "sound") speakLocalText(SOUND_PAUSED_TEXT);
-        else if (checked.started) soundRef.current?.alert();
       }
     }, DEBUG_OVERLAY.refreshMs);
     return () => window.clearInterval(id);

@@ -1,12 +1,13 @@
 // Keeps a walk going, and flags what stopped when it can't. Warnings need three things to keep
-// arriving: sensing updates, trusted depth, and a running sound. A problem plays a short alert
-// once, with nothing on screen, and each one is counted for the walk summary.
+// arriving: sensing updates, trusted depth, and a running sound. A problem shows nothing on screen
+// and plays no sound, since any tone could be taken for a hazard. Each one is counted for the walk
+// summary.
 
 import { WALK_HEALTH } from "@/lib/shared/params";
 
 export type Problem = "frames" | "depth" | "sound";
 
-// A paused sound can't play the alert, so the phone's own voice says this instead.
+// The one problem the wearer can fix, with a tap, so the phone's own voice says it.
 export const SOUND_PAUSED_TEXT = "The phone paused beluga's sound. Tap the screen to turn it back on.";
 
 export interface HealthInput {
@@ -31,7 +32,7 @@ export class HealthWatch {
   private soundPausedSince: number | null = null;
   readonly counts: HealthCounts = { frames: 0, depth: 0, sound: 0, screen: 0 };
 
-  // The problem now, most serious first, and whether it just started (to alert once).
+  // The problem now, most serious first, and whether it just started (to speak it once).
   update(input: HealthInput): { problem: Problem | null; started: boolean } {
     const { now } = input;
     if (input.soundRunning) this.soundPausedSince = null;

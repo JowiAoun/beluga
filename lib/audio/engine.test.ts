@@ -201,7 +201,7 @@ describe("AudioEngine under an Ask answer", () => {
   });
 });
 
-describe("AudioEngine status lines and alerts", () => {
+describe("AudioEngine status lines", () => {
   const sources = (playing: unknown) => (playing as Array<{ source: FakeSource }>).map((p) => p.source);
 
   it("cuts a status line still playing when the next one starts", () => {
@@ -223,12 +223,5 @@ describe("AudioEngine status lines and alerts", () => {
     engine.sayLine("calibrated");
     expect(words).toHaveLength(2);
     for (const word of words) expect(word.stoppedAt).toBeNull();
-  });
-
-  it("plays the alert once, drawn in code, with no library", () => {
-    engine.alert();
-    const played = [...(engine["oneShots"] as unknown as Set<{ source: FakeSource }>)].map((p) => p.source);
-    expect(played).toHaveLength(1);
-    expect(played[0].buffer.duration).toBeGreaterThan(0.3);
   });
 });
