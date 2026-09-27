@@ -127,14 +127,20 @@ export function findHazards(update: SensingUpdate, headTopM: number = headHeight
     if (head && below && below.near <= head.near + SENSING.bucketMergeDistanceM) hits[1][b] = null;
 
     // A drop-off is where the floor ends. From chest height the lower floor only shows further out,
-    // so the last floor point before it marks the edge.
+    // so the last floor point before it marks the edge. With too little floor before it, the low
+    // points are more likely bad depth, or a floor height that is off, than a real edge.
     const drop = hits[2][b];
     if (drop) {
       let edge = -1;
+      let floorBefore = 0;
       for (const i of floorLists[b]) {
-        if (ahead[i] < drop.near && (edge < 0 || ahead[i] > ahead[edge])) edge = i;
+        if (ahead[i] >= drop.near) continue;
+        floorBefore++;
+        if (edge < 0 || ahead[i] > ahead[edge]) edge = i;
       }
-      if (edge >= 0) {
+      if (floorBefore < SENSING.dropOffMinFloorPoints) {
+        hits[2][b] = null;
+      } else {
         drop.near = ahead[edge];
         drop.index = edge;
       }

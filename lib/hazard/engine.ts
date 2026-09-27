@@ -47,7 +47,7 @@ interface Track {
   blocking: number;
   poleLike: boolean;
   label: DetectorClass;
-  // Updates in a row with the hazard seen, and without it while in view.
+  // Updates with the hazard seen (in a row, or with one miss for a drop-off), and without it while in view.
   streak: number;
   misses: number;
   active: boolean;
@@ -142,12 +142,14 @@ export class HazardEngine {
     const t = update.t;
     const events: HazardEvent[] = [];
 
-    // Pair each hazard with the closest track of its kind: one bucket of drift, or the same spot.
+    // Pair each hazard with the closest track of its kind: one bucket of drift, or the same spot,
+    // and never further than a person walks in an update or two.
     const pairs: Array<{ track: Track; raw: RawHazard; gap: number }> = [];
     for (const track of this.tracks) {
       for (const raw of raws) {
         if (raw.kind !== track.kind) continue;
         const gap = Math.hypot(raw.world.x - track.world.x, raw.world.z - track.world.z);
+        if (gap > SENSING.trackMatchMaxM) continue;
         if (Math.abs(raw.bucket - track.bucket) > 1 && gap > SENSING.bucketMergeDistanceM) continue;
         pairs.push({ track, raw, gap });
       }
@@ -186,8 +188,12 @@ export class HazardEngine {
         kept.push(track);
         continue;
       }
-      // A hazard not yet active needs its updates in a row.
-      if (!track.active) continue;
+      // A hazard not yet active needs its updates in a row. A drop-off, which needs more of them,
+      // may miss one between them.
+      if (!track.active) {
+        if (track.kind === "drop_off" && track.misses++ === 0) kept.push(track);
+        continue;
+      }
       const at = relative(track.world, update);
       track.distance = at.ahead;
       track.angle = angleOf(at.ahead, at.lateral);
@@ -229,7 +235,8 @@ export class HazardEngine {
 
     const active: Track[] = [];
     for (const track of kept) {
-      const activates = !track.active && track.streak >= SENSING.activateAfterUpdates;
+      const needed = track.kind === "drop_off" ? SENSING.dropOffActivateAfterUpdates : SENSING.activateAfterUpdates;
+      const activates = !track.active && track.streak >= needed;
       if (activates) track.active = true;
       if (!track.active) continue;
       const fallback: DetectorClass = track.poleLike ? "pole_like" : "unknown";

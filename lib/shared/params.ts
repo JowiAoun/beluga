@@ -85,6 +85,13 @@ export const SENSING = {
   depthAgreeMin: 3,
   depthAgreeM: 0.08,
   depthAgreeShare: 0.06,
+  // A hazard only follows a new reading this close to where it was, so noise across the view
+  // can't pull its distance around.
+  trackMatchMaxM: 0.6,
+  // A drop-off needs this many floor points before its edge in the same lane, and to be seen in
+  // this many updates, with one miss allowed between them, before it sounds.
+  dropOffMinFloorPoints: 6,
+  dropOffActivateAfterUpdates: 5,
 } as const;
 
 export const USER = {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { sampleDepth, type DepthReader } from "@/lib/xr/depth";
 import { toViewCoords } from "@/lib/xr/geometry";
 import { makeUpdate, noise, perspective, yaw } from "@/lib/xr/testFixtures";
 import type { SensingUpdate } from "@/lib/xr/types";
@@ -46,8 +47,8 @@ function floor(z: number, from = 0.3, to = 3.5, heightAt: (ahead: number) => num
   return out;
 }
 
-// Runs the same scene for a few updates and returns the last result.
-function settle(engine: HazardEngine, points: number[], updates = 4): EngineResult {
+// Runs the same scene for a few updates and returns the last result. Drop-offs need 5 updates.
+function settle(engine: HazardEngine, points: number[], updates = 6): EngineResult {
   let result: EngineResult | null = null;
   for (let i = 0; i < updates; i++) result = engine.update(at(0, points, i * 100));
   return result!;
@@ -128,6 +129,22 @@ describe("HazardEngine scenes", () => {
     expect(hazards).toHaveLength(1);
     expect(hazards[0].kind).toBe("drop_off");
     expect(hazards[0].distance).toBeCloseTo(2, 1);
+  });
+
+  it("sounds a drop-off after 5 updates, and lets one missed update pass", () => {
+    const step = [...floor(0, 0.3, 2.0), ...floor(0, 2.3, 3.5, () => -0.18)];
+    const engine = new HazardEngine();
+    const kinds = (t: number, points: number[]) => engine.update(at(0, points, t)).hazards.map((h) => h.kind);
+    for (let i = 0; i < 3; i++) expect(kinds(i * 100, step)).toEqual([]);
+    // One update without the lower floor, as depth sometimes misses it.
+    expect(kinds(300, floor(0, 0.3, 2.0))).toEqual([]);
+    expect(kinds(400, step)).toEqual([]);
+    expect(kinds(500, step)).toEqual(["drop_off"]);
+  });
+
+  it("finds no drop-off without floor before it, as when the floor height is off", () => {
+    // Every point 0.3 m below the tracked floor: the floor height is wrong, not the world.
+    expect(settle(new HazardEngine(), floor(0, 0.3, 3.5, () => -0.3)).hazards).toEqual([]);
   });
 
   it("ignores a noisy floor with scattered single points", () => {
@@ -224,6 +241,16 @@ describe("HazardEngine behaviour", () => {
     expect(after.map((h) => h.id)).toEqual(before.map((h) => h.id));
   });
 
+  it("keeps a hazard's distance when a reading in the next lane is far from it", () => {
+    const engine = new HazardEngine();
+    const box = grid([-0.06, 0.06], [0, 0.5], [-2, -2]);
+    expect(settle(engine, [...floor(0), ...box]).hazards.map((h) => h.distance)).toEqual([expect.closeTo(2, 1)]);
+    // The box reads missing for an update, and a patch 0.8 m ahead shows one lane to the right.
+    const patch = grid([0.12, 0.24], [0, 0.4], [-0.8, -0.8]);
+    const next = engine.update(at(0, [...floor(0), ...patch], 600)).hazards;
+    expect(next.map((h) => h.distance)).toEqual([expect.closeTo(2, 1)]);
+  });
+
   it("stops a hazard at once when the user turns away from it", () => {
     const engine = new HazardEngine();
     const scene = [...floor(0, 0.3, 1.45), ...grid([-0.3, -0.1], [0, 1], [-1.5, -1.5])];
@@ -268,5 +295,49 @@ describe("HazardEngine behaviour", () => {
     const sign = grid([-0.3, 0.3], [1.75, 1.9], [-1.8, -1.8]);
     expect(settle(new HazardEngine(1.85), [...floor(0), ...sign]).hazards).toHaveLength(1);
     expect(settle(new HazardEngine(1.6), [...floor(0), ...sign]).hazards).toEqual([]);
+  });
+});
+
+describe("HazardEngine on flickering depth", () => {
+  const TAN_V = Math.tan((37 * Math.PI) / 180);
+
+  // What the level phone in `at` reads over a floor that steps down `drop` metres 2.4 m ahead.
+  // Some pixels flicker to 4 m on every read, and on most updates a patch of the floor in a new
+  // spot reads 25% too far, as ARCore's depth does on a plain or dim floor.
+  function reader(rand: () => number, drop: number): DepthReader {
+    const patch = (rand() + 1) / 2 < 0.7 ? { u: (rand() + 1) / 2, v: 0.8 + ((rand() + 1) / 2) * 0.15 } : null;
+    return {
+      getDepthInMeters: (u, v) => {
+        if ((rand() + 1) / 2 < 0.1) return 4;
+        const k = (2 * v - 1) * TAN_V;
+        if (k <= 0) return 0;
+        const near = 1.3 / k;
+        const d = near <= 2.4 ? near : (1.3 + drop) / k;
+        const inPatch = patch && Math.abs(u - patch.u) < 0.15 && Math.abs(v - patch.v) < 0.05;
+        return inPatch ? d * 1.25 : d;
+      },
+    };
+  }
+
+  // Five seconds of standing still, through the real depth sampler. Returns every kind heard.
+  function kindsHeard(drop: number): Set<string> {
+    const engine = new HazardEngine();
+    const rand = noise(42);
+    const kinds = new Set<string>();
+    for (let i = 0; i < 50; i++) {
+      const update = at(0, [], i * 100);
+      const sample = sampleDepth(reader(rand, drop), update.projection, update.worldFromView, { cols: 36, rows: 48 });
+      update.points = sample.points;
+      for (const hazard of engine.update(update).hazards) kinds.add(hazard.kind);
+    }
+    return kinds;
+  }
+
+  it("stays quiet on a flat floor with flickering pixels and patches that read too far", () => {
+    expect(kindsHeard(0)).toEqual(new Set());
+  });
+
+  it("still finds a real 18 cm step down through the same flicker", () => {
+    expect(kindsHeard(0.18)).toEqual(new Set(["drop_off"]));
   });
 });
