@@ -9,6 +9,7 @@ import { SOUNDS_PATH } from "@/lib/audio/library";
 import { samplePath, VOICES, type VoiceKey } from "@/lib/audio/voices";
 import { cn } from "@/lib/utils";
 import { CHECKBOX } from "./styles";
+import { stopRecording } from "./voice";
 
 export default function VoicePicker({
   value,
@@ -36,7 +37,8 @@ export default function VoicePicker({
     const wasPlaying = playing === key;
     stop();
     if (wasPlaying) return;
-    // The phone's own voice may still be reading a setup step.
+    // A setup step may still be playing, as a recording or in the phone's own voice.
+    stopRecording();
     window.speechSynthesis?.cancel();
     const sample = new Audio(`${SOUNDS_PATH}/${samplePath(key)}`);
     sample.onended = () => setPlaying((now) => (now === key ? null : now));

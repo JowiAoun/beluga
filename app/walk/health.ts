@@ -2,15 +2,22 @@
 // arriving: sensing updates, trusted depth, and a running sound. A problem shows on the walking
 // screen and is spoken once, and each one is counted for the walk summary.
 
+import { CLIP_TEXT, type ClipId } from "@/lib/audio/library";
 import { WALK_HEALTH } from "@/lib/shared/params";
 
 export type Problem = "frames" | "depth" | "sound";
 
 export const PROBLEM_TEXT: Record<Problem, string> = {
-  frames: "beluga stopped getting camera frames, so warnings are off. Press Stop, then Start again.",
-  depth:
-    "beluga isn't getting depth, so warnings are off. Point the phone at the path ahead. If this stays, press Stop, then Start again.",
+  frames: CLIP_TEXT.problem_frames,
+  depth: CLIP_TEXT.problem_depth,
   sound: "The phone paused beluga's sound. Tap the screen to turn it back on.",
+};
+
+// The recorded line for each problem. A paused sound has none: only the phone's own voice can
+// still be heard then.
+export const PROBLEM_CLIP: Partial<Record<Problem, ClipId>> = {
+  frames: "problem_frames",
+  depth: "problem_depth",
 };
 
 export interface HealthInput {

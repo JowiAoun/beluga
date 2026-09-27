@@ -16,7 +16,7 @@ import {
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AudioEngine } from "@/lib/audio/engine";
-import { decodeLibrary, fetchLibrary, isClipId, type RawLibrary } from "@/lib/audio/library";
+import { decodeLibrary, fetchLibrary, isClipId, type DecodedLibrary, type RawLibrary } from "@/lib/audio/library";
 import { DetectPipeline } from "@/lib/detect/pipeline";
 import { withStrip } from "@/lib/detect/strip";
 import { CameraOnlyEngine } from "@/lib/hazard/cameraOnly";
@@ -48,7 +48,7 @@ import ReplayPlayer from "./ReplayPlayer";
 import { Reporting } from "./reporting";
 import { DEFAULT_SETTINGS, readSettings, saveSettings, type Settings } from "./settings";
 import SettingsPanel from "./SettingsPanel";
-import { HealthWatch, keepScreenOn, PROBLEM_TEXT, type HealthCounts, type Problem } from "./health";
+import { HealthWatch, keepScreenOn, PROBLEM_CLIP, PROBLEM_TEXT, type HealthCounts, type Problem } from "./health";
 import { heardHazards, offText, warnFromOf } from "./warnings";
 import { HapticEngine } from "@/lib/haptics/engine";
 import AskButton from "./AskButton";
@@ -58,7 +58,7 @@ import { askLocation, locationPermission, watchLocation, type Fix } from "./loca
 import StopButton from "./StopButton";
 import MicrophoneSetup from "./MicrophoneSetup";
 import VoiceAsk from "./VoiceAsk";
-import { LINES, say, speakLocalText, speakText, unlockVoice } from "./voice";
+import { LINES, say, speakLocalText, speakText, unlockVoice, type Line } from "./voice";
 import { Contours } from "@/components/brand/Contours";
 import { cn } from "@/lib/utils";
 import { CHECKBOX, LINK_ROW, PANEL, PRIMARY, SECONDARY } from "./styles";
@@ -117,6 +117,14 @@ const CAMERA_HELP =
 // Start waits this long at most for the recorded sounds.
 const SOUNDS_WAIT_MS = 8000;
 
+// A recorded line with no engine to play it, like "beluga stopped" after a walk: at the walk's
+// volume, from both sides.
+function playOnce(ctx: AudioContext, buffer: AudioBuffer, volumeDb: number): void {
+  const source = new AudioBufferSourceNode(ctx, { buffer });
+  source.connect(new GainNode(ctx, { gain: 10 ** (volumeDb / 20) })).connect(ctx.destination);
+  source.start();
+}
+
 function freshLatest(fix: Fix | null = null): Latest {
   return {
     update: null,
@@ -139,6 +147,8 @@ export default function Walk() {
   const soundRef = useRef<AudioEngine | null>(null);
   const hapticsRef = useRef<HapticEngine | null>(null);
   const libraryRef = useRef<RawLibrary | null>(null);
+  // The recorded sounds decoded into the walk's audio, or on their way.
+  const decodedRef = useRef<Promise<DecodedLibrary> | null>(null);
   const cleanupRef = useRef<Array<() => void>>([]);
   const debugRef = useRef(false);
   const latestRef = useRef<Latest>(freshLatest());
@@ -204,6 +214,30 @@ export default function Walk() {
     cleanupRef.current.splice(0).forEach((fn) => fn());
   }, []);
 
+  // The running engine takes the decoded sounds; the status lines after a walk play them from
+  // decodedRef. Only the newest decode counts, so a voice picked mid-walk isn't undone by an older one.
+  const decodeInto = useCallback((ctx: AudioContext, raw: RawLibrary) => {
+    const decoding = decodeLibrary(ctx, raw);
+    decodedRef.current = decoding;
+    void decoding.then((library) => {
+      if (decodedRef.current === decoding) soundRef.current?.useLibrary(library);
+    });
+  }, []);
+
+  // A status line in the chosen voice: through the engine during a walk, straight out after one.
+  // Before the recordings are decoded, or with none, the phone's voice says it.
+  const sayLine = useCallback((line: Line) => {
+    const decoding: Promise<DecodedLibrary | null> = decodedRef.current ?? Promise.resolve(null);
+    void decoding.then((library) => {
+      const clip = isClipId(line) ? library?.clips[line] : undefined;
+      const ctx = audioRef.current;
+      const sound = soundRef.current;
+      if (clip && sound) sound.say([line]);
+      else if (clip && ctx?.state === "running") playOnce(ctx, clip, settingsRef.current.volumeDb);
+      else say(line);
+    });
+  }, []);
+
   useEffect(() => {
     const overlay = overlayRef.current;
     // Taps on the overlay must not also fire an XR select.
@@ -253,9 +287,8 @@ export default function Walk() {
       libraryRef.current = raw;
       setSoundsLoading(false);
       // A walk that started on tones takes the recorded sounds now.
-      const sound = soundRef.current;
       const ctx = audioRef.current;
-      if (raw && sound && ctx) void decodeLibrary(ctx, raw).then((library) => sound.useLibrary(library));
+      if (raw && ctx) decodeInto(ctx, raw);
       setSoundStatus(
         raw?.offlineReady
           ? "Spoken labels saved on this device for offline playback."
@@ -277,7 +310,7 @@ export default function Walk() {
       sessionRef.current?.stop();
       runCleanups();
     };
-  }, [runCleanups]);
+  }, [runCleanups, decodeInto]);
 
   // Numbers for the overlay refresh a few times a second, not on every update.
   useEffect(() => {
@@ -313,7 +346,12 @@ export default function Walk() {
           soundRunning: !ctx || ctx.state === "running",
         });
         setProblem(checked.problem);
-        if (checked.started && checked.problem) speakLocalText(PROBLEM_TEXT[checked.problem]);
+        if (checked.started && checked.problem) {
+          const clip = PROBLEM_CLIP[checked.problem];
+          const sound = soundRef.current;
+          if (clip && sound) sound.say([clip]);
+          else speakLocalText(PROBLEM_TEXT[checked.problem]);
+        }
       }
     }, DEBUG_OVERLAY.refreshMs);
     return () => window.clearInterval(id);
@@ -395,7 +433,7 @@ export default function Walk() {
       latest.events = [...result.events.reverse(), ...latest.events].slice(0, RECENT_EVENTS);
   }, []);
 
-  // Recorded clips where there is one; the phone's voice for the rest.
+  // Recorded clips, or the phone's voice until they are decoded.
   const onCue = useCallback((cue: Cue) => {
     if (cue === "calibrated") hapticsRef.current?.calibrated(performance.now());
     if (soundRef.current && isClipId(cue)) soundRef.current.say([cue]);
@@ -421,7 +459,7 @@ export default function Walk() {
       setPhase("ended");
       setSummary(result);
       setLastHealth(health ? { ...health.counts } : null);
-      say("stopped");
+      sayLine("stopped");
       if (debugRef.current) {
         console.info("[beluga walk] summary", result);
         // Chrome's Bluetooth latency estimate, next to the Phase 3 target of 0.6 s to the first sound.
@@ -434,7 +472,7 @@ export default function Walk() {
         }).catch(() => {});
       }
     },
-    [runCleanups],
+    [runCleanups, sayLine],
   );
 
   const start = (how: Mode = support === "camera" ? "camera" : "ar") => {
@@ -483,7 +521,7 @@ export default function Walk() {
     });
     // Tones play until the library is decoded, a moment later.
     const raw = libraryRef.current;
-    if (raw) void decodeLibrary(ctx, raw).then((library) => sound.useLibrary(library));
+    if (raw) decodeInto(ctx, raw);
     cleanupRef.current.push(() => {
       sound.stop();
       if (soundRef.current === sound) soundRef.current = null;
@@ -542,7 +580,7 @@ export default function Walk() {
         if (!granted.depth && (!granted.camera || !detectorOk)) {
           cameraOnlyRef.current = how === "camera";
           setCameraOnly(cameraOnlyRef.current);
-          say("no_depth");
+          sayLine("no_depth");
           const detectorError = detectRef.current?.stats().error;
           setMessage(
             detectorError ? `No depth is available, and the object detector failed: ${detectorError}` : LINES.no_depth,
@@ -550,7 +588,7 @@ export default function Walk() {
         } else if (!granted.depth || cameraOnlyRef.current) {
           cameraOnlyRef.current = true;
           setCameraOnly(true);
-          say("camera_only");
+          sayLine("camera_only");
           setMessage(LINES.camera_only);
         }
       },
@@ -566,11 +604,11 @@ export default function Walk() {
           return;
         }
         if (err instanceof CameraDeniedError) {
-          say("camera_denied");
+          sayLine("camera_denied");
           setMessage(CAMERA_HELP);
           return;
         }
-        say("start_failed");
+        sayLine("start_failed");
         setMessage(`beluga could not start: ${errorText(err)}`);
       },
     );
@@ -604,7 +642,7 @@ export default function Walk() {
         const expectedMs = result.meta.answer.length * AUDIO.spokenAnswerMsPerChar;
         speakText(result.meta.answer, sound.duckForSpokenAnswer(expectedMs));
       }
-      else say(result.kind === "offline" ? "ask_offline" : "sorry");
+      else sayLine(result.kind === "offline" ? "ask_offline" : "sorry");
       const outcome = result.kind === "text" && result.meta.voiceFailed ? "phone voice" : result.kind;
       latestRef.current.lastAsk = { ms: Math.round(performance.now() - began), outcome };
     } finally {
@@ -634,9 +672,8 @@ export default function Walk() {
         if (settingsRef.current.voice !== next.voice) return;
         libraryRef.current = raw;
         setSoundsLoading(false);
-        const sound = soundRef.current;
         const ctx = audioRef.current;
-        if (raw && sound && ctx) void decodeLibrary(ctx, raw).then((library) => sound.useLibrary(library));
+        if (raw && ctx) decodeInto(ctx, raw);
       });
     }
   };
@@ -653,7 +690,7 @@ export default function Walk() {
     const next = !reporting.isOn();
     reporting.setOn(next);
     setReportingOn(next);
-    say(next ? "reporting_on" : "reporting_off");
+    sayLine(next ? "reporting_on" : "reporting_off");
   };
 
   const toggleDebug = () => {

@@ -1,24 +1,25 @@
-// Speaks beluga's status lines with the phone's own text-to-speech voice, which works offline.
-// The ElevenLabs clips from Phase 3 take over the lines they cover.
+// The phone's own text-to-speech voice, which works offline. It says beluga's status lines only
+// when their ElevenLabs recordings can't play: before they are decoded, or with no sound library.
+
+import { CLIP_TEXT } from "@/lib/audio/library";
 
 export const LINES = {
-  take_steps: "take three slow steps",
-  calibrated: "calibrated",
-  hold_steady: "hold steady",
-  stopped: "beluga stopped",
+  take_steps: CLIP_TEXT.take_steps,
+  calibrated: CLIP_TEXT.calibrated,
+  hold_steady: CLIP_TEXT.hold_steady,
+  stopped: CLIP_TEXT.stopped,
   no_ar: "This phone can't run beluga. It needs Chrome with AR support.",
-  start_failed: "beluga could not start.",
-  no_depth: "No depth on this phone. Obstacle alerts can't run.",
-  ask_offline: "Ask is offline. Obstacle alerts still on.",
-  reporting_on: "reporting on",
-  reporting_off: "reporting off",
-  sorry: "Sorry, I couldn't see that.",
-  camera_only:
-    "Camera-only mode. It warns about things it can name, like people, bikes and chairs, and yellow edge strips. No step warnings.",
-  tap_camera: "Tap the screen once to start the camera.",
-  camera_dark: "The camera is covered or it's too dark. Warnings are off until it can see.",
-  camera_light: "The camera can see again.",
-  camera_denied: "beluga needs the camera. Allow it in the browser's settings for this site, then tap Start again.",
+  start_failed: CLIP_TEXT.start_failed,
+  no_depth: CLIP_TEXT.no_depth,
+  ask_offline: CLIP_TEXT.ask_offline,
+  reporting_on: CLIP_TEXT.reporting_on,
+  reporting_off: CLIP_TEXT.reporting_off,
+  sorry: CLIP_TEXT.sorry,
+  camera_only: CLIP_TEXT.camera_only,
+  tap_camera: CLIP_TEXT.tap_camera,
+  camera_dark: CLIP_TEXT.camera_dark,
+  camera_light: CLIP_TEXT.camera_light,
+  camera_denied: CLIP_TEXT.camera_denied,
 } as const;
 
 export type Line = keyof typeof LINES;
@@ -67,4 +68,26 @@ export function speakLocalText(text: string): void {
   utterance.voice = voice;
   utterance.lang = voice.lang;
   synth.speak(utterance);
+}
+
+// One recording at a time outside a walk, such as a setup step: a new one cuts the last one, and
+// the phone's voice too. When the file can't play (offline, never fetched), the phone's voice says
+// the text instead.
+let recording: HTMLAudioElement | null = null;
+
+export function playRecording(url: string, text: string): void {
+  stopRecording();
+  speech()?.cancel();
+  const audio = new Audio(url);
+  recording = audio;
+  audio.play().catch(() => {
+    if (recording !== audio) return;
+    recording = null;
+    speakText(text);
+  });
+}
+
+export function stopRecording(): void {
+  recording?.pause();
+  recording = null;
 }

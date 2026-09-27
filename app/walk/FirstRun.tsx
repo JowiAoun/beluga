@@ -1,7 +1,7 @@
 "use client";
 
 // The first-run steps from Phase 9, spoken and on screen. Each step moves focus to its heading,
-// so TalkBack reads it; the phone's voice says the same short prompt for anyone without TalkBack.
+// so TalkBack reads it; the chosen voice says the same short prompt for anyone without TalkBack.
 
 import {
   IconBlind,
@@ -18,24 +18,17 @@ import {
 } from "@tabler/icons-react";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { DISPLAY, Name } from "@/components/brand/Display";
-import { DEFAULT_VOICE, voiceOf, type VoiceKey } from "@/lib/audio/voices";
+import { SETUP_TEXT, SOUNDS_PATH, type SetupStep } from "@/lib/audio/library";
+import { DEFAULT_VOICE, setupPath, voiceOf, type VoiceKey } from "@/lib/audio/voices";
 import { cn } from "@/lib/utils";
 import { heightText, stepHeight } from "./settings";
 import { PANEL, PRIMARY, SECONDARY } from "./styles";
-import { speakText, unlockVoice } from "./voice";
+import { playRecording, unlockVoice } from "./voice";
 import VoicePicker from "./VoicePicker";
 
-type Step = "welcome" | "voice" | "reporting" | "location" | "height" | "ready";
+type Step = SetupStep;
 
-const PROMPTS: Record<Step, string> = {
-  welcome: "beluga works alongside your cane or guide dog. It can miss things.",
-  voice: "Pick the voice that says warnings and answers your questions. Tap Play to hear each one.",
-  reporting: "Help the city by sharing anonymous hazard reports? You can change this any time in settings.",
-  location:
-    "Location marks where hazard reports happen, to about 100 metres. Chrome can't ask during a walk, so it asks now.",
-  height: "How tall are you? beluga uses it to watch for things at head height.",
-  ready: "Put the phone on your chest mount, camera facing forward, then tap Start.",
-};
+const PROMPTS = SETUP_TEXT;
 
 const ORDER: Step[] = ["welcome", "voice", "reporting", "location", "height", "ready"];
 
@@ -120,7 +113,7 @@ export default function FirstRun({
 
   const go = (next: Step) => {
     setStep(next);
-    speakText(PROMPTS[next]);
+    playRecording(`${SOUNDS_PATH}/${setupPath(voice, next)}`, PROMPTS[next]);
   };
 
   const StepIcon = step ? ICONS[step] : null;

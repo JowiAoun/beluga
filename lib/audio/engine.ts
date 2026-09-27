@@ -6,7 +6,7 @@ import { priorityOf } from "@/lib/hazard/engine";
 import type { HazardUpdate } from "@/lib/shared/contracts";
 import { SOUND_IDS, type SoundId } from "@/lib/shared/enums";
 import { AUDIO } from "@/lib/shared/params";
-import { isClipId, type ClipId, type DecodedLibrary } from "./library";
+import { CLIP_TEXT, isClipId, type ClipId, type DecodedLibrary } from "./library";
 import { createPlacer, DEFAULT_EARS, lateralOf, type EarSettings, type Pan, type Placer } from "./placement";
 import { QUIET, Scheduler, type Action, type Scene, type SoundInfo, type VoiceView, type WarnFrom } from "./scheduler";
 import { renderTone } from "./tones";
@@ -402,7 +402,7 @@ export class AudioEngine {
   say(words: string[], pan: Pan = 0): void {
     const buffers = words.map((word) => (isClipId(word) ? this.clips[word] : undefined));
     if (buffers.some((b) => !b)) {
-      this.speak?.(words.join(", "));
+      this.speak?.(words.map((word) => (isClipId(word) ? CLIP_TEXT[word] : word)).join(", "));
       return;
     }
     let at = this.ctx.currentTime;
