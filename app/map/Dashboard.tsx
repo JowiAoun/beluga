@@ -4,7 +4,7 @@ import { IconBuildingCommunity, IconDatabaseOff, IconFlask, IconMap2 } from "@ta
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { CARD } from "@/components/brand/Card";
-import { Contours } from "@/components/brand/Contours";
+import { LiveContours } from "@/components/brand/LiveContours";
 import { DISPLAY, Eyebrow, Name, Serif } from "@/components/brand/Display";
 import { SonarRings } from "@/components/brand/SonarRings";
 import type {
@@ -29,7 +29,7 @@ import { loadOf, usePoll } from "./usePoll";
 function MapLoading() {
   return (
     <div className="relative isolate flex h-[60svh] min-h-80 w-full items-center justify-center overflow-hidden bg-abyss ring-1 ring-line lg:h-[36rem]">
-      <Contours variant="b" />
+      <LiveContours variant="b" />
       <span className="relative flex size-20 items-center justify-center">
         <SonarRings className="inset-0" count={3} />
         <span className="size-2.5 rounded-full bg-sonar" />
@@ -116,7 +116,7 @@ export default function Dashboard() {
   return (
     <main id="main" tabIndex={-1} className="relative isolate overflow-x-clip outline-none">
       <div className="tone-dark relative isolate border-b border-line">
-        <Contours variant="a" />
+        <LiveContours variant="a" />
         <header className="relative mx-auto flex max-w-[90rem] flex-col gap-6 px-4 pt-28 pb-10 sm:px-6 md:pt-32 md:pb-12">
           <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
             <div className="max-w-4xl">
