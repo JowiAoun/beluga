@@ -83,15 +83,25 @@ describe("Scheduler", () => {
     expect(times[1] - times[0]).toBeCloseTo(0.08, 6);
   });
 
-  it("plays one hazard at a time: the nearest band first, then the most urgent kind", () => {
+  it("plays one hazard at a time: the nearest first, then the most urgent kind", () => {
     const ids = (hazards: HazardUpdate[]) =>
       new Set(run(new Scheduler(INFO), 0, 0.2, scene(hazards)).flatMap((a) => (a.type === "voice" ? [a.id] : [])));
     const drop = (d: number) => hazard("drop", d, 0, { kind: "drop_off" });
     const pole = hazard("pole", 0.6, -0.2, { label: "pole_like" });
-    // A drop-off at 1.4 m is a band further out than a pole at 0.6 m, even with its bands shifted.
+    // A drop-off at 1.4 m sounds, but a pole at 0.6 m is nearer.
     expect(ids([drop(1.4), pole, hazard("box", 0.7, 0.3)])).toEqual(new Set(["pole"]));
-    // In the same band, the drop-off comes first.
-    expect(ids([drop(1.2), pole])).toEqual(new Set(["drop"]));
+    // Within the same 0.25 m, the drop-off comes first.
+    expect(ids([drop(0.55), pole])).toEqual(new Set(["drop"]));
+  });
+
+  it("sounds each kind from its own warning distance, and speeds up across it", () => {
+    const s = new Scheduler(INFO);
+    s.setWarnFrom((h) => (h.label === "pole_like" ? 2.5 : 1));
+    const pole = run(s, 0, 0.1, scene([hazard("pole", 2, 0, { label: "pole_like" })]));
+    // 2 m of 2.5 m is the last step: every 350 ms, at -6 dB.
+    expect(pole.find((a) => a.type === "voice")).toMatchObject({ gainDb: -6 });
+    expect(hitTimes(pole)).toEqual([0]);
+    expect(run(new Scheduler(INFO), 0, 0.1, scene([hazard("box", 2)]))).toEqual([]);
   });
 
   it("keeps the hazard already sounding against a closer one in the same band, until it is a band nearer", () => {
@@ -109,7 +119,8 @@ describe("Scheduler", () => {
     const hazards = [hazard("drop", 1.2, 0, { kind: "drop_off" }), hazard("pole", 0.6, -0.2, { label: "pole_like" })];
     const voices = run(new Scheduler(INFO, 2), 0, 0.2, scene(hazards)).filter((a) => a.type === "voice");
     expect(voices.find((v) => v.id === "pole")).toMatchObject({ gainDb: -3 - 12 });
-    expect(voices.find((v) => v.id === "drop")).toMatchObject({ gainDb: -3 });
+    // 1.2 m of a drop-off's 1.5 m is its last step.
+    expect(voices.find((v) => v.id === "drop")).toMatchObject({ gainDb: -6 });
   });
 
   it("drops an obstacle 6 dB when standing still, then stops it after 3 repeats until moving", () => {
@@ -122,9 +133,9 @@ describe("Scheduler", () => {
   });
 
   it("never quietens a drop-off for standing still", () => {
-    const actions = run(new Scheduler(INFO), 0, 3, scene([hazard("d", 0.9, 0, { kind: "drop_off" })], { stationary: true }));
+    const actions = run(new Scheduler(INFO), 0, 3, scene([hazard("d", 0.6, 0, { kind: "drop_off" })], { stationary: true }));
     expect(hitTimes(actions).length).toBeGreaterThan(10);
-    // Drop-offs use the table shifted 0.5 m out, so 0.9 m is already in the 0 dB band.
+    // Drop-offs sound from 1.5 m, so 0.6 m is already in the 0 dB band.
     expect(actions.find((a) => a.type === "voice")).toMatchObject({ gainDb: 0 });
   });
 

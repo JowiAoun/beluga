@@ -46,26 +46,26 @@ Copied from `docs/PLAN.md` on Sept 26, 2026. When this file and `lib/shared` dif
 
 ## Audio
 
-| Distance ahead | Repeat every | Volume |
+| Share of the warning distance | Repeat every | Volume |
 | --- | --- | --- |
-| more than 1.0 m | silent | none |
-| 0.75 to 1.0 m | 350 ms | −6 dB |
-| 0.5 to 0.75 m | 220 ms | −3 dB |
-| 0.3 to 0.5 m | 120 ms | 0 dB |
-| under 0.3 m | 80 ms (continuous) | 0 dB |
+| past it | silent | none |
+| 75 to 100% | 350 ms | −6 dB |
+| 50 to 75% | 220 ms | −3 dB |
+| 30 to 50% | 120 ms | 0 dB |
+| under 30% | 80 ms (continuous) | 0 dB |
 
-Hazards are still found out to 3 m, so they sound the moment they come within 1 m. Drop-offs: same table 0.5 m further out (start 1.5 m, continuous under 0.8 m).
+Each kind of hazard has its own warning distance, a slider in Settings from 0.5 m to 3 m (3.5 m for drop-offs), in 0.25 m steps: 1 m by default, 1.5 m for drop-offs. Vibration uses the same distance. Hazards are still found out to 3 m, so they warn the moment they come within it.
 
 | Parameter | Default |
 | --- | --- |
 | Pan | offset from the walking line ÷ 0.45 m, clamped to ±1. Ask answers: angle ÷ 20° |
 | Far ear | −24 dB × pan, silent at full pan, up to 0.6 ms late |
 | Centre marker zone | within 0.09 m of the walking line (the middle bucket) |
-| Max simultaneous hazard sounds | 1, the nearest band first |
+| Max simultaneous hazard sounds | 1, the nearest first (in 0.25 m steps), then the most urgent kind |
 | Centre marker | first repeat straight ahead, then at most every 1 s |
 | Lower-priority duck | −12 dB |
 | Stationary reduction | −6 dB, stop after 3 repeats (never for drop-offs) |
-| Voice clip trigger | entering the 0.5 to 1.0 m band |
+| Voice clip trigger | entering the far half of the warning distance |
 | Voice clip | the word, then the side ("pole, left") |
 | Voice clip cooldown | 8 s per word + side |
 | Scheduler tick / schedule ahead | 25 ms / 100 ms |

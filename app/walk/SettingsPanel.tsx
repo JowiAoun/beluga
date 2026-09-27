@@ -5,50 +5,110 @@
 
 import { IconChevronDown, IconMinus, IconPlus, IconRefresh, IconSettings } from "@tabler/icons-react";
 import type { OneSound } from "@/lib/audio/sounds";
+import { WARN_FROM } from "@/lib/shared/params";
 import { STATIONS, type StationId } from "@/lib/shared/stations";
 import { cn } from "@/lib/utils";
 import { heightText, stepHeight, VOLUME_RANGE_DB, type Settings } from "./settings";
 import { CHECKBOX, PANEL, SECONDARY, SELECT } from "./styles";
-import { DEPTH_WARNINGS, OBJECT_WARNINGS, type WarningGroup, type WarningId } from "./warnings";
+import {
+  DEPTH_WARNINGS,
+  OBJECT_WARNINGS,
+  warnFromMax,
+  type DistanceId,
+  type WarningGroup,
+  type WarningId,
+  type WarnFromM,
+} from "./warnings";
 import VibrationControls from "./VibrationControls";
 
 const TOGGLE = "flex min-h-16 items-center gap-4 text-lg";
 const STEP_BUTTON = cn(SECONDARY, "flex-col gap-1 px-2 py-2 text-lg text-balance");
 
-// One checkbox per kind of warning. Ticked means it plays.
+// "1.0", "1.25", "1.5": a slider's value in metres.
+function metres(value: number): string {
+  return value.toFixed(2).replace(/0$/, "");
+}
+
+// How far away one kind of hazard starts to warn, by sound and vibration.
+function DistanceSlider({
+  id,
+  name,
+  value,
+  onChange,
+}: {
+  id: DistanceId;
+  name: string;
+  value: number;
+  onChange: (id: DistanceId, metres: number) => void;
+}) {
+  return (
+    <label className="flex flex-col gap-1 text-base">
+      <span>
+        Warns from <span className="font-mono font-medium tabular-nums">{metres(value)}</span> m away
+      </span>
+      <input
+        type="range"
+        min={WARN_FROM.minM}
+        max={warnFromMax(id)}
+        step={WARN_FROM.stepM}
+        value={value}
+        aria-label={`${name}: warns from`}
+        aria-valuetext={`${metres(value)} metres`}
+        onChange={(e) => onChange(id, Number(e.target.value))}
+        className="min-h-12 w-full accent-accent"
+      />
+    </label>
+  );
+}
+
+// One checkbox per kind of warning, and while it is on, how far away it starts.
 function WarningList({
   legend,
   note,
   groups,
   off,
+  warnFrom,
   showSound,
   onToggle,
+  onDistance,
 }: {
   legend: string;
   note: string;
   groups: readonly WarningGroup[];
   off: readonly WarningId[];
+  warnFrom: WarnFromM;
   showSound: boolean;
   onToggle: (id: WarningId, on: boolean) => void;
+  onDistance: (id: DistanceId, metres: number) => void;
 }) {
   return (
     <fieldset className="flex flex-col gap-1">
       <legend className="text-lg font-semibold">{legend}</legend>
       <p className="mb-1 text-base text-muted">{note}</p>
-      {groups.map((group) => (
-        <label key={group.id} className={cn(TOGGLE, "min-h-14 border-t border-line pt-2")}>
-          <input
-            type="checkbox"
-            checked={!off.includes(group.id)}
-            onChange={(e) => onToggle(group.id, e.target.checked)}
-            className={CHECKBOX}
-          />
-          <span className="flex flex-col">
-            {group.name}
-            {showSound && <span className="text-base text-muted">{group.sound}</span>}
-          </span>
-        </label>
-      ))}
+      {groups.map((group) => {
+        const on = !off.includes(group.id);
+        return (
+          <div key={group.id} className="flex flex-col gap-1 border-t border-line pt-2">
+            <label className={cn(TOGGLE, "min-h-14")}>
+              <input
+                type="checkbox"
+                checked={on}
+                onChange={(e) => onToggle(group.id, e.target.checked)}
+                className={CHECKBOX}
+              />
+              <span className="flex flex-col">
+                {group.name}
+                {showSound && <span className="text-base text-muted">{group.sound}</span>}
+              </span>
+            </label>
+            {on && (
+              <div className="pl-10">
+                <DistanceSlider id={group.id} name={group.name} value={warnFrom[group.id]} onChange={onDistance} />
+              </div>
+            )}
+          </div>
+        );
+      })}
     </fieldset>
   );
 }
@@ -68,6 +128,7 @@ export default function SettingsPanel({
   const set = (patch: Partial<Settings>) => onChange({ ...settings, ...patch });
   const toggleWarning = (id: WarningId, on: boolean) =>
     set({ warningsOff: on ? settings.warningsOff.filter((w) => w !== id) : [...settings.warningsOff, id] });
+  const setDistance = (id: DistanceId, metres: number) => set({ warnFromM: { ...settings.warnFromM, [id]: metres } });
   return (
     <details className={cn(PANEL, "group p-0")}>
       <summary className="flex min-h-16 cursor-pointer items-center gap-3 rounded-md px-5 text-xl font-semibold [&::-webkit-details-marker]:hidden">
@@ -154,13 +215,20 @@ export default function SettingsPanel({
           Say what it is as it comes near, like &quot;pole, left&quot;
         </label>
 
+        <p className="text-base text-muted">
+          Each slider sets how far away that kind of hazard starts to warn, by sound and vibration. The sound speeds
+          up as it gets closer. A shorter distance means fewer sounds, and less time to react.
+        </p>
+
         <WarningList
           legend="Things beluga names"
-          note="Untick one to stop its own sound and name. With depth, beluga still warns about it with the plain wooden tick, since it is still in your path. In camera-only mode it gives no warning for it at all."
+          note="Untick one to stop its own sound and name. With depth, beluga still warns about it with the plain wooden tick, from the distance for everything else, since it is still in your path. In camera-only mode it gives no warning for it at all."
           groups={OBJECT_WARNINGS}
           off={settings.warningsOff}
+          warnFrom={settings.warnFromM}
           showSound={settings.oneSound === null}
           onToggle={toggleWarning}
+          onDistance={setDistance}
         />
 
         <WarningList
@@ -168,9 +236,22 @@ export default function SettingsPanel({
           note="Untick one and beluga gives no warning for it at all, by sound or vibration. Drop-offs include yellow edge strips."
           groups={DEPTH_WARNINGS}
           off={settings.warningsOff}
+          warnFrom={settings.warnFromM}
           showSound={settings.oneSound === null}
           onToggle={toggleWarning}
+          onDistance={setDistance}
         />
+
+        <fieldset className="flex flex-col gap-1">
+          <legend className="text-lg font-semibold">Everything else in your path</legend>
+          <p className="mb-1 text-base text-muted">Walls, boxes and anything beluga can&apos;t name. Always on.</p>
+          <DistanceSlider
+            id="obstacles"
+            name="Everything else in your path"
+            value={settings.warnFromM.obstacles}
+            onChange={setDistance}
+          />
+        </fieldset>
 
         <label className={TOGGLE}>
           <input

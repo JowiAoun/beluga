@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { HazardUpdate } from "@/lib/shared/contracts";
-import { cleanWarningsOff, heardHazards, offText } from "./warnings";
+import { cleanWarnFrom, cleanWarningsOff, defaultWarnFrom, distanceIdOf, heardHazards, offText } from "./warnings";
 
 function hazard(id: string, kind: HazardUpdate["kind"], label: HazardUpdate["label"]): HazardUpdate {
   return { id, kind, distance: 2, angle: 0, label, blocking: 0.2, active: true, firstSeenAt: 0, updatedAt: 0 };
@@ -59,5 +59,22 @@ describe("cleanWarningsOff", () => {
 describe("offText", () => {
   it("lists the groups that are off", () => {
     expect(offText(["drop_off", "bikes"])).toBe("Bikes and motorcycles, drop-offs and edges");
+  });
+});
+
+describe("warning distances", () => {
+  it("follows the slider for each kind, and everything else for anything unnamed", () => {
+    expect(distanceIdOf(DROP)).toBe("drop_off");
+    expect(distanceIdOf({ kind: "head_height", label: "unknown" })).toBe("head_height");
+    expect(distanceIdOf(BIKE)).toBe("bikes");
+    expect(distanceIdOf({ kind: "obstacle", label: "fire_hydrant" })).toBe("poles");
+    expect(distanceIdOf(WALL)).toBe("obstacles");
+  });
+
+  it("starts at 1 m, 1.5 m for drop-offs, and keeps saved values in range and on a step", () => {
+    expect(defaultWarnFrom()).toMatchObject({ people: 1, obstacles: 1, head_height: 1, drop_off: 1.5 });
+    const saved = cleanWarnFrom({ people: 2.1, poles: 9, drop_off: 3.4, head_height: 0.1, bikes: "far" });
+    expect(saved).toMatchObject({ people: 2, poles: 3, drop_off: 3.5, head_height: 0.5, bikes: 1, obstacles: 1 });
+    expect(cleanWarnFrom(null)).toEqual(defaultWarnFrom());
   });
 });

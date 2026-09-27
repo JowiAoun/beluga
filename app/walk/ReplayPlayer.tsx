@@ -23,7 +23,7 @@ import DebugOverlay, { type DebugView } from "./DebugOverlay";
 import { readSettings } from "./settings";
 import { CHECKBOX, DANGER, LINK_ROW, PANEL, PRIMARY } from "./styles";
 import { speakText } from "./voice";
-import { heardHazards } from "./warnings";
+import { heardHazards, warnFromOf } from "./warnings";
 
 const RECENT_EVENTS = 5;
 
@@ -85,6 +85,7 @@ export default function ReplayPlayer({ src }: { src: string }) {
     sound.start();
     sound.setVolume(settings.volumeDb);
     sound.setOneSound(settings.oneSound);
+    sound.setWarnFrom(warnFromOf(settings.warnFromM));
     sound.setWords(settings.spokenNames);
     const raw = libraryRef.current;
     if (raw) void decodeLibrary(ctx, raw).then((library) => sound.useLibrary(library));

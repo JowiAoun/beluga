@@ -5,6 +5,7 @@
 
 import type { HazardUpdate } from "@/lib/shared/contracts";
 import type { DetectorClass, HazardKind } from "@/lib/shared/enums";
+import { defaultWarnFromM, WARN_FROM } from "@/lib/shared/params";
 
 export type WarningId = "bikes" | "vehicles" | "people" | "poles" | "furniture" | "drop_off" | "head_height";
 
@@ -79,4 +80,49 @@ export function offText(off: readonly WarningId[]): string {
   return WARNING_GROUPS.filter((g) => off.includes(g.id))
     .map((g, i) => (i === 0 ? g.name : g.name.toLowerCase()))
     .join(", ");
+}
+
+// Each kind of warning has its own warning distance, a slider in Settings: the groups above, and
+// everything beluga can't name (walls, boxes), which is always on.
+export type DistanceId = WarningId | "obstacles";
+export type WarnFromM = Record<DistanceId, number>;
+
+export const DISTANCE_IDS: readonly DistanceId[] = [...WARNING_IDS, "obstacles"];
+
+function kindOf(id: DistanceId): HazardKind {
+  return WARNING_GROUPS.find((g) => g.id === id)?.kind ?? "obstacle";
+}
+
+export function defaultWarnFrom(): WarnFromM {
+  return Object.fromEntries(DISTANCE_IDS.map((id) => [id, defaultWarnFromM(kindOf(id))])) as WarnFromM;
+}
+
+// The top of a slider: as far as that kind of hazard is found.
+export function warnFromMax(id: DistanceId): number {
+  return kindOf(id) === "drop_off" ? WARN_FROM.dropOffMaxM : WARN_FROM.maxM;
+}
+
+// Distances from storage, each kept in range and on a slider step. Anything missing takes its default.
+export function cleanWarnFrom(saved: unknown): WarnFromM {
+  const out = defaultWarnFrom();
+  if (!saved || typeof saved !== "object") return out;
+  for (const id of DISTANCE_IDS) {
+    const value = (saved as Record<string, unknown>)[id];
+    if (typeof value !== "number" || !Number.isFinite(value)) continue;
+    const stepped = Math.round(value / WARN_FROM.stepM) * WARN_FROM.stepM;
+    out[id] = Math.min(warnFromMax(id), Math.max(WARN_FROM.minM, stepped));
+  }
+  return out;
+}
+
+// Which slider a hazard follows. A named object turned off counts as a plain obstacle, since that
+// is how it still warns.
+export function distanceIdOf(hazard: Pick<HazardUpdate, "kind" | "label">): DistanceId {
+  if (hazard.kind === "drop_off") return "drop_off";
+  if (hazard.kind === "head_height") return "head_height";
+  return OBJECT_WARNINGS.find((g) => g.labels?.includes(hazard.label))?.id ?? "obstacles";
+}
+
+export function warnFromOf(warnFrom: WarnFromM): (hazard: HazardUpdate) => number {
+  return (hazard) => warnFrom[distanceIdOf(hazard)];
 }

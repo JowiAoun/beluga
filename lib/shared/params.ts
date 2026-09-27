@@ -127,26 +127,38 @@ export function headHeightTopM(userHeightM: number = USER.defaultHeightM): numbe
   return userHeightM + USER.headHeightAboveUserM;
 }
 
-// Repeat interval and volume by distance ahead, nearest band first. Past the last band: silent.
-// Only the last metre sounds: further out a thing is still a few steps away, and fewer sounds
-// keep each one clear. Hazards are still found out to 3 m, so they sound the moment they come in.
+// How far away each kind of hazard starts to warn, by sound and vibration: a slider per kind in
+// Settings. Drop-offs start further out by default, since stopping before a step down takes
+// longer than stepping around a pole. The sliders stop where hazards stop being found.
+export const WARN_FROM = {
+  defaultM: 1.0,
+  dropOffDefaultM: 1.5,
+  minM: 0.5,
+  maxM: 3.0,
+  dropOffMaxM: 3.5,
+  stepM: 0.25,
+} as const;
+
+// The warning distance for a kind of hazard before the user sets their own.
+export function defaultWarnFromM(kind: HazardKind): number {
+  return kind === "drop_off" ? WARN_FROM.dropOffDefaultM : WARN_FROM.defaultM;
+}
+
+// Repeat interval and volume by distance, as a share of the hazard's warning distance, nearest
+// band first. Past the warning distance: silent. At the default 1 m that is 350 ms from 1 m,
+// 220 ms from 0.75 m, 120 ms from 0.5 m and 80 ms (continuous) under 0.3 m.
 export const AUDIO_BANDS = [
-  { upToM: 0.3, repeatMs: 80, gainDb: 0 },
-  { upToM: 0.5, repeatMs: 120, gainDb: 0 },
-  { upToM: 0.75, repeatMs: 220, gainDb: -3 },
-  { upToM: 1.0, repeatMs: 350, gainDb: -6 },
+  { upToShare: 0.3, repeatMs: 80, gainDb: 0 },
+  { upToShare: 0.5, repeatMs: 120, gainDb: 0 },
+  { upToShare: 0.75, repeatMs: 220, gainDb: -3 },
+  { upToShare: 1.0, repeatMs: 350, gainDb: -6 },
 ] as const;
 
 export type AudioBand = (typeof AUDIO_BANDS)[number];
 
-// Drop-offs use the same table 0.5 m further out: they start at 1.5 m and go continuous under 0.8 m,
-// since stopping before a step down takes longer than stepping around a pole.
-export const DROP_OFF_BAND_SHIFT_M = 0.5;
-
-export function audioBandFor(distanceM: number, kind: HazardKind): AudioBand | null {
-  const shift = kind === "drop_off" ? DROP_OFF_BAND_SHIFT_M : 0;
+export function audioBandFor(distanceM: number, warnFromM: number): AudioBand | null {
   for (const band of AUDIO_BANDS) {
-    if (distanceM <= band.upToM + shift) return band;
+    if (distanceM <= band.upToShare * warnFromM) return band;
   }
   return null;
 }
@@ -164,14 +176,17 @@ export const AUDIO = {
   farEarCutDb: 24,
   // The far ear also hears it later, by this × pan.
   maxEarDelayMs: 0.6,
-  // Hazards sounding at once. One at a time keeps each side clear; the nearest band wins.
+  // Hazards sounding at once. One at a time keeps each side clear; the nearest wins.
   maxHazardVoices: 1,
+  // Hazards this close in distance count as equally near, and the most urgent kind sounds first.
+  sameDistanceM: 0.25,
   lowerPriorityDuckDb: -12,
   askDuckDb: -12,
   stationaryAfterMs: 5000,
   stationaryReductionDb: -6,
   stationaryStopAfterRepeats: 3,
-  voiceClipBandM: { from: 0.5, to: 1.0 },
+  // A hazard's name is said once as it comes into the far half of its warning distance.
+  voiceClipBandShare: { from: 0.5, to: 1.0 },
   voiceClipCooldownMs: 8000,
   schedulerTickMs: 25,
   // A new repeat cuts the one still playing with this fade.
@@ -329,9 +344,8 @@ export const HAPTICS = {
   pulseGapMs: 100,
   calibrationPulseMs: 45,
   calibrationGapMs: 180,
+  // Pulses repeat every 450 ms at 0.5 m and slow to 1500 ms at the hazard's warning distance.
   nearM: 0.5,
-  farM: 3,
-  dropOffFarM: 3.5,
   nearIntervalMs: 450,
   farIntervalMs: 1500,
   minimumRestMs: 200,

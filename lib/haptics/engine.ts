@@ -1,7 +1,7 @@
 // Local-only tactile warnings. Timing is adjustable; browsers do not expose motor amplitude.
 import { priorityOf } from "@/lib/hazard/engine";
 import type { HazardUpdate } from "@/lib/shared/contracts";
-import { HAPTICS } from "@/lib/shared/params";
+import { defaultWarnFromM, HAPTICS } from "@/lib/shared/params";
 
 export type VibrationStrength = keyof typeof HAPTICS.pulseMs;
 export type VibrationKind = "obstacle" | "head_height" | "drop_off" | "calibrated";
@@ -26,7 +26,11 @@ export function vibrationPattern(kind: VibrationKind, strength: VibrationStrengt
   return [pulse];
 }
 
+// How far away a hazard starts to warn, in metres: the same distance its sound uses.
+export type WarnFrom = (hazard: HazardUpdate) => number;
+
 export class HapticEngine {
+  private warnFrom: WarnFrom = (hazard) => defaultWarnFromM(hazard.kind);
   private nextAt = 0;
   private currentPriority = Infinity;
   private vibrating = false;
@@ -36,6 +40,10 @@ export class HapticEngine {
   configure(next: VibrationSettings): void {
     if (next.vibrationOn !== this.settings.vibrationOn || next.vibrationStrength !== this.settings.vibrationStrength) this.stop();
     this.settings = { ...next };
+  }
+
+  setWarnFrom(warnFrom: WarnFrom): void {
+    this.warnFrom = warnFrom;
   }
 
   calibrated(now: number): void {
@@ -50,7 +58,7 @@ export class HapticEngine {
     if (!ready || !this.settings.vibrationOn) { this.stop(); return; }
     if (now < this.calibrationUntil) return;
     const hazard = hazards.filter((h) => h.active && Number.isFinite(h.distance) && h.distance >= 0 &&
-      h.distance <= (h.kind === "drop_off" ? HAPTICS.dropOffFarM : HAPTICS.farM))
+      h.distance <= this.warnFrom(h))
       .sort((a, b) => priorityOf(a) - priorityOf(b) || a.distance - b.distance)[0];
     if (!hazard) { this.stop(); return; }
     const priority = priorityOf(hazard);
@@ -59,8 +67,9 @@ export class HapticEngine {
     const pattern = vibrationPattern(hazard.kind, this.settings.vibrationStrength);
     this.vibrating = this.vibrate(pattern);
     this.currentPriority = priority;
-    const far = hazard.kind === "drop_off" ? HAPTICS.dropOffFarM : HAPTICS.farM;
-    const fraction = Math.max(0, Math.min(1, (hazard.distance - HAPTICS.nearM) / (far - HAPTICS.nearM)));
+    // Slowest at the warning distance. A distance at or under nearM repeats at the fastest.
+    const span = this.warnFrom(hazard) - HAPTICS.nearM;
+    const fraction = span > 0 ? Math.max(0, Math.min(1, (hazard.distance - HAPTICS.nearM) / span)) : 0;
     const interval = HAPTICS.nearIntervalMs + fraction * (HAPTICS.farIntervalMs - HAPTICS.nearIntervalMs);
     this.nextAt = now + Math.max(interval, pattern.reduce((sum, ms) => sum + ms, 0) + HAPTICS.minimumRestMs);
   }

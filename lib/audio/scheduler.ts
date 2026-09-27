@@ -5,7 +5,7 @@
 import { priorityOf } from "@/lib/hazard/engine";
 import type { HazardUpdate } from "@/lib/shared/contracts";
 import type { SoundId } from "@/lib/shared/enums";
-import { AUDIO, AUDIO_BANDS, audioBandFor } from "@/lib/shared/params";
+import { AUDIO, AUDIO_BANDS, audioBandFor, defaultWarnFromM } from "@/lib/shared/params";
 import { lateralOf, panForLateral, sideOf, type Pan } from "./placement";
 import { soundFor, wordFor } from "./sounds";
 
@@ -27,6 +27,11 @@ export interface Scene {
 }
 
 export const QUIET: Scene = { hazards: [], speed: 0, stationary: false, leadS: 0 };
+
+// How far away a hazard starts to warn, in metres. The walk sets it from Settings, one per kind.
+export type WarnFrom = (hazard: HazardUpdate) => number;
+
+const DEFAULT_WARN_FROM: WarnFrom = (hazard) => defaultWarnFromM(hazard.kind);
 
 export type Action =
   // Creates the hazard's voice, or moves it and sets its level.
@@ -64,6 +69,7 @@ export class Scheduler {
   private lastSaid = new Map<string, number>();
   // One sound for every warning, with no words and no centre marker, when the user picks it.
   private oneSound: SoundId | null = null;
+  private warnFrom: WarnFrom = DEFAULT_WARN_FROM;
   // Names like "pole" as a hazard comes near. The user can turn them off in Settings.
   private words = true;
 
@@ -74,6 +80,10 @@ export class Scheduler {
 
   setOneSound(sound: SoundId | null): void {
     this.oneSound = sound;
+  }
+
+  setWarnFrom(warnFrom: WarnFrom): void {
+    this.warnFrom = warnFrom;
   }
 
   setWords(on: boolean): void {
@@ -117,14 +127,15 @@ export class Scheduler {
     const candidates = [];
     for (const hazard of scene.hazards) {
       const distance = Math.max(0, hazard.distance - lead);
-      const band = audioBandFor(distance, hazard.kind);
+      const warnFromM = this.warnFrom(hazard);
+      const band = audioBandFor(distance, warnFromM);
       if (!band) continue;
       const playing = this.voices.has(hazard.id) ? 0 : 1;
-      const rank = AUDIO_BANDS.indexOf(band);
-      candidates.push({ hazard, distance, band, rank, priority: priorityOf(hazard), playing });
+      const rank = Math.floor(distance / AUDIO.sameDistanceM);
+      candidates.push({ hazard, distance, warnFromM, band, rank, priority: priorityOf(hazard), playing });
     }
-    // The nearest band first (drop-offs use theirs, shifted out), then the most urgent kind. In a
-    // tie the one already sounding stays, so the sound doesn't flip between two sides.
+    // The nearest first, in 0.25 m steps, then the most urgent kind. In a tie the one already
+    // sounding stays, so the sound doesn't flip between two sides.
     candidates.sort(
       (a, b) => a.rank - b.rank || a.priority - b.priority || a.playing - b.playing || a.distance - b.distance,
     );
@@ -141,7 +152,7 @@ export class Scheduler {
 
     const dropOffPlaying = audible.some((a) => a.priority === 1);
 
-    for (const { hazard, distance, band, priority } of audible) {
+    for (const { hazard, distance, warnFromM, band, priority } of audible) {
       const lateral = lateralOf(hazard);
       const pan = panForLateral(lateral);
       const side = sideOf(lateral);
@@ -225,9 +236,10 @@ export class Scheduler {
         voice.nextAt = null;
       }
 
-      // Its word, once, as it comes into the 1.5 to 2.0 m band.
+      // Its word, once, as it comes into the far half of its warning distance.
       const word = this.oneSound || !this.words ? null : wordFor(hazard, blocked);
-      const inClipBand = distance >= AUDIO.voiceClipBandM.from && distance <= AUDIO.voiceClipBandM.to;
+      const clipBand = AUDIO.voiceClipBandShare;
+      const inClipBand = distance >= clipBand.from * warnFromM && distance <= clipBand.to * warnFromM;
       if (word && inClipBand && !this.spoken.has(hazard.id)) {
         this.spoken.add(hazard.id);
         const key = `${word}:${side}`;

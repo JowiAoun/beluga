@@ -9,7 +9,7 @@ import {
   decodeAskMeta,
   encodeAskMeta,
 } from "./contracts";
-import { audioBandFor, headHeightTopM } from "./params";
+import { audioBandFor, defaultWarnFromM, headHeightTopM } from "./params";
 
 const nearMiss = {
   ts: "2026-09-26T16:00:00.000Z",
@@ -83,12 +83,20 @@ describe("params helpers", () => {
     expect(headHeightTopM(1.7)).toBeCloseTo(1.8);
   });
 
-  it("picks audio bands within 1 m, with drop-offs 0.5 m further out", () => {
-    expect(audioBandFor(1.2, "obstacle")).toBeNull();
-    expect(audioBandFor(1.4, "drop_off")?.repeatMs).toBe(350);
-    expect(audioBandFor(1.6, "drop_off")).toBeNull();
-    expect(audioBandFor(0.2, "obstacle")?.repeatMs).toBe(80);
-    expect(audioBandFor(0.7, "drop_off")?.repeatMs).toBe(80);
-    expect(audioBandFor(0.9, "head_height")?.repeatMs).toBe(350);
+  it("picks audio bands as a share of the warning distance", () => {
+    expect(audioBandFor(1.2, 1)).toBeNull();
+    expect(audioBandFor(0.2, 1)?.repeatMs).toBe(80);
+    expect(audioBandFor(0.9, 1)?.repeatMs).toBe(350);
+    expect(audioBandFor(1.4, 1.5)?.repeatMs).toBe(350);
+    expect(audioBandFor(1.6, 1.5)).toBeNull();
+    // A 3 m warning distance stretches the same four steps: continuous under 0.9 m.
+    expect(audioBandFor(0.8, 3)?.repeatMs).toBe(80);
+    expect(audioBandFor(2.9, 3)?.repeatMs).toBe(350);
+  });
+
+  it("starts drop-offs further out than everything else by default", () => {
+    expect(defaultWarnFromM("obstacle")).toBe(1);
+    expect(defaultWarnFromM("head_height")).toBe(1);
+    expect(defaultWarnFromM("drop_off")).toBe(1.5);
   });
 });

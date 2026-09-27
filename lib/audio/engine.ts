@@ -8,7 +8,7 @@ import { SOUND_IDS, type SoundId } from "@/lib/shared/enums";
 import { AUDIO } from "@/lib/shared/params";
 import { isClipId, type ClipId, type DecodedLibrary } from "./library";
 import { createPlacer, DEFAULT_EARS, lateralOf, type EarSettings, type Pan, type Placer } from "./placement";
-import { QUIET, Scheduler, type Action, type Scene, type SoundInfo, type VoiceView } from "./scheduler";
+import { QUIET, Scheduler, type Action, type Scene, type SoundInfo, type VoiceView, type WarnFrom } from "./scheduler";
 import { renderTone } from "./tones";
 
 interface LoadedSound {
@@ -242,6 +242,11 @@ export class AudioEngine {
   // Master volume in dB; 0 plays the sounds at the level they were made.
   setVolume(db: number): void {
     this.master.gain.setTargetAtTime(dbToGain(db), this.ctx.currentTime, LEVEL_SECONDS);
+  }
+
+  // How far away each hazard starts to sound, from Settings.
+  setWarnFrom(warnFrom: WarnFrom): void {
+    this.scheduler.setWarnFrom(warnFrom);
   }
 
   // Plays this one sound for every warning, with no words, or null for a sound per kind of hazard.

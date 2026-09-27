@@ -5,7 +5,7 @@ import { ONE_SOUNDS, type OneSound } from "@/lib/audio/sounds";
 import { STATIONS, type StationId } from "@/lib/shared/stations";
 import { USER } from "@/lib/shared/params";
 import type { VibrationSettings } from "@/lib/haptics/engine";
-import { cleanWarningsOff, type WarningId } from "./warnings";
+import { cleanWarnFrom, cleanWarningsOff, defaultWarnFrom, type WarningId, type WarnFromM } from "./warnings";
 
 export interface Settings extends VibrationSettings {
   // Sets the head-height top: height + 0.1 m. Changed in 5 cm steps.
@@ -31,6 +31,8 @@ export interface Settings extends VibrationSettings {
   spokenNames: boolean;
   // The kinds of warning turned off in Settings (see warnings.ts).
   warningsOff: WarningId[];
+  // How far away each kind of hazard starts to warn, in metres, set with a slider each.
+  warnFromM: WarnFromM;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -48,6 +50,7 @@ export const DEFAULT_SETTINGS: Settings = {
   oneSound: null,
   spokenNames: true,
   warningsOff: [],
+  warnFromM: defaultWarnFrom(),
 };
 
 export const HEIGHT_RANGE_M = { min: 1.2, max: 2.1 } as const;
@@ -90,6 +93,7 @@ export function readSettings(): Settings {
     oneSound: ONE_SOUNDS.find((sound) => sound === saved.oneSound) ?? null,
     spokenNames: typeof saved.spokenNames === "boolean" ? saved.spokenNames : DEFAULT_SETTINGS.spokenNames,
     warningsOff: cleanWarningsOff(saved.warningsOff),
+    warnFromM: cleanWarnFrom(saved.warnFromM),
   };
 }
 
