@@ -5,7 +5,7 @@
 
 import type { LabelFor } from "@/lib/hazard/engine";
 import type { HazardUpdate } from "@/lib/shared/contracts";
-import { NETWORK } from "@/lib/shared/params";
+import { DETECTOR, NETWORK } from "@/lib/shared/params";
 import { cellOf } from "@/lib/shared/geo";
 import type { SmallImage } from "@/lib/xr/cameraImage";
 import type { SensingSession } from "@/lib/xr/session";
@@ -27,6 +27,8 @@ export interface DetectStats {
   // Why the worker couldn't start, when the detector runs on the page instead.
   workerError: string | null;
   error: string | null;
+  // Frames that never came back from the detector, so it moved on without them.
+  stalls: number;
   // Averages over recent frames.
   msPerFrame: number;
   framesPerSecond: number;
@@ -58,6 +60,8 @@ export class DetectPipeline {
   private delegate: Delegate | null = null;
   // A frame is out for detection. New frames are dropped until it comes back, so results never lag.
   private busy = false;
+  private busySince = 0;
+  private stalls = 0;
   private state: DetectorState = "loading";
   private error: string | null = null;
   private workerError: string | null = null;
@@ -250,6 +254,7 @@ export class DetectPipeline {
       runsOn: this.state !== "ready" ? null : this.worker ? "worker" : "page",
       workerError: this.workerError,
       error: this.error,
+      stalls: this.stalls,
       msPerFrame: this.msPerFrame,
       framesPerSecond: this.framesPerSecond,
       brightness: this.brightness,
@@ -271,8 +276,14 @@ export class DetectPipeline {
       this.framesPerSecond += AVERAGE * (1000 / (t - this.lastFrameAt) - this.framesPerSecond);
     }
     this.lastFrameAt = t;
+    // A worker that dies without a word never sends its frame back, which would stop every label.
+    if (this.busy && t - this.busySince > DETECTOR.stallMs) {
+      this.busy = false;
+      this.stalls++;
+    }
     const hfovDeg = this.hfovDeg;
     if (this.busy || hfovDeg === null || this.state !== "ready") return;
+    this.busySince = t;
     if (this.worker) {
       // A copy goes to the worker: the debug preview still draws this frame after us.
       const data = image.data.slice();

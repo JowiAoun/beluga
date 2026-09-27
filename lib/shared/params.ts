@@ -199,6 +199,8 @@ export const DETECTOR = {
   // head-height box must start in the upper half. 0 is the top of the frame, 1 the bottom.
   obstacleBoxBottomMin: 1 / 3,
   headBoxTopMax: 0.5,
+  // A frame out for detection this long never came back: the detector takes the next one.
+  stallMs: 3000,
 } as const;
 
 export const GATE = {

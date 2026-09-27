@@ -30,6 +30,7 @@ Copied from `docs/PLAN.md` on Sept 26, 2026. When this file and `lib/shared` dif
 | Floor move | 3 updates with 30 floor points at the phone's usual height above the floor, and few at the old floor |
 | Tilt banner | shows after 1 s with the camera more than 25° down, 10° up or turned 20°, and goes 5° back inside |
 | Stale depth | the same depth image for 0.5 s while the phone moved 5 cm or turned 3° counts as no depth |
+| Detector stall | a frame not back from the detector in 3 s is let go, and the next one goes |
 | Smoothing weight | 0.5 |
 | Near-miss distance | 1.0 m |
 | Stationary | < 0.1 m moved in 5 s |
