@@ -1,12 +1,12 @@
 "use client";
 
 import { IconArrowLeft, IconArrowRight, IconArrowUp, IconHeadphones, IconPlayerStopFilled } from "@tabler/icons-react";
-import { useScroll } from "motion/react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/brand/Button";
 import { DISPLAY, Eyebrow, Serif } from "@/components/brand/Display";
+import { LiveContours } from "@/components/brand/LiveContours";
 import { usePaused } from "@/components/brand/MotionPrefs";
 import { Reveal, RevealHeading } from "@/components/brand/Reveal";
 import { SonarRings } from "@/components/brand/SonarRings";
@@ -79,8 +79,6 @@ function EarbudsPoster({ side }: { side: Side | null }) {
 }
 
 export function HearWarning() {
-  const section = useRef<HTMLElement>(null);
-  const { scrollYProgress } = useScroll({ target: section, offset: ["start end", "end start"] });
   const paused = usePaused();
   const [active, setActive] = useState<number | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -168,11 +166,11 @@ export function HearWarning() {
 
   return (
     <section
-      ref={section}
       id="hear"
       aria-labelledby="hear-title"
       className="tone-paper relative isolate overflow-hidden px-4 pb-24 sm:px-6 md:pb-36"
     >
+      <LiveContours variant="b" />
       <div className="relative mx-auto max-w-7xl border-t border-line pt-20 md:pt-28">
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <div>
@@ -204,7 +202,7 @@ export function HearWarning() {
           </div>
 
           <SceneSlot poster={<EarbudsPoster side={side} />} className="mx-auto aspect-square w-full max-w-xl">
-            {(controls) => <EarbudsScene side={side} progress={scrollYProgress} still={paused} {...controls} />}
+            {(controls) => <EarbudsScene side={side} still={paused} {...controls} />}
           </SceneSlot>
         </div>
 

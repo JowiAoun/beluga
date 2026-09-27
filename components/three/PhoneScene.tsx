@@ -4,10 +4,11 @@
 // from its camera. A depth scan runs up the corridor, and the pole lights and rings as the scan
 // reaches it. The phone is drawn 4 times its real size so it reads next to the corridor.
 
-import { Clone, PerformanceMonitor, useGLTF } from "@react-three/drei";
+import { Clone, useGLTF } from "@react-three/drei";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Suspense, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
+import { Watchdog } from "./Watchdog";
 
 const MODEL = "/3d/phone.glb";
 const SONAR = new THREE.Color("#29b8ff");
@@ -152,7 +153,7 @@ export default function PhoneScene({
       camera={{ position: [0.55, 1.6, 1.25], fov: 42, near: 0.05, far: 30 }}
       gl={{ alpha: true, antialias: true, powerPreference: "low-power" }}
     >
-      <PerformanceMonitor onDecline={() => setDpr(1)} onFallback={onFallback} flipflops={3}>
+      <Watchdog onDpr={setDpr} onFallback={onFallback}>
         <Camera />
         <hemisphereLight args={["#dff4ff", "#0b1320", 1.2]} />
         <directionalLight position={[2, 4, 3]} intensity={2} />
@@ -160,7 +161,7 @@ export default function PhoneScene({
         <Suspense fallback={null}>
           <Scene still={still} onReady={onReady} />
         </Suspense>
-      </PerformanceMonitor>
+      </Watchdog>
     </Canvas>
   );
 }

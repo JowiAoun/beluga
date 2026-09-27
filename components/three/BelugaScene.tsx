@@ -4,10 +4,11 @@
 // tail and flippers turn around pivots found from their bounds. Sonar rings leave the melon
 // (the forehead bump real belugas echolocate from) and travel ahead of the muzzle.
 
-import { ContactShadows, PerformanceMonitor, useGLTF } from "@react-three/drei";
+import { ContactShadows, useGLTF } from "@react-three/drei";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
+import { Watchdog } from "./Watchdog";
 
 const MODEL = "/3d/beluga.glb";
 const SONAR = new THREE.Color("#29b8ff");
@@ -102,6 +103,7 @@ function Beluga({ still, progress, onReady }: { still: boolean; progress?: Progr
   }, [parts]);
 
   const root = useRef<THREE.Group | null>(null);
+  const born = useRef<number | null>(null);
   const body = useRef<THREE.Group | null>(null);
   const tail = useRef<THREE.Group | null>(null);
   const near = useRef<THREE.Group | null>(null);
@@ -112,7 +114,12 @@ function Beluga({ still, progress, onReady }: { still: boolean; progress?: Progr
   useEffect(onReady, [onReady]);
 
   useFrame((state) => {
-    const t = still ? 0 : state.clock.elapsedTime;
+    // Starts in the still image's pose, so the fade from the still shows one beluga, then eases
+    // into its movement over 3 seconds.
+    born.current ??= state.clock.elapsedTime;
+    const age = state.clock.elapsedTime - born.current;
+    const ease = still ? 0 : Math.min(1, age / 3);
+    const t = still ? 0 : age;
     const dive = progress?.get() ?? 0;
     // Turns a little toward the pointer while it is over the scene, and eases back.
     if (root.current) {
@@ -121,12 +128,13 @@ function Beluga({ still, progress, onReady }: { still: boolean; progress?: Progr
       root.current.rotation.x = THREE.MathUtils.lerp(root.current.rotation.x, still ? 0 : -state.pointer.y * 0.06, 0.05);
     }
     if (body.current) {
-      body.current.position.y = Math.sin(t * 1.1) * 0.12 - dive * 0.6;
-      body.current.rotation.z = Math.sin(t * 1.1 + 0.8) * 0.035 - dive * 0.15;
+      body.current.position.y = Math.sin(t * 1.1) * 0.12 * ease - dive * 0.6;
+      const tilt = Math.sin(0.8) + (Math.sin(t * 1.1 + 0.8) - Math.sin(0.8)) * ease;
+      body.current.rotation.z = tilt * 0.035 - dive * 0.15;
     }
-    if (tail.current) tail.current.rotation.z = Math.sin(t * 2.2) * 0.22;
-    if (near.current) near.current.rotation.x = Math.sin(t * 1.8) * 0.18;
-    if (far.current) far.current.rotation.x = -Math.sin(t * 1.8) * 0.18;
+    if (tail.current) tail.current.rotation.z = Math.sin(t * 2.2) * 0.22 * ease;
+    if (near.current) near.current.rotation.x = Math.sin(t * 1.8) * 0.18 * ease;
+    if (far.current) far.current.rotation.x = -Math.sin(t * 1.8) * 0.18 * ease;
     droplets.current.forEach((d, i) => {
       if (d) d.position.y = Math.sin(t * 1.6 + i * 1.3) * 0.08;
     });
@@ -204,7 +212,7 @@ export default function BelugaScene({
       camera={{ position: [0, 1.2, 17.5], fov: 30, near: 0.1, far: 100 }}
       gl={{ alpha: true, antialias: true, powerPreference: "low-power" }}
     >
-      <PerformanceMonitor onDecline={() => setDpr(1)} onFallback={onFallback} flipflops={3}>
+      <Watchdog onDpr={setDpr} onFallback={onFallback}>
         <hemisphereLight args={["#dff4ff", "#0b1320", 1.1]} />
         <directionalLight position={[6, 10, 8]} intensity={2.2} />
         <directionalLight position={[-8, 3, -4]} intensity={1.6} color="#29b8ff" />
@@ -212,7 +220,7 @@ export default function BelugaScene({
           <Beluga still={still} progress={progress} onReady={onReady} />
         </Suspense>
         <ContactShadows position={[0, -3.2, 0]} opacity={0.4} scale={14} blur={2.8} far={4} frames={1} />
-      </PerformanceMonitor>
+      </Watchdog>
     </Canvas>
   );
 }
