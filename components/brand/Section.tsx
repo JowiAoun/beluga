@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { Contours } from "./Contours";
+import { LiveContours } from "./LiveContours";
 import { Eyebrow } from "./Display";
 import { Reveal, RevealHeading } from "./Reveal";
 
@@ -34,7 +34,7 @@ export function Section({
       aria-labelledby={`${id}-title`}
       className={cn("relative isolate px-4 py-24 sm:px-6 md:py-36", TONES[tone], className)}
     >
-      {contours && <Contours variant={contours} />}
+      {contours && <LiveContours variant={contours} />}
       <div className="relative mx-auto max-w-7xl">
         {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
         <RevealHeading id={`${id}-title`} lines={title} className="mt-5 max-w-5xl text-section" />

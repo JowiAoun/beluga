@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { IconArrowUpRight, IconBrandGithub, IconWalk } from "@tabler/icons-react";
 import { ButtonLink, Roll } from "@/components/brand/Button";
-import { Contours } from "@/components/brand/Contours";
+import { LiveContours } from "@/components/brand/LiveContours";
 import { DISPLAY, Eyebrow, Name, Serif } from "@/components/brand/Display";
 import { Scribble } from "@/components/brand/Scribble";
 import { BelugaStage } from "@/components/three/BelugaStage";
@@ -37,7 +37,7 @@ export function Footer() {
             <path d="M0 40c40 0 48-40 92-40h136c44 0 52 40 92 40z" fill="currentColor" />
           </svg>
           <div className="absolute inset-0 overflow-hidden rounded-[1.5rem]">
-            <Contours variant="a" />
+            <LiveContours variant="a" />
           </div>
 
           <div className="relative text-center">

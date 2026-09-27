@@ -10,7 +10,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { IconArrowUpRight, IconWalk, IconX } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { ButtonLink, Roll } from "./Button";
-import { Contours } from "./Contours";
+import { LiveContours } from "./LiveContours";
 import { DISPLAY, Name, Serif } from "./Display";
 import { Logo } from "./Logo";
 import { PauseMotion } from "./MotionPrefs";
@@ -103,7 +103,7 @@ export function Navbar({ links = NAV_LINKS }: { links?: typeof NAV_LINKS }) {
         onClose={() => setOpen(false)}
         className="menu-dialog tone-ink fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none overflow-y-auto overscroll-contain p-0"
       >
-        <Contours variant="b" />
+        <LiveContours variant="b" />
         <div className="relative mx-auto flex min-h-full max-w-[90rem] flex-col px-4 sm:px-6">
           <div className="flex h-18 shrink-0 items-center justify-between">
             <Logo />

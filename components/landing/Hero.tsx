@@ -1,7 +1,7 @@
 import { IconArrowDown, IconHeadphones, IconInfoCircle, IconWalk } from "@tabler/icons-react";
 import Image from "next/image";
 import { ButtonLink } from "@/components/brand/Button";
-import { Contours } from "@/components/brand/Contours";
+import { LiveContours } from "@/components/brand/LiveContours";
 import { Eyebrow, Name, Serif } from "@/components/brand/Display";
 import { Reveal, RevealHeading } from "@/components/brand/Reveal";
 import { HeroVisual } from "./HeroVisual";
@@ -32,7 +32,7 @@ export function Hero() {
       aria-labelledby="hero-title"
       className="tone-dark relative isolate overflow-hidden px-4 pt-24 sm:px-6 md:pt-28 lg:flex lg:min-h-dvh lg:flex-col"
     >
-      <Contours variant="b" />
+      <LiveContours variant="b" />
 
       <div className="relative mx-auto grid w-full max-w-7xl flex-1 items-center gap-8 lg:grid-cols-[1.25fr_1fr] lg:gap-4">
         <div className="relative z-10 order-2 lg:order-1">

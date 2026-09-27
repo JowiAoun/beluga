@@ -19,6 +19,7 @@ export function Privacy() {
       title={["What leaves", <Serif key="p">your phone</Serif>]}
       intro="Reporting is off until you turn it on. Even then, only these few facts go to the city's database."
       tone="dark"
+      contours="b"
       className="overflow-hidden"
     >
       <Scribble className="absolute -top-10 right-0 -z-10 hidden w-[36rem] opacity-40 lg:block" />

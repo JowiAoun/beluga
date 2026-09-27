@@ -1,4 +1,4 @@
-import { Contours } from "@/components/brand/Contours";
+import { LiveContours } from "@/components/brand/LiveContours";
 import { DISPLAY, Eyebrow, Serif } from "@/components/brand/Display";
 import { BelugaMark } from "@/components/brand/Logo";
 import { Reveal } from "@/components/brand/Reveal";
@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 export function Statement() {
   return (
     <div className="tone-paper relative isolate overflow-hidden px-4 py-28 sm:px-6 md:py-40">
-      <Contours variant="a" />
+      <LiveContours variant="a" />
       <div className="relative mx-auto flex max-w-6xl flex-col items-center text-center">
         <Reveal>
           <Eyebrow icon={<BelugaMark size={32} className="size-8" />}>Made for walking with a cane or guide dog</Eyebrow>

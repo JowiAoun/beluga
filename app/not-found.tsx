@@ -1,5 +1,5 @@
 import { ButtonLink } from "@/components/brand/Button";
-import { Contours } from "@/components/brand/Contours";
+import { LiveContours } from "@/components/brand/LiveContours";
 import { DISPLAY, Serif } from "@/components/brand/Display";
 import { BelugaStage } from "@/components/three/BelugaStage";
 import { cn } from "@/lib/utils";
@@ -10,7 +10,7 @@ export default function NotFound() {
       id="main"
       className="tone-dark relative isolate flex min-h-dvh flex-col items-center justify-center overflow-hidden px-4 py-16 text-center"
     >
-      <Contours variant="b" />
+      <LiveContours variant="b" />
       <BelugaStage className="relative w-72 sm:w-96" sizes="24rem" />
       <p className="relative mt-4 font-display text-hero font-extrabold text-accent tabular-nums">404</p>
       <h1 className={cn(DISPLAY, "relative mt-2 text-section")}>
