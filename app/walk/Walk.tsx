@@ -48,7 +48,7 @@ import ReplayPlayer from "./ReplayPlayer";
 import { Reporting } from "./reporting";
 import { DEFAULT_SETTINGS, readSettings, saveSettings, type Settings } from "./settings";
 import SettingsPanel from "./SettingsPanel";
-import { HealthWatch, keepScreenOn, PROBLEM_CLIP, PROBLEM_TEXT, type HealthCounts, type Problem } from "./health";
+import { HealthWatch, keepScreenOn, SOUND_PAUSED_TEXT, type HealthCounts } from "./health";
 import { heardHazards, offText, warnFromOf } from "./warnings";
 import { HapticEngine } from "@/lib/haptics/engine";
 import AskButton from "./AskButton";
@@ -159,7 +159,6 @@ export default function Walk() {
   const screenRef = useRef<{ retry: () => void } | null>(null);
   const lastUpdateAtRef = useRef<number | null>(null);
   const lastDepthAtRef = useRef<number | null>(null);
-  const [problem, setProblem] = useState<Problem | null>(null);
   const [lastHealth, setLastHealth] = useState<HealthCounts | null>(null);
   const engineRef = useRef<HazardEngine | null>(null);
   // Camera-only mode (Phase 10) swaps the depth engine for one that reads detector boxes.
@@ -348,13 +347,10 @@ export default function Walk() {
           lastDepthAt: lastDepthAtRef.current,
           soundRunning: !ctx || ctx.state === "running",
         });
-        setProblem(checked.problem);
-        if (checked.started && checked.problem) {
-          const clip = PROBLEM_CLIP[checked.problem];
-          const sound = soundRef.current;
-          if (clip && sound) sound.say([clip]);
-          else speakLocalText(PROBLEM_TEXT[checked.problem]);
-        }
+        // A short alert, and nothing on screen. A paused sound can't play it, so the phone's voice
+        // speaks instead.
+        if (checked.started && checked.problem === "sound") speakLocalText(SOUND_PAUSED_TEXT);
+        else if (checked.started) soundRef.current?.alert();
       }
     }, DEBUG_OVERLAY.refreshMs);
     return () => window.clearInterval(id);
@@ -456,7 +452,6 @@ export default function Walk() {
       const health = healthRef.current;
       healthRef.current = null;
       screenRef.current = null;
-      setProblem(null);
       // A session that never got going is reported by the start handler instead.
       if (!result.granted) return;
       setPhase("ended");
@@ -550,7 +545,6 @@ export default function Walk() {
     setTilt(null);
     lastUpdateAtRef.current = null;
     lastDepthAtRef.current = null;
-    setProblem(null);
     // The head-height top follows the user's height.
     engineRef.current = new HazardEngine(settingsRef.current.heightM);
     cameraEngineRef.current = new CameraOnlyEngine();
@@ -782,12 +776,6 @@ export default function Walk() {
             </div>
             {heatmapOnly && <HeatmapKey depth={!cameraOnly} />}
             <div hidden={heatmapOnly} className="contents">
-              {problem && (
-                <p role="alert" className="flex items-center gap-3 rounded-md bg-danger px-4 py-3 text-xl font-bold text-white">
-                  <IconAlertTriangle aria-hidden size={32} className="shrink-0" />
-                  {PROBLEM_TEXT[problem]}
-                </p>
-              )}
               {tilt && (
                 <p
                   role="status"

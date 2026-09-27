@@ -181,11 +181,29 @@ export interface RenderedTone {
   trimDb: number;
 }
 
-export function renderTone(id: SoundId, sampleRate: number): RenderedTone {
-  const design = TONE_DESIGNS[id];
+function render(design: ToneDesign, sampleRate: number): RenderedTone {
   return {
     samples: normalise(renderNotes(design.notes, design.seconds, sampleRate)),
     loop: design.loop ? normalise(renderNotes(design.loop.notes, design.loop.seconds, sampleRate)) : null,
     trimDb: design.trimDb,
   };
+}
+
+export function renderTone(id: SoundId, sampleRate: number): RenderedTone {
+  return render(TONE_DESIGNS[id], sampleRate);
+}
+
+// Warnings stopped for a moment (no camera frames, or no depth): two soft notes going down, slower
+// and quieter than any warning, and played once. Never a hazard sound, so it can't be taken for one.
+const ALERT: ToneDesign = {
+  seconds: 0.55,
+  notes: [
+    { at: 0, length: 0.22, freq: 740, decay: 0.2, attack: 0.015, partials: [[2, 0.15]] },
+    { at: 0.27, length: 0.28, freq: 554, decay: 0.22, attack: 0.015, partials: [[2, 0.15]] },
+  ],
+  trimDb: -6,
+};
+
+export function renderAlert(sampleRate: number): RenderedTone {
+  return render(ALERT, sampleRate);
 }

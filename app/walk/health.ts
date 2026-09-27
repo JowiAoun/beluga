@@ -1,24 +1,13 @@
-// Keeps a walk going, and says what stopped when it can't. Warnings need three things to keep
-// arriving: sensing updates, trusted depth, and a running sound. A problem shows on the walking
-// screen and is spoken once, and each one is counted for the walk summary.
+// Keeps a walk going, and flags what stopped when it can't. Warnings need three things to keep
+// arriving: sensing updates, trusted depth, and a running sound. A problem plays a short alert
+// once, with nothing on screen, and each one is counted for the walk summary.
 
-import { CLIP_TEXT, type ClipId } from "@/lib/audio/library";
 import { WALK_HEALTH } from "@/lib/shared/params";
 
 export type Problem = "frames" | "depth" | "sound";
 
-export const PROBLEM_TEXT: Record<Problem, string> = {
-  frames: CLIP_TEXT.problem_frames,
-  depth: CLIP_TEXT.problem_depth,
-  sound: "The phone paused beluga's sound. Tap the screen to turn it back on.",
-};
-
-// The recorded line for each problem. A paused sound has none: only the phone's own voice can
-// still be heard then.
-export const PROBLEM_CLIP: Partial<Record<Problem, ClipId>> = {
-  frames: "problem_frames",
-  depth: "problem_depth",
-};
+// A paused sound can't play the alert, so the phone's own voice says this instead.
+export const SOUND_PAUSED_TEXT = "The phone paused beluga's sound. Tap the screen to turn it back on.";
 
 export interface HealthInput {
   // performance.now() now, at the last sensing update, and at the last update with trusted depth
@@ -42,7 +31,7 @@ export class HealthWatch {
   private soundPausedSince: number | null = null;
   readonly counts: HealthCounts = { frames: 0, depth: 0, sound: 0, screen: 0 };
 
-  // The problem now, most serious first, and whether it just started (to speak it once).
+  // The problem now, most serious first, and whether it just started (to alert once).
   update(input: HealthInput): { problem: Problem | null; started: boolean } {
     const { now } = input;
     if (input.soundRunning) this.soundPausedSince = null;

@@ -9,7 +9,7 @@ import { AUDIO } from "@/lib/shared/params";
 import { CLIP_TEXT, isClipId, type ClipId, type DecodedLibrary } from "./library";
 import { createPlacer, DEFAULT_EARS, lateralOf, type EarSettings, type Pan, type Placer } from "./placement";
 import { QUIET, Scheduler, type Action, type Scene, type SoundInfo, type VoiceView, type WarnFrom } from "./scheduler";
-import { renderTone } from "./tones";
+import { renderAlert, renderTone } from "./tones";
 
 interface LoadedSound {
   buffer: AudioBuffer;
@@ -131,6 +131,7 @@ export class AudioEngine {
   private answer: { playing: Playing; placer: Placer } | null = null;
   // The status line playing, which the next one cuts.
   private line: Playing[] = [];
+  private alertSound: LoadedSound | null = null;
 
   constructor(
     private readonly ctx: AudioContext,
@@ -202,6 +203,16 @@ export class AudioEngine {
   playBuffer(buffer: AudioBuffer, pan: Pan = 0, level = 1, at = this.ctx.currentTime): number {
     this.oneShot(buffer, pan, level, at);
     return Math.max(at, this.ctx.currentTime) + buffer.duration;
+  }
+
+  // Warnings stopped for a moment: a short alert once, from both sides. It is drawn in code, so it
+  // plays before the library is decoded too.
+  alert(): void {
+    if (!this.alertSound) {
+      const tone = renderAlert(this.ctx.sampleRate);
+      this.alertSound = { buffer: toBuffer(this.ctx, tone.samples), loop: null, gain: dbToGain(tone.trimDb) };
+    }
+    this.playBuffer(this.alertSound.buffer, 0, this.alertSound.gain);
   }
 
   private oneShot(buffer: AudioBuffer, pan: Pan, level: number, at: number): Playing {
