@@ -73,7 +73,7 @@ We built beluga at [Hack the Hill III](https://hack-the-hill-iii.devpost.com/) a
 
 ### Made for bone-conduction earbuds 🎧
 
-<img src="images/earbuds.gif" alt="3D bone-conduction earbuds turning slowly" width="280" align="right">
+<img src="images/earbuds.gif" alt="3D bone-conduction earbuds turning slowly" width="316" align="right">
 
 Bone-conduction earbuds rest in front of your ears, so you still hear traffic. They also lose most 3D sound, so beluga works around that:
 
