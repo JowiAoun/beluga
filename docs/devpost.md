@@ -134,3 +134,22 @@ webxr, arcore, gemini, elevenlabs, tiger-data, next.js, react, typescript, web-a
 - [beluga.surf/map](https://www.beluga.surf/map): the city dashboard
 - [GitHub](https://github.com/JowiAoun/beluga): the source
 - [YouTube](https://www.youtube.com/watch?v=Pz9jS8v5VJ8): the demo video
+
+## Technology feedback
+
+For the feedback question on the submission form.
+
+**ElevenLabs** (Agents, Eleven v3, Sound Effects, Scribe v2): Eleven v3 gave us five voices that sound natural even on one-word warnings like "pole" and "left". The Sound Effects API turned a text prompt into a warning sound in seconds, so we designed all 12 in an afternoon. Scribe v2 was accurate enough that we used it to check all 200 of our voice recordings. Agents with one client tool were a clean way to get structured answers back. A few things slowed us down:
+
+- A file uploaded right after a conversation starts can come back 404 or 408, so we wait and retry.
+- Zero Retention Mode turns off file uploads, so we couldn't use it for camera frames.
+- Deleting a conversation right after it ends gets undone when ElevenLabs saves it a few seconds later. A "delete when done" option would help any app that promises not to keep images.
+- Sound Effects' `pcm_48000` output is stereo with no header, and the docs don't say so. Our first pass came out twice as long and an octave low.
+- Text to Speech offers `wav_48000`, but Sound Effects doesn't.
+- On very short lines, v3 now and then says the wrong word ("pole" came out as "pull"), so we retook a few.
+
+**Gemini** (inside the ElevenLabs agents): Gemini Flash-Lite answered in about 2.5 s a turn, against 4 to 7 s for Flash, which is fast enough for a question asked mid-walk. It read street scenes well: it named a "sidewalk closed" barrier as a construction barrier with 0.95 confidence. Using it through ElevenLabs also meant one less API key on the backend.
+
+**Tiger Data** (Tiger Cloud, TimescaleDB): continuous aggregates in real-time mode made the dashboard fast with no cache. A 7-day question dropped from about 390 ms on the raw table to 17 to 92 ms. Compression made older chunks 10.4 times smaller, and 429,093 rows loaded in 53 s on the free service. Our one snag came from the venue: its network blocked the database port, so we ran migrations from a phone hotspot. A way to connect over port 443 would help at hackathons.
+
+**WebXR & ARCore depth in Chrome**: depth in the browser, with no app store, is what made beluga possible in a weekend. It needs a little motion, and glass and shiny floors leave holes in the depth. Safari has no WebXR AR, so an iPhone falls back to camera mode.
