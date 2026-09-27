@@ -44,12 +44,18 @@ class FakeDelay extends FakeNode {
 class FakeSource extends FakeNode {
   onended: (() => void) | null = null;
   readonly buffer: { duration: number };
+  startedAt: number | null = null;
+  stoppedAt: number | null = null;
   constructor(_ctx: unknown, options: { buffer: { duration: number } }) {
     super();
     this.buffer = options.buffer;
   }
-  start() {}
-  stop() {}
+  start(at = 0) {
+    this.startedAt = at;
+  }
+  stop(at = 0) {
+    this.stoppedAt = at;
+  }
 }
 
 function fakeContext() {
@@ -192,5 +198,30 @@ describe("AudioEngine under an Ask answer", () => {
     engine.duckForSpokenAnswer(4000);
     first();
     expect(bus()).toBeCloseTo(HALF, 6);
+  });
+});
+
+describe("AudioEngine status lines", () => {
+  const sources = (playing: unknown) => (playing as Array<{ source: FakeSource }>).map((p) => p.source);
+
+  it("cuts a status line still playing when the next one starts", () => {
+    engine.useLibrary({ sounds: {}, clips: { camera_dark: answerBuffer(4), camera_light: answerBuffer(1.5) } });
+    engine.sayLine("camera_dark");
+    const [dark] = sources(engine["line"]);
+    ctx.currentTime = 0.6;
+    engine.sayLine("camera_light");
+    const [light] = sources(engine["line"]);
+    expect(dark.stoppedAt).toBeCloseTo(0.6 + AUDIO.cutFadeMs / 1000, 6);
+    expect(light.startedAt).toBeCloseTo(0.6, 6);
+    expect(light.stoppedAt).toBeNull();
+  });
+
+  it("never cuts hazard words for a status line", () => {
+    engine.useLibrary({ sounds: {}, clips: { pole: answerBuffer(0.4), left: answerBuffer(0.3), calibrated: answerBuffer(1) } });
+    engine.say(["pole", "left"], -1);
+    const words = [...(engine["oneShots"] as unknown as Set<{ source: FakeSource }>)].map((p) => p.source);
+    engine.sayLine("calibrated");
+    expect(words).toHaveLength(2);
+    for (const word of words) expect(word.stoppedAt).toBeNull();
   });
 });

@@ -231,10 +231,11 @@ export default function Walk() {
   const sayLine = useCallback((line: Line) => {
     const decoding: Promise<DecodedLibrary | null> = decodedRef.current ?? Promise.resolve(null);
     void decoding.then((library) => {
-      const clip = isClipId(line) ? library?.clips[line] : undefined;
+      const id = isClipId(line) ? line : null;
+      const clip = id ? library?.clips[id] : undefined;
       const ctx = audioRef.current;
       const sound = soundRef.current;
-      if (clip && sound) sound.say([line]);
+      if (id && clip && sound) sound.sayLine(id);
       else if (clip && ctx?.state === "running") playOnce(ctx, clip, settingsRef.current.volumeDb);
       else say(line);
     });
@@ -438,7 +439,7 @@ export default function Walk() {
   // Recorded clips, or the phone's voice until they are decoded.
   const onCue = useCallback((cue: Cue) => {
     if (cue === "calibrated") hapticsRef.current?.calibrated(performance.now());
-    if (soundRef.current && isClipId(cue)) soundRef.current.say([cue]);
+    if (soundRef.current && isClipId(cue)) soundRef.current.sayLine(cue);
     else speakLocalText(LINES[cue]);
   }, []);
 

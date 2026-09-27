@@ -129,6 +129,8 @@ export class AudioEngine {
   private recentWarnings: WarningSoundLog[] = [];
   // The spoken Ask answer, while it plays.
   private answer: { playing: Playing; placer: Placer } | null = null;
+  // The status line playing, which the next one cuts.
+  private line: Playing[] = [];
 
   constructor(
     private readonly ctx: AudioContext,
@@ -198,6 +200,11 @@ export class AudioEngine {
   // Any decoded buffer, such as a library variant on the audition page. Returns when it ends,
   // on the audio clock.
   playBuffer(buffer: AudioBuffer, pan: Pan = 0, level = 1, at = this.ctx.currentTime): number {
+    this.oneShot(buffer, pan, level, at);
+    return Math.max(at, this.ctx.currentTime) + buffer.duration;
+  }
+
+  private oneShot(buffer: AudioBuffer, pan: Pan, level: number, at: number): Playing {
     const placer = createPlacer(this.ctx, this.master, pan, this.ears);
     const playing = this.startSound(buffer, level, placer, at, false);
     this.oneShots.add(playing);
@@ -206,7 +213,7 @@ export class AudioEngine {
       playing.gain.disconnect();
       placer.disconnect();
     };
-    return Math.max(at, this.ctx.currentTime) + buffer.duration;
+    return playing;
   }
 
   // Fades everything out and lets go of the mix. The AudioContext stays for the next session.
@@ -400,13 +407,28 @@ export class AudioEngine {
   // Recorded clips play one after another from the hazard's side. Without all of them, the
   // phone's own voice says the words, from both sides.
   say(words: string[], pan: Pan = 0): void {
+    this.sayWords(words, pan);
+  }
+
+  // A status line, such as "calibrated" or "the camera can see again". It cuts the line still
+  // playing, since the newest one is what is true now. Hazard words are never cut.
+  sayLine(line: ClipId): void {
+    for (const playing of this.line) this.fade(playing, this.ctx.currentTime);
+    this.line = this.sayWords([line], 0);
+  }
+
+  private sayWords(words: string[], pan: Pan): Playing[] {
     const buffers = words.map((word) => (isClipId(word) ? this.clips[word] : undefined));
     if (buffers.some((b) => !b)) {
       this.speak?.(words.map((word) => (isClipId(word) ? CLIP_TEXT[word] : word)).join(", "));
-      return;
+      return [];
     }
     let at = this.ctx.currentTime;
-    for (const buffer of buffers) at = this.playBuffer(buffer!, pan, 1, at) + CLIP_GAP_S;
+    return buffers.map((buffer) => {
+      const playing = this.oneShot(buffer!, pan, 1, at);
+      at = Math.max(at, this.ctx.currentTime) + buffer!.duration + CLIP_GAP_S;
+      return playing;
+    });
   }
 
   private recordWarning(id: string, sound: SoundId, rhythm: string): void {
