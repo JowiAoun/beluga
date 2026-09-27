@@ -12,6 +12,11 @@ const instrument = Instrument_Serif({ subsets: ["latin"], weight: "400", variabl
 // Sets Pause motion from the last visit before the first paint, so nothing moves for a moment first.
 const MOTION_SCRIPT = `try{if(localStorage.getItem("beluga-motion")==="paused")document.documentElement.dataset.motion="paused"}catch(e){}`;
 
+// The service worker on every page, so the browser offers to install the app from any of them, not
+// only /walk. After the page has loaded, so it never slows the first paint. Production only: in
+// development it would serve stale code from its cache.
+const WORKER_SCRIPT = `if("serviceWorker"in navigator)addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){})})`;
+
 export const metadata: Metadata = {
   title: "beluga",
   description:
@@ -34,7 +39,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: MOTION_SCRIPT }} />
       </head>
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full">
+        {children}
+        {process.env.NODE_ENV === "production" && <script dangerouslySetInnerHTML={{ __html: WORKER_SCRIPT }} />}
+      </body>
     </html>
   );
 }

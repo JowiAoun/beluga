@@ -1,6 +1,10 @@
 // beluga's service worker (Phase 9). After one visit online, a walk starts and warns with no
 // network: the page, its code, the sounds, the detector's model and WASM are all kept here.
 //
+// Every page registers it, so the browser offers to install the app from any of them. Installing
+// keeps only the light files. The big walk files (about 22 MB) download once /walk opens, so a
+// visit to the home page or the dashboard doesn't cost that on a phone plan.
+//
 // Build chunks and icons never change at their URL, so they come from the cache first. Everything
 // else goes to the network first and falls back to the cache: a package update keeps file names
 // like vision_wasm_internal.wasm, and a stale copy would break the detector. /api is never cached.
@@ -16,6 +20,10 @@ const PRECACHE = [
   "/icons/logo-128.png",
   "/3d/beluga.webp",
   "/3d/beluga.glb",
+];
+
+// Kept once /walk opens, along with the sound library.
+const WALK_FILES = [
   "/models/efficientdet_lite0.tflite",
   "/mediapipe/wasm/vision_wasm_internal.js",
   "/mediapipe/wasm/vision_wasm_internal.wasm",
@@ -35,7 +43,12 @@ async function precacheSounds(cache) {
       ...Object.values(manifest.sounds ?? {}).flatMap((s) => [s.file, s.loop].filter(Boolean)),
       ...Object.values(manifest.clips ?? {}).map((c) => c.file),
     ];
-    await Promise.all(files.map((file) => cache.add(`/sounds/${file}`).catch(() => {})));
+    await Promise.all(
+      files.map(async (file) => {
+        const url = `/sounds/${file}`;
+        if (!(await cache.match(url))) await cache.add(url).catch(() => {});
+      }),
+    );
   } catch {
     // No sound library yet: the tones drawn in code play instead.
   }
@@ -47,7 +60,6 @@ self.addEventListener("install", (event) => {
       const cache = await caches.open(VERSION);
       // One missing file must not stop the install.
       await Promise.all(PRECACHE.map((url) => cache.add(url).catch(() => {})));
-      await precacheSounds(cache);
       await self.skipWaiting();
     })(),
   );
@@ -62,10 +74,21 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// The page lists the build chunks it loaded before this worker took control, so the first visit
-// alone is enough to walk offline next time.
+// Keeps what a walk needs with no network, once. Files already kept are skipped.
+async function precacheWalk(cache) {
+  await Promise.all(
+    WALK_FILES.map(async (url) => {
+      if (!(await cache.match(url))) await cache.add(url).catch(() => {});
+    }),
+  );
+  await precacheSounds(cache);
+}
+
+// /walk lists the build chunks it loaded before this worker took control, so the first visit
+// alone is enough to walk offline next time. The same message fetches the big walk files.
 self.addEventListener("message", (event) => {
-  const urls = event.data?.type === "cache" && Array.isArray(event.data.urls) ? event.data.urls : [];
+  if (event.data?.type !== "cache") return;
+  const urls = Array.isArray(event.data.urls) ? event.data.urls : [];
   const ours = urls.filter((u) => {
     try {
       const url = new URL(u);
@@ -75,7 +98,9 @@ self.addEventListener("message", (event) => {
     }
   });
   event.waitUntil(
-    caches.open(VERSION).then((cache) => Promise.all(ours.map((u) => cache.add(u).catch(() => {})))),
+    caches
+      .open(VERSION)
+      .then((cache) => Promise.all([...ours.map((u) => cache.add(u).catch(() => {})), precacheWalk(cache)])),
   );
 });
 
