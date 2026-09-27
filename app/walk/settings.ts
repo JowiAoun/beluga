@@ -36,6 +36,8 @@ export interface Settings extends VibrationSettings {
   warnFromM: WarnFromM;
   // The ElevenLabs voice that says the warning words and Ask's answers (lib/audio/voices.ts).
   voice: VoiceKey;
+  // The depth heatmap over the camera view during a walk.
+  heatmap: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -55,6 +57,7 @@ export const DEFAULT_SETTINGS: Settings = {
   warningsOff: [],
   warnFromM: defaultWarnFrom(),
   voice: DEFAULT_VOICE,
+  heatmap: false,
 };
 
 export const HEIGHT_RANGE_M = { min: 1.2, max: 2.1 } as const;
@@ -99,6 +102,7 @@ export function readSettings(): Settings {
     warningsOff: cleanWarningsOff(saved.warningsOff),
     warnFromM: cleanWarnFrom(saved.warnFromM),
     voice: isVoiceKey(saved.voice) ? saved.voice : DEFAULT_VOICE,
+    heatmap: saved.heatmap === true,
   };
 }
 

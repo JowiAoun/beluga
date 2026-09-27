@@ -42,6 +42,8 @@ import { askAboutView } from "./ask";
 import { encodeClip } from "@/lib/replay/format";
 import { CLIP_SECONDS, Recorder } from "@/lib/replay/recorder";
 import FirstRun, { type FirstRunResult } from "./FirstRun";
+import HeatmapButton, { HeatmapKey } from "./HeatmapButton";
+import { drawHeatmap } from "./heatmap";
 import ReplayPlayer from "./ReplayPlayer";
 import { Reporting } from "./reporting";
 import { DEFAULT_SETTINGS, readSettings, saveSettings, type Settings } from "./settings";
@@ -157,6 +159,7 @@ export default function Walk() {
   const estimatesConfirmedRef = useRef(false);
   const [estimatesConfirmed, setEstimatesConfirmed] = useState(false);
   const detectRef = useRef<DetectPipeline | null>(null);
+  const heatmapRef = useRef<HTMLCanvasElement>(null);
   const reportingRef = useRef<Reporting | null>(null);
 
   const [support, setSupport] = useState<Support>("checking");
@@ -319,6 +322,15 @@ export default function Walk() {
   const onUpdate = useCallback((update: SensingUpdate) => {
     const latest = latestRef.current;
     latest.update = update;
+    // The depth heatmap, when it is on. It only reads the update, and a drawing error never
+    // reaches the warnings below.
+    if (heatmapRef.current) {
+      try {
+        drawHeatmap(heatmapRef.current, update);
+      } catch {
+        // Skip this frame's heatmap.
+      }
+    }
     const now = performance.now();
     lastUpdateAtRef.current = now;
     // Depth counts as missing only while it should be there: tracking, with depth granted. The
@@ -697,20 +709,30 @@ export default function Walk() {
         playsInline
         className={inAr && mode === "camera" ? "fixed inset-0 h-full w-full object-cover" : "hidden"}
       />
+      {inAr && settings?.heatmap && (
+        <canvas ref={heatmapRef} aria-hidden className="pointer-events-none fixed inset-0 z-[5] size-full opacity-60" />
+      )}
       {inAr ? (
         <main className="relative z-10 flex min-h-dvh flex-col justify-between gap-3 px-3 pt-safe pb-safe">
           <div className="flex flex-col gap-2">
-            {status && (
-              <p
-                role="status"
-                aria-atomic="true"
-                className={`self-start rounded-md border-2 bg-abyss px-4 py-3 text-2xl font-bold ${
-                  status === "Calibrated" ? "border-accent text-accent" : "border-foreground text-foreground"
-                }`}
-              >
-                {status}
-              </p>
-            )}
+            <div className="flex items-start gap-3">
+              {status && (
+                <p
+                  role="status"
+                  aria-atomic="true"
+                  className={`rounded-md border-2 bg-abyss px-4 py-3 text-2xl font-bold ${
+                    status === "Calibrated" ? "border-accent text-accent" : "border-foreground text-foreground"
+                  }`}
+                >
+                  {status}
+                </p>
+              )}
+              <HeatmapButton
+                on={!!settings?.heatmap}
+                onToggle={() => changeSettings({ ...settingsRef.current, heatmap: !settingsRef.current.heatmap })}
+              />
+            </div>
+            {settings?.heatmap && <HeatmapKey depth={!cameraOnly} />}
             {problem && (
               <p role="alert" className="flex items-center gap-3 rounded-md bg-danger px-4 py-3 text-xl font-bold text-white">
                 <IconAlertTriangle aria-hidden size={32} className="shrink-0" />

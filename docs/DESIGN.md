@@ -274,6 +274,7 @@ No Motion and no view transitions on these pages. The only canvas is the 3D belu
 
 - **Setup**: the 3D beluga at the top (its still with reduced motion, no WebGL2 or offline), "beluga" in big Mona Sans, step dots ("2 of 5"), the buttons in Atkinson and the height in big Mono digits. A CSS slide between steps. Headings in Mona Sans; everything else in Atkinson.
 - **During a walk**: colours, font and corners only, with no animation, blur or shadow. The status pill, Ask and Stop keep their sizes, and Stop keeps its hold-to-fill.
+- **Depth heatmap**: a 48 px flame button at the top right, next to the status pill, turns on a see-through layer over the camera view: every depth point the walk uses, warm near and blue far out to 4 m, with a one-line key under the top row. It is off by default, saved with the settings, redraws with each depth update, and only reads that update, inside a `try`, so it can never stop a warning.
 - **`/walk/sounds`**: a head seen from above with a dot moving to each side, in CSS.
 - **`/walk/check`**: checklist cards, each result as a word and an icon.
 - The manifest and theme colour are `#1b232c`, the dark tone.
