@@ -48,7 +48,6 @@ import { DEFAULT_SETTINGS, readSettings, saveSettings, type Settings } from "./s
 import SettingsPanel from "./SettingsPanel";
 import { HealthWatch, keepScreenOn, PROBLEM_TEXT, type HealthCounts, type Problem } from "./health";
 import { heardHazards, offText } from "./warnings";
-import VibrationControls from "./VibrationControls";
 import { HapticEngine } from "@/lib/haptics/engine";
 import AskButton from "./AskButton";
 import DebugOverlay, { type DebugView } from "./DebugOverlay";
@@ -740,10 +739,6 @@ export default function Walk() {
             getAudio={() => audioRef.current} getEngine={() => soundRef.current}
             getFov={() => latestRef.current.update?.fov.horizontal}
           />}
-          <details className="rounded-lg bg-black/90 p-4 text-white">
-            <summary className="min-h-16 cursor-pointer text-xl font-semibold">Vibration settings</summary>
-            <VibrationControls settings={settings ?? DEFAULT_SETTINGS} onChange={(next) => changeSettings({ ...settingsRef.current, ...next })} />
-          </details>
           <StopButton onStop={() => { hapticsRef.current?.stop(); sessionRef.current?.stop(); }} />
         </main>
       ) : (
