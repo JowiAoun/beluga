@@ -23,7 +23,7 @@ import { CameraOnlyEngine } from "@/lib/hazard/cameraOnly";
 import { nearestAhead } from "@/lib/hazard/corridor";
 import { HazardEngine, type HazardEvent } from "@/lib/hazard/engine";
 import type { HazardUpdate } from "@/lib/shared/contracts";
-import { DEBUG_OVERLAY, SENSING } from "@/lib/shared/params";
+import { AUDIO, DEBUG_OVERLAY, SENSING } from "@/lib/shared/params";
 import {
   errorText,
   startSensing,
@@ -599,7 +599,11 @@ export default function Walk() {
         latestRef.current.update, cameraOnlyRef.current, estimatesConfirmedRef.current,
       )) return;
       if (result.kind === "audio") sound.playAnswer(result.buffer, result.pan);
-      else if (result.kind === "text") speakText(result.meta.answer);
+      else if (result.kind === "text") {
+        // The phone's voice reads the answer; obstacle warnings stay down while it does.
+        const expectedMs = result.meta.answer.length * AUDIO.spokenAnswerMsPerChar;
+        speakText(result.meta.answer, sound.duckForSpokenAnswer(expectedMs));
+      }
       else say(result.kind === "offline" ? "ask_offline" : "sorry");
       const outcome = result.kind === "text" && result.meta.voiceFailed ? "phone voice" : result.kind;
       latestRef.current.lastAsk = { ms: Math.round(performance.now() - began), outcome };

@@ -104,6 +104,13 @@ function loadTones(ctx: BaseAudioContext): Record<SoundId, LoadedSound> {
 export class AudioEngine {
   private readonly limiter: DynamicsCompressorNode;
   private readonly master: GainNode;
+  // Every hazard warning goes through here, so it can be turned down under an Ask answer.
+  private readonly hazardBus: GainNode;
+  private hazardsDucked = false;
+  // Audio-clock time the phone's own voice is expected to stop speaking an answer.
+  private spokenUntil = 0;
+  // Counts phone-voice answers, so a late end from an older one can't lift the duck of a newer one.
+  private spokenAnswers = 0;
   private readonly centre: Placer;
   private sounds: Record<SoundId, LoadedSound>;
   private clips: Partial<Record<ClipId, AudioBuffer>> = {};
@@ -121,7 +128,7 @@ export class AudioEngine {
   private readonly oneShots = new Set<Playing>();
   private recentWarnings: WarningSoundLog[] = [];
   // The spoken Ask answer, while it plays.
-  private answer: { playing: Playing; placer: Placer; ducked: boolean } | null = null;
+  private answer: { playing: Playing; placer: Placer } | null = null;
 
   constructor(
     private readonly ctx: AudioContext,
@@ -140,7 +147,9 @@ export class AudioEngine {
     this.limiter.connect(ctx.destination);
     this.master = new GainNode(ctx);
     this.master.connect(this.limiter);
-    this.centre = createPlacer(ctx, this.master, 0, this.ears);
+    this.hazardBus = new GainNode(ctx);
+    this.hazardBus.connect(this.master);
+    this.centre = createPlacer(ctx, this.hazardBus, 0, this.ears);
     this.sounds = loadTones(ctx);
     this.scheduler = new Scheduler(this.soundInfo());
   }
@@ -264,18 +273,19 @@ export class AudioEngine {
     this.lastSoundAt = this.ctx.currentTime;
   }
 
-  // An Ask answer from the side of the object it describes. It plays under any hazard, 12 dB down,
-  // and stops for a drop-off or head-height hazard: warnings always come first.
+  // An Ask answer from the side of the object it describes. It plays at full level with obstacle
+  // warnings turned down under it, and stops for a drop-off or head-height hazard: those come first.
   playAnswer(buffer: AudioBuffer, pan: Pan): boolean {
     this.stopAnswer();
     if (this.scene.hazards.some((h) => h.active && priorityOf(h) <= 2)) return false;
     const placer = createPlacer(this.ctx, this.master, pan, this.ears);
     const playing = this.startSound(buffer, 1, placer, this.ctx.currentTime, false);
-    const answer = { playing, placer, ducked: false };
+    const answer = { playing, placer };
     playing.source.onended = () => {
       playing.gain.disconnect();
       placer.disconnect();
       if (this.answer === answer) this.answer = null;
+      this.fitHazardBus();
     };
     this.answer = answer;
     this.fitAnswer();
@@ -286,6 +296,22 @@ export class AudioEngine {
     if (!this.answer) return;
     this.fade(this.answer.playing, this.ctx.currentTime);
     this.answer = null;
+    this.fitHazardBus();
+  }
+
+  // For an answer the phone's own voice speaks: obstacle warnings stay down while it talks.
+  // Call the returned function when the voice ends. The duck also ends on its own after
+  // `expectedMs`, capped, so a lost end event can't leave the warnings quiet.
+  duckForSpokenAnswer(expectedMs: number): () => void {
+    const ms = Math.min(Math.max(expectedMs, 0), AUDIO.spokenAnswerMaxMs);
+    const answer = ++this.spokenAnswers;
+    this.spokenUntil = this.ctx.currentTime + ms / 1000;
+    this.fitHazardBus();
+    return () => {
+      if (this.spokenAnswers !== answer) return;
+      this.spokenUntil = 0;
+      this.fitHazardBus();
+    };
   }
 
   answerPlaying(): boolean {
@@ -293,16 +319,20 @@ export class AudioEngine {
   }
 
   private fitAnswer(): void {
-    const answer = this.answer;
-    if (!answer) return;
-    if (this.scene.hazards.some((h) => priorityOf(h) <= 2)) {
-      this.stopAnswer();
-      return;
-    }
-    const ducked = this.voices.size > 0;
-    if (ducked === answer.ducked) return;
-    answer.ducked = ducked;
-    answer.placer.input.gain.setTargetAtTime(ducked ? dbToGain(AUDIO.askDuckDb) : 1, this.ctx.currentTime, LEVEL_SECONDS);
+    if (this.answer && this.scene.hazards.some((h) => priorityOf(h) <= 2)) this.stopAnswer();
+    this.fitHazardBus();
+  }
+
+  // Warnings at half amplitude while an answer is spoken, unless a drop-off or head-height
+  // hazard is active: those always play at full level.
+  private fitHazardBus(): void {
+    const speaking = this.answer !== null || this.ctx.currentTime < this.spokenUntil;
+    const urgent = this.scene.hazards.some((h) => h.active && priorityOf(h) <= 2);
+    const ducked = speaking && !urgent;
+    if (ducked === this.hazardsDucked) return;
+    this.hazardsDucked = ducked;
+    const gain = ducked ? dbToGain(AUDIO.hazardUnderAnswerDb) : 1;
+    this.hazardBus.gain.setTargetAtTime(gain, this.ctx.currentTime, LEVEL_SECONDS);
   }
 
   private apply(actions: Action[]): void {
@@ -315,7 +345,7 @@ export class AudioEngine {
       switch (action.type) {
         case "voice":
           if (!voice) {
-            const placer = createPlacer(this.ctx, this.master, action.pan, this.ears);
+            const placer = createPlacer(this.ctx, this.hazardBus, action.pan, this.ears);
             placer.input.gain.value = dbToGain(action.gainDb);
             this.voices.set(action.id, { placer, pan: action.pan, gainDb: action.gainDb, current: null, loop: null });
             break;

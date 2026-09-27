@@ -181,7 +181,13 @@ export const AUDIO = {
   // Hazards this close in distance count as equally near, and the most urgent kind sounds first.
   sameDistanceM: 0.25,
   lowerPriorityDuckDb: -12,
-  askDuckDb: -12,
+  // While an Ask answer is spoken, obstacle warnings drop to half their amplitude so the answer
+  // stays clear. Drop-off and head-height warnings are never turned down: they stop the answer.
+  hazardUnderAnswerDb: -6,
+  // The phone's own voice has no reliable end event, so its duck lasts about this long per
+  // character, and never longer than the cap.
+  spokenAnswerMsPerChar: 70,
+  spokenAnswerMaxMs: 15_000,
   stationaryAfterMs: 5000,
   stationaryReductionDb: -6,
   stationaryStopAfterRepeats: 3,

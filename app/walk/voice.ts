@@ -41,11 +41,19 @@ export function say(line: Line): void {
 }
 
 // For hazard words like "pole, left", which the recorded clips from Phase 3a will replace.
-export function speakText(text: string): void {
+// `onDone` runs when the voice finishes or fails, or at once when there is no voice.
+export function speakText(text: string, onDone?: () => void): void {
   const synth = speech();
-  if (!synth) return;
+  if (!synth) {
+    onDone?.();
+    return;
+  }
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = "en-CA";
+  if (onDone) {
+    utterance.onend = onDone;
+    utterance.onerror = onDone;
+  }
   synth.speak(utterance);
 }
 

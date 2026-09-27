@@ -64,6 +64,7 @@ Each kind of hazard has its own warning distance, a slider in Settings from 0.5 
 | Max simultaneous hazard sounds | 1, the nearest first (in 0.25 m steps), then the most urgent kind |
 | Centre marker | first repeat straight ahead, then at most every 1 s |
 | Lower-priority duck | −12 dB |
+| Obstacle warnings under an Ask answer | −6 dB (half amplitude); drop-off and head-height never ducked |
 | Stationary reduction | −6 dB, stop after 3 repeats (never for drop-offs) |
 | Voice clip trigger | entering the far half of the warning distance |
 | Voice clip | the word, then the side ("pole, left") |

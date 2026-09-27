@@ -627,7 +627,7 @@ Voice clips (one calm voice): "edge", "step down", "head", "pole", "bike", "scoo
 - One hazard sounds at a time: the nearest, in 0.25 m steps, then the most urgent kind by priority. In a tie the one already sounding stays, so the sound doesn't jump between sides. Tuned up to 2, lower-priority voices drop by 12 dB while a drop-off plays.
 - A setting plays one sound (tick, ping or marimba) for every hazard, with no words and no centre marker, for users who find a sound per kind too much.
 - Stationary for more than 5 s: obstacle voices drop 6 dB and stop after 3 more repeats until the user moves; drop-off voices are never reduced.
-- Ask playback uses the same engine at the target angle, ducked 12 dB under any hazard; a priority 1–2 hazard stops it.
+- Ask playback uses the same engine at the target angle, at full level. While it speaks, obstacle warnings drop 6 dB (half their amplitude) so they don't drown the answer; a priority 1–2 hazard stops the answer and always plays at full level.
 
 ### Done when
 
@@ -1160,6 +1160,7 @@ Each kind of hazard has its own warning distance, a slider in Settings from 0.5 
 | Max simultaneous hazard sounds | 1, the nearest first (in 0.25 m steps), then the most urgent kind |
 | Centre marker | first repeat straight ahead, then at most every 1 s |
 | Lower-priority duck | −12 dB |
+| Obstacle warnings under an Ask answer | −6 dB (half amplitude); drop-off and head-height never ducked |
 | Stationary reduction | −6 dB, stop after 3 repeats (never for drop-offs) |
 | Voice clip trigger | entering the far half of the warning distance |
 | Voice clip | the word, then the side ("pole, left") |
