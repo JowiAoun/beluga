@@ -7,7 +7,7 @@ import { Scribble } from "@/components/brand/Scribble";
 import { BelugaStage } from "@/components/three/BelugaStage";
 import { cn } from "@/lib/utils";
 
-export const SOURCE = "https://github.com/AshwinSri23/beluga";
+export const SOURCE = "https://github.com/JowiAoun/beluga";
 
 const PAGES = [
   { name: "Walk with beluga", href: "/walk" },
