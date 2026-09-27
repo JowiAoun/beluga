@@ -1,7 +1,7 @@
 "use client";
 
-// Settings outside the walk (Phase 9): height, starting station, sounds, which warnings play, volume
-// and camera-only mode. Every change is saved on the phone right away.
+// Settings outside the walk (Phase 9): height, starting station, the voice, sounds, which warnings
+// play, volume and camera-only mode. Every change is saved on the phone right away.
 
 import { IconChevronDown, IconMinus, IconPlus, IconRefresh, IconSettings } from "@tabler/icons-react";
 import type { OneSound } from "@/lib/audio/sounds";
@@ -20,6 +20,7 @@ import {
   type WarnFromM,
 } from "./warnings";
 import VibrationControls from "./VibrationControls";
+import VoicePicker from "./VoicePicker";
 
 const TOGGLE = "flex min-h-16 items-center gap-4 text-lg";
 const STEP_BUTTON = cn(SECONDARY, "flex-col gap-1 px-2 py-2 text-lg text-balance");
@@ -184,6 +185,8 @@ export default function SettingsPanel({
             ))}
           </select>
         </label>
+
+        <VoicePicker legend="Voice for warnings and answers" value={settings.voice} onChange={(voice) => set({ voice })} />
 
         <label className="flex flex-col gap-2 text-lg">
           Warning sounds

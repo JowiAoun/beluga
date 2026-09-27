@@ -49,7 +49,7 @@ export default function Practice() {
   useEffect(() => {
     let active = true;
     queueMicrotask(() => { if (active) setSettings(readSettings()); });
-    void fetchLibrary().then((library) => {
+    void fetchLibrary(readSettings().voice).then((library) => {
       if (!active) return;
       raw.current = library; setLoaded(true);
       setMessage("Choose a sound and direction to practice. All examples are simulated.");

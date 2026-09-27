@@ -13,19 +13,23 @@ import {
   IconMinus,
   IconPlus,
   IconRuler,
+  IconVolume,
   IconX,
 } from "@tabler/icons-react";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { DISPLAY, Name } from "@/components/brand/Display";
+import { DEFAULT_VOICE, voiceOf, type VoiceKey } from "@/lib/audio/voices";
 import { cn } from "@/lib/utils";
 import { heightText, stepHeight } from "./settings";
 import { PANEL, PRIMARY, SECONDARY } from "./styles";
 import { speakText, unlockVoice } from "./voice";
+import VoicePicker from "./VoicePicker";
 
-type Step = "welcome" | "reporting" | "location" | "height" | "ready";
+type Step = "welcome" | "voice" | "reporting" | "location" | "height" | "ready";
 
 const PROMPTS: Record<Step, string> = {
   welcome: "beluga works alongside your cane or guide dog. It can miss things.",
+  voice: "Pick the voice that says warnings and answers your questions. Tap Play to hear each one.",
   reporting: "Help the city by sharing anonymous hazard reports? You can change this any time in settings.",
   location:
     "Location marks where hazard reports happen, to about 100 metres. Chrome can't ask during a walk, so it asks now.",
@@ -33,10 +37,11 @@ const PROMPTS: Record<Step, string> = {
   ready: "Put the phone on your chest mount, camera facing forward, then tap Start.",
 };
 
-const ORDER: Step[] = ["welcome", "reporting", "location", "height", "ready"];
+const ORDER: Step[] = ["welcome", "voice", "reporting", "location", "height", "ready"];
 
 const ICONS: Record<Step, typeof IconBlind> = {
   welcome: IconBlind,
+  voice: IconVolume,
   reporting: IconBuildingCommunity,
   location: IconMapPin,
   height: IconRuler,
@@ -62,6 +67,7 @@ function withName(text: string) {
 export interface FirstRunResult {
   reporting: boolean;
   heightM: number;
+  voice: VoiceKey;
 }
 
 // Dots for the eye, and the same thing in words.
@@ -91,11 +97,13 @@ function StepDots({ step }: { step: Step }) {
 
 export default function FirstRun({
   heightM: startHeight,
+  voice: startVoice = DEFAULT_VOICE,
   locationGranted,
   onAllowLocation,
   onDone,
 }: {
   heightM: number;
+  voice?: VoiceKey;
   locationGranted: boolean;
   onAllowLocation: () => Promise<void>;
   onDone: (result: FirstRunResult) => void;
@@ -103,6 +111,7 @@ export default function FirstRun({
   const [step, setStep] = useState<Step | null>(null);
   const [reporting, setReporting] = useState(false);
   const [heightM, setHeightM] = useState(startHeight);
+  const [voice, setVoice] = useState<VoiceKey>(startVoice);
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
@@ -122,7 +131,7 @@ export default function FirstRun({
         <h2 className={HEADING}>
           Set up <Name />
         </h2>
-        <p className="text-xl text-muted">Five short steps, spoken aloud. They take about a minute.</p>
+        <p className="text-xl text-muted">Six short steps, spoken aloud. They take about a minute.</p>
         <button
           type="button"
           onClick={() => {
@@ -160,9 +169,20 @@ export default function FirstRun({
         </h2>
 
         {step === "welcome" && (
-          <button type="button" onClick={() => go("reporting")} className={BIG_PRIMARY}>
+          <button type="button" onClick={() => go("voice")} className={BIG_PRIMARY}>
             Continue
           </button>
+        )}
+
+        {step === "voice" && (
+          <>
+            <div className={PANEL}>
+              <VoicePicker legend="Voices" value={voice} onChange={setVoice} />
+            </div>
+            <button type="button" onClick={() => go("reporting")} className={BIG_PRIMARY}>
+              Use {voiceOf(voice).name}
+            </button>
+          </>
         )}
 
         {step === "reporting" && (
@@ -272,7 +292,7 @@ export default function FirstRun({
         )}
 
         {step === "ready" && (
-          <button type="button" onClick={() => onDone({ reporting, heightM })} className={BIG_PRIMARY}>
+          <button type="button" onClick={() => onDone({ reporting, heightM, voice })} className={BIG_PRIMARY}>
             Done
           </button>
         )}

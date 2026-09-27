@@ -2,6 +2,7 @@
 // or cleared storage still gives a working walk.
 
 import { ONE_SOUNDS, type OneSound } from "@/lib/audio/sounds";
+import { DEFAULT_VOICE, isVoiceKey, type VoiceKey } from "@/lib/audio/voices";
 import { STATIONS, type StationId } from "@/lib/shared/stations";
 import { USER } from "@/lib/shared/params";
 import type { VibrationSettings } from "@/lib/haptics/engine";
@@ -33,6 +34,8 @@ export interface Settings extends VibrationSettings {
   warningsOff: WarningId[];
   // How far away each kind of hazard starts to warn, in metres, set with a slider each.
   warnFromM: WarnFromM;
+  // The ElevenLabs voice that says the warning words and Ask's answers (lib/audio/voices.ts).
+  voice: VoiceKey;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -51,6 +54,7 @@ export const DEFAULT_SETTINGS: Settings = {
   spokenNames: true,
   warningsOff: [],
   warnFromM: defaultWarnFrom(),
+  voice: DEFAULT_VOICE,
 };
 
 export const HEIGHT_RANGE_M = { min: 1.2, max: 2.1 } as const;
@@ -94,6 +98,7 @@ export function readSettings(): Settings {
     spokenNames: typeof saved.spokenNames === "boolean" ? saved.spokenNames : DEFAULT_SETTINGS.spokenNames,
     warningsOff: cleanWarningsOff(saved.warningsOff),
     warnFromM: cleanWarnFrom(saved.warnFromM),
+    voice: isVoiceKey(saved.voice) ? saved.voice : DEFAULT_VOICE,
   };
 }
 

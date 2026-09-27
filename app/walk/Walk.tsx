@@ -245,7 +245,7 @@ export default function Walk() {
     // The recorded sounds download now, so the walk itself needs no network. A slow network
     // doesn't hold Start back for long: tones play until the recorded sounds arrive.
     const soundsWait = window.setTimeout(() => setSoundsLoading(false), SOUNDS_WAIT_MS);
-    void fetchLibrary().then((raw) => {
+    void fetchLibrary(readSettings().voice).then((raw) => {
       window.clearTimeout(soundsWait);
       libraryRef.current = raw;
       setSoundsLoading(false);
@@ -576,7 +576,13 @@ export default function Walk() {
     sound.play("listening");
     const began = performance.now();
     try {
-      const result = await askAboutView(session, ctx, latestRef.current.update?.fov.horizontal ?? 40);
+      const result = await askAboutView(
+        session,
+        ctx,
+        latestRef.current.update?.fov.horizontal ?? 40,
+        undefined,
+        settingsRef.current.voice,
+      );
       if (sessionRef.current !== session || !detectionReady(
         latestRef.current.update, cameraOnlyRef.current, estimatesConfirmedRef.current,
       )) return;
@@ -600,16 +606,29 @@ export default function Walk() {
   };
 
   const changeSettings = (next: Settings) => {
+    const newVoice = next.voice !== settingsRef.current.voice;
     hapticsRef.current?.configure(next);
     settingsRef.current = next;
     setSettings(next);
     saveSettings(next);
+    // The spoken words come in the new voice. Tones fill in until they arrive.
+    if (newVoice) {
+      setSoundsLoading(true);
+      void fetchLibrary(next.voice).then((raw) => {
+        if (settingsRef.current.voice !== next.voice) return;
+        libraryRef.current = raw;
+        setSoundsLoading(false);
+        const sound = soundRef.current;
+        const ctx = audioRef.current;
+        if (raw && sound && ctx) void decodeLibrary(ctx, raw).then((library) => sound.useLibrary(library));
+      });
+    }
   };
 
   const finishFirstRun = (result: FirstRunResult) => {
     reportingRef.current?.setOn(result.reporting);
     setReportingOn(result.reporting);
-    changeSettings({ ...settingsRef.current, heightM: result.heightM, firstRunDone: true });
+    changeSettings({ ...settingsRef.current, heightM: result.heightM, voice: result.voice, firstRunDone: true });
   };
 
   const toggleReporting = () => {
@@ -759,6 +778,7 @@ export default function Walk() {
             session={session} microphone={microphone}
             getAudio={() => audioRef.current} getEngine={() => soundRef.current}
             getFov={() => latestRef.current.update?.fov.horizontal}
+            voice={settings?.voice}
           />}
           <StopButton onStop={() => { hapticsRef.current?.stop(); sessionRef.current?.stop(); }} />
         </main>
@@ -797,6 +817,7 @@ export default function Walk() {
           {settings && !settings.firstRunDone ? (
             <FirstRun
               heightM={settings.heightM}
+              voice={settings.voice}
               locationGranted={locationGranted}
               onAllowLocation={allowLocation}
               onDone={finishFirstRun}

@@ -39,7 +39,7 @@ export default function ReplayPlayer({ src }: { src: string }) {
   const [view, setView] = useState<DebugView | null>(null);
 
   useEffect(() => {
-    void fetchLibrary().then((raw) => {
+    void fetchLibrary(readSettings().voice).then((raw) => {
       libraryRef.current = raw;
     });
   }, []);

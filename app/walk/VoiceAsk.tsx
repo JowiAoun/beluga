@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { AudioEngine } from "@/lib/audio/engine";
 import { decodeFile } from "@/lib/audio/library";
+import type { VoiceKey } from "@/lib/audio/voices";
 import { panForAngle } from "@/lib/audio/placement";
 import { ASK_META_HEADER, AskMetaSchema, decodeAskMeta } from "@/lib/shared/contracts";
 import { VOICE_ASK } from "@/lib/shared/params";
@@ -10,8 +11,8 @@ import type { SensingSession } from "@/lib/xr/session";
 
 type Stage = "idle" | "permission" | "recording" | "transcribing" | "answering";
 
-export default function VoiceAsk({ session, microphone, getAudio, getEngine, getFov }: {
-  session: SensingSession; microphone: string;
+export default function VoiceAsk({ session, microphone, getAudio, getEngine, getFov, voice }: {
+  session: SensingSession; microphone: string; voice?: VoiceKey;
   getAudio: () => AudioContext | null; getEngine: () => AudioEngine | null; getFov: () => number | undefined;
 }) {
   const [stage, setStage] = useState<Stage>("idle");
@@ -78,7 +79,7 @@ export default function VoiceAsk({ session, microphone, getAudio, getEngine, get
       let binary = "";
       for (const byte of bytes) binary += String.fromCharCode(byte);
       const response = await fetch("/api/ask", { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ frame: btoa(binary), question: text }), signal });
+        body: JSON.stringify({ frame: btoa(binary), question: text, voice }), signal });
       await checkResponse(response);
       const audioResponse = response.headers.get("content-type")?.startsWith("audio/");
       const meta = audioResponse ? decodeAskMeta(response.headers.get(ASK_META_HEADER)) : AskMetaSchema.parse(await response.json());

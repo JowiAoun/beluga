@@ -21,6 +21,7 @@ import type { HazardKind, SoundId } from "@/lib/shared/enums";
 import { AUDIO } from "@/lib/shared/params";
 import { cn } from "@/lib/utils";
 import { LINK_ROW, PANEL, PRIMARY, SECONDARY, CHECKBOX, SELECT } from "../styles";
+import { readSettings } from "../settings";
 import { speakText } from "../voice";
 
 const SOUNDS: Array<{ id: SoundId; use: string }> = [
@@ -111,7 +112,7 @@ export default function Sounds() {
   const [test, setTest] = useState<TestState | null>(null);
 
   useEffect(() => {
-    void fetchLibrary().then(setLibrary);
+    void fetchLibrary(readSettings().voice).then(setLibrary);
     return () => {
       if (walkRef.current !== null) window.clearInterval(walkRef.current);
       engineRef.current?.stop();

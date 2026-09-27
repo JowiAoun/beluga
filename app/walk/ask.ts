@@ -2,6 +2,7 @@
 // object sits, so the answer plays from its side. Nothing here is part of the safety loop.
 
 import { panForAngle, type Pan } from "@/lib/audio/placement";
+import type { VoiceKey } from "@/lib/audio/voices";
 import { ASK_META_HEADER, AskMetaSchema, decodeAskMeta, type AskMeta } from "@/lib/shared/contracts";
 import { NETWORK } from "@/lib/shared/params";
 import type { SensingSession } from "@/lib/xr/session";
@@ -33,6 +34,7 @@ export async function askAboutView(
   ctx: BaseAudioContext,
   hfovDeg: number,
   question?: string,
+  voice?: VoiceKey,
 ): Promise<AskResult> {
   if (!navigator.onLine) return { kind: "offline" };
   const frame = await session.captureFrame();
@@ -40,7 +42,7 @@ export async function askAboutView(
   const response = await fetch("/api/ask", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ frame: await toBase64(frame.blob), ...(question ? { question } : {}) }),
+    body: JSON.stringify({ frame: await toBase64(frame.blob), ...(question ? { question } : {}), voice }),
     signal: AbortSignal.timeout(NETWORK.askTimeoutMs + 2000),
   }).catch(() => null);
   if (!response) return { kind: "offline" };
