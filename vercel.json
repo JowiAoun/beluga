@@ -1,6 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
+  "git": { "deploymentEnabled": false },
   "buildCommand": "npm run db:deploy || echo \"[beluga] The database setup above failed; the app still builds.\"; npm run build",
   "ignoreCommand": "[ -n \"$VERCEL_GIT_PREVIOUS_SHA\" ] || exit 1; files=$(git diff --name-only \"$VERCEL_GIT_PREVIOUS_SHA\" HEAD) || exit 1; [ -n \"$files\" ] || exit 1; ! printf '%s\\n' \"$files\" | grep -qvE '^(docs/|LICENSE$)|\\.md$'"
 }

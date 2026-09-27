@@ -130,7 +130,12 @@ beluga lives at [beluga.surf](https://beluga.surf), a GoDaddy Registry domain: t
 2. Run `npm run phone`
 3. Open `http://localhost:3000/walk` in Chrome on the phone
 
-To deploy, import the repository into Vercel and set the same variables there.
+To deploy, import the repository into Vercel and set the same variables there. Pushes don't deploy by themselves (`vercel.json` turns that off), so a deploy happens only when you ask for one:
+
+1. In Vercel, open the project that serves beluga.surf, then Settings, Git, Deploy Hooks, and make a hook for the branch `main`
+2. Put its URL in `.env.local` as `VERCEL_DEPLOY_HOOK_URL`
+3. Push your commits to GitHub
+4. Run `npm run deploy`
 
 ## Limitations and next steps
 
