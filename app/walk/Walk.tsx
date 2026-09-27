@@ -689,6 +689,9 @@ export default function Walk() {
   else if (update?.calibrating) status = "Calibrating — take three slow steps";
   else if (update?.floorSource === "calibrated") status = "Calibrated";
   else if (update && view?.granted?.depth) status = "Floor estimated — calibration unavailable";
+  // With the heatmap on, only it, its key and its button show. The rest stays mounted, so a Stop
+  // being held or a question being asked carries on, and it all comes back when the heatmap goes off.
+  const heatmapOnly = !!settings?.heatmap;
 
   return (
     <div
@@ -722,6 +725,7 @@ export default function Walk() {
             <div className="flex items-start gap-3">
               {status && (
                 <p
+                  hidden={heatmapOnly}
                   role="status"
                   aria-atomic="true"
                   className={`rounded-md border-2 bg-abyss px-4 py-3 text-2xl font-bold ${
@@ -736,77 +740,81 @@ export default function Walk() {
                 onToggle={() => changeSettings({ ...settingsRef.current, heatmap: !settingsRef.current.heatmap })}
               />
             </div>
-            {settings?.heatmap && <HeatmapKey depth={!cameraOnly} />}
-            {problem && (
-              <p role="alert" className="flex items-center gap-3 rounded-md bg-danger px-4 py-3 text-xl font-bold text-white">
-                <IconAlertTriangle aria-hidden size={32} className="shrink-0" />
-                {PROBLEM_TEXT[problem]}
-              </p>
-            )}
-            {tilt && (
-              <p
-                role="status"
-                className="flex items-center gap-3 rounded-md bg-accent px-4 py-3 text-2xl font-bold text-on-accent"
-              >
-                {(() => {
-                  const { Icon, text } = TILT_FIX[tilt];
-                  return (
-                    <>
-                      <Icon aria-hidden size={40} className="shrink-0" />
-                      {text}
-                    </>
-                  );
-                })()}
-              </p>
-            )}
-            {suggestCalibration && (
-              <div role="status" className="flex flex-col gap-3 rounded-md border-2 border-accent bg-abyss p-4">
-                <p className="text-xl font-bold">
-                  The floor looks off, so warnings may be wrong. On flat ground, tap Calibrate again and take three slow
-                  steps.
+            {heatmapOnly && <HeatmapKey depth={!cameraOnly} />}
+            <div hidden={heatmapOnly} className="contents">
+              {problem && (
+                <p role="alert" className="flex items-center gap-3 rounded-md bg-danger px-4 py-3 text-xl font-bold text-white">
+                  <IconAlertTriangle aria-hidden size={32} className="shrink-0" />
+                  {PROBLEM_TEXT[problem]}
                 </p>
-                <button type="button" onClick={() => sessionRef.current?.recalibrate()} className={PRIMARY}>
-                  Calibrate again
+              )}
+              {tilt && (
+                <p
+                  role="status"
+                  className="flex items-center gap-3 rounded-md bg-accent px-4 py-3 text-2xl font-bold text-on-accent"
+                >
+                  {(() => {
+                    const { Icon, text } = TILT_FIX[tilt];
+                    return (
+                      <>
+                        <Icon aria-hidden size={40} className="shrink-0" />
+                        {text}
+                      </>
+                    );
+                  })()}
+                </p>
+              )}
+              {suggestCalibration && (
+                <div role="status" className="flex flex-col gap-3 rounded-md border-2 border-accent bg-abyss p-4">
+                  <p className="text-xl font-bold">
+                    The floor looks off, so warnings may be wrong. On flat ground, tap Calibrate again and take three slow
+                    steps.
+                  </p>
+                  <button type="button" onClick={() => sessionRef.current?.recalibrate()} className={PRIMARY}>
+                    Calibrate again
+                  </button>
+                </div>
+              )}
+              {message && (
+                <p role="alert" className="rounded-md bg-danger px-4 py-3 text-xl text-white">
+                  {message}
+                </p>
+              )}
+              {debug && (
+                <button
+                  type="button"
+                  onClick={record}
+                  disabled={recording !== null}
+                  className="min-h-12 self-start rounded-md border border-line-strong bg-abyss px-4 font-semibold text-foreground"
+                >
+                  {recording === null
+                    ? `Record a ${CLIP_SECONDS} s replay`
+                    : `Recording, ${recording.toFixed(0)} of ${CLIP_SECONDS} s`}
                 </button>
-              </div>
-            )}
-            {message && (
-              <p role="alert" className="rounded-md bg-danger px-4 py-3 text-xl text-white">
-                {message}
-              </p>
-            )}
-            {debug && (
-              <button
-                type="button"
-                onClick={record}
-                disabled={recording !== null}
-                className="min-h-12 self-start rounded-md border border-line-strong bg-abyss px-4 font-semibold text-foreground"
-              >
-                {recording === null
-                  ? `Record a ${CLIP_SECONDS} s replay`
-                  : `Recording, ${recording.toFixed(0)} of ${CLIP_SECONDS} s`}
-              </button>
-            )}
-            {debug && <DebugOverlay view={view} session={session} />}
+              )}
+              {debug && <DebugOverlay view={view} session={session} />}
+            </div>
           </div>
-          {(waitingForCalibration || waitingForEstimates) && <p role="status" className="rounded-lg bg-black/90 p-4 text-xl font-semibold text-white">
-            {cameraOnly
-              ? "This mode cannot calibrate the floor. Detection and sounds are paused. Estimated warnings have no drop-off or head-height detection."
-              : "Obstacle detection and warning sounds are paused until calibration completes. Keep the floor in view while taking three slow steps."}
-          </p>}
-          {cameraOnly && !estimatesConfirmed && update?.tracking && <button
-            type="button"
-            onClick={() => { estimatesConfirmedRef.current = true; setEstimatesConfirmed(true); }}
-            className="min-h-24 rounded-lg bg-yellow-300 p-4 text-2xl font-bold text-black"
-          >Start estimated warnings</button>}
-          {ready && <AskButton asking={asking} onAsk={() => void ask()} />}
-          {phase === "running" && ready && session && <VoiceAsk
-            session={session} microphone={microphone}
-            getAudio={() => audioRef.current} getEngine={() => soundRef.current}
-            getFov={() => latestRef.current.update?.fov.horizontal}
-            voice={settings?.voice}
-          />}
-          <StopButton onStop={() => { hapticsRef.current?.stop(); sessionRef.current?.stop(); }} />
+          <div hidden={heatmapOnly} className="contents">
+            {(waitingForCalibration || waitingForEstimates) && <p role="status" className="rounded-lg bg-black/90 p-4 text-xl font-semibold text-white">
+              {cameraOnly
+                ? "This mode cannot calibrate the floor. Detection and sounds are paused. Estimated warnings have no drop-off or head-height detection."
+                : "Obstacle detection and warning sounds are paused until calibration completes. Keep the floor in view while taking three slow steps."}
+            </p>}
+            {cameraOnly && !estimatesConfirmed && update?.tracking && <button
+              type="button"
+              onClick={() => { estimatesConfirmedRef.current = true; setEstimatesConfirmed(true); }}
+              className="min-h-24 rounded-lg bg-yellow-300 p-4 text-2xl font-bold text-black"
+            >Start estimated warnings</button>}
+            {ready && <AskButton asking={asking} onAsk={() => void ask()} />}
+            {phase === "running" && ready && session && <VoiceAsk
+              session={session} microphone={microphone}
+              getAudio={() => audioRef.current} getEngine={() => soundRef.current}
+              getFov={() => latestRef.current.update?.fov.horizontal}
+              voice={settings?.voice}
+            />}
+            <StopButton onStop={() => { hapticsRef.current?.stop(); sessionRef.current?.stop(); }} />
+          </div>
         </main>
       ) : (
         <main className="mx-auto flex w-full max-w-xl flex-col gap-5 px-4 pt-safe pb-16">
