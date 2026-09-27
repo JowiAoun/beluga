@@ -41,10 +41,10 @@ We built beluga at [Hack the Hill III](https://hack-the-hill-iii.devpost.com/) a
 
 | Track | What beluga brings |
 | --- | --- |
-| **[Best Use of ElevenLabs](#elevenlabs)** | Three agents that see and look things up through client tools, 12 designed warning sounds, five Eleven v3 voices recorded lossless at 48 kHz, and Scribe v2 for spoken questions |
-| **[Best Use of Gemini API](#gemini)** | Gemini inside all three agents: a fixed triage rubric, Ask answers whose boxes become a sound direction, and a planner's questions answered from the data |
-| **[Best Use of Tiger Data](#tiger-data)** | One hypertable, four real-time continuous aggregates (one stacked on another), compression and retention as privacy tools, and the fix-first score in SQL |
-| **[Best Domain Name from GoDaddy Registry](#domain)** | [beluga.surf](https://beluga.surf), home of a beluga that surfs |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="images/logos/elevenlabs-dark.png"><img src="images/logos/elevenlabs.png" alt="ElevenLabs" height="18"></picture><br>**[Best Use of ElevenLabs](#elevenlabs)** | Three agents that see and look things up through client tools, 12 designed warning sounds, five Eleven v3 voices recorded lossless at 48 kHz, and Scribe v2 for spoken questions |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="images/logos/google-cloud-dark.png"><img src="images/logos/google-cloud.png" alt="Google Cloud" height="22"></picture><br>**[Best Use of Gemini API](#gemini)** | Gemini inside all three agents: a fixed triage rubric, Ask answers whose boxes become a sound direction, and a planner's questions answered from the data |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="images/logos/tiger-data-dark.png"><img src="images/logos/tiger-data.png" alt="Tiger Data" height="26"></picture><br>**[Best Use of Tiger Data](#tiger-data)** | One hypertable, four real-time continuous aggregates (one stacked on another), compression and retention as privacy tools, and the fix-first score in SQL |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="images/logos/godaddy-registry-dark.png"><img src="images/logos/godaddy-registry.png" alt="GoDaddy Registry" height="20"></picture><br>**[Best Domain Name from GoDaddy Registry](#domain)** | [beluga.surf](https://beluga.surf), home of a beluga that surfs |
 | **[Civic Technology](#for-the-city-%EF%B8%8F)** | A ranked fix-first list for the City of Ottawa and OC Transpo, with the rule each spot likely breaks, who fixes it and where to report it |
 | **[Best UI/UX](#on-the-walk)** | A walking screen made for TalkBack and bone-conduction earbuds, a setup that speaks, and a site with the 3D beluga |
 | **General** | A working phone app and a city dashboard, joined end to end in one weekend |
@@ -87,7 +87,7 @@ Bone-conduction earbuds rest in front of your ears, so you still hear traffic. T
 
 ### For the city 🏙️
 
-<img src="images/map.png" alt="The beluga city dashboard: report counts, a 3D hazard map around Ottawa's O-Train stations, a Check now item for a tactile strip near Rideau, and the Pick a spot panel" width="100%">
+<img src="images/map.png" alt="The beluga city dashboard: the week's report and near-miss counts, a 3D hazard map with blue bars around Ottawa's O-Train stations, a Check now item for a tactile strip near Rideau, and the Pick a spot panel" width="100%">
 
 With your consent, beluga sends anonymous reports of lasting hazards. The dashboard at [beluga.surf/map](https://www.beluga.surf/map) turns them into what to fix first around Ottawa's O-Train stations:
 
@@ -226,53 +226,7 @@ beluga lives at [beluga.surf](https://beluga.surf), a GoDaddy Registry domain: t
 
 ## Install & Run
 
-### Requirements
-
-- Node.js 22 or later, and ffmpeg for the sound library
-- A Tiger Cloud service (TimescaleDB and PostGIS)
-- An ElevenLabs API key
-- An Android phone with ARCore depth and Chrome, and bone-conduction earbuds
-
-### Setup
-
-1. Run `npm install`
-2. Run `cp .env.example .env.local` and fill in the values
-3. Run `npm run db:migrate`
-4. Run `npm run seed` for the simulated fortnight
-5. Run `npm run agents` and copy the three agent ids it prints into `.env.local`
-6. Run `npm run sounds` to build the sound library
-7. Run `npm run dev`
-
-### On the phone
-
-1. Plug the phone in over USB with USB debugging on
-2. Run `npm run phone`
-3. Open `http://localhost:3000/walk` in Chrome on the phone
-
-### Deploy
-
-Import the repository into Vercel and set the same variables there. Pushes don't deploy by themselves (`vercel.json` turns that off), so a deploy happens only when you ask for one:
-
-1. In Vercel, open the project that serves beluga.surf, then Settings, Git, Deploy Hooks, and make a hook for the branch `main`
-2. Put its URL in `.env.local` as `VERCEL_DEPLOY_HOOK_URL`
-3. Push your commits to GitHub
-4. Run `npm run deploy`
-
-## Test
-
-1. Run `npm run lint`
-2. Run `npm run typecheck`
-3. Run `npm test` for the 284 tests
-
-## Limitations & next steps
-
-- Depth needs a phone with ARCore depth and a little motion. Glass, dark and shiny floors leave holes in it.
-- Without depth, camera-only mode warns about the things the detector can name, but finds no steps, drop-offs or yellow edge strips. With depth, the strip check goes by colour alone, so a yellow mat counts too.
-- Safari has no WebXR AR, so an iPhone runs camera mode: the camera and the tilt sensors, with the floor taken to be a chest height below the phone.
-- Bone conduction gives weaker left and right than headphones, and no up or down.
-- The detector knows common objects only. There is no scooter class, so a scooter shows up as a bike, a motorcycle or nothing.
-- Ask and reporting need a network. Warnings don't.
-- No blind or low-vision users co-designed this version. Next: co-design with CNIB, and a pilot with OC Transpo.
+Requirements, setup, deploy, tests, and the limitations & next steps are in [`docs/INSTALL.md`](docs/INSTALL.md).
 
 ## Credits
 
