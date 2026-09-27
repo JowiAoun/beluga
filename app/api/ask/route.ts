@@ -73,10 +73,10 @@ export async function POST(request: Request): Promise<Response> {
     };
     try {
       const left = Math.max(500, began + NETWORK.askTimeoutMs - Date.now());
-      const mp3 = await speak(meta.answer, voice, AbortSignal.timeout(left));
+      const wav = await speak(meta.answer, voice, AbortSignal.timeout(left));
       log("answered", began);
-      return new Response(mp3, {
-        headers: { "content-type": "audio/mpeg", [ASK_META_HEADER]: encodeAskMeta(meta), "cache-control": "no-store" },
+      return new Response(wav, {
+        headers: { "content-type": "audio/wav", [ASK_META_HEADER]: encodeAskMeta(meta), "cache-control": "no-store" },
       });
     } catch {
       log("voice_failed", began);

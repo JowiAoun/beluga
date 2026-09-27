@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-27T01:46:41.095Z",
+  "generatedAt": "2026-09-27T03:03:12.778Z",
   "sounds": {
     "edge_pulse": {
       "file": "edge_pulse-1.wav",
@@ -131,7 +131,7 @@
       "prompt": "Warm soft three-note rising chime"
     },
     "reported": {
-      "file": "reported-1.wav",
+      "file": "reported-2.wav",
       "variants": [
         "reported-1.wav",
         "reported-2.wav",
@@ -145,6 +145,7 @@
     "centre_tick": {
       "file": "centre_tick-2.wav",
       "variants": [
+        "centre_tick-1.wav",
         "centre_tick-2.wav",
         "centre_tick-3.wav"
       ],
@@ -156,607 +157,823 @@
   },
   "clips": {
     "edge": {
-      "file": "voice/river/edge.mp3",
+      "file": "voice/river/edge.flac",
       "text": "edge"
     },
     "step_down": {
-      "file": "voice/river/step_down.mp3",
+      "file": "voice/river/step_down.flac",
       "text": "step down"
     },
     "head": {
-      "file": "voice/river/head.mp3",
+      "file": "voice/river/head.flac",
       "text": "head"
     },
     "pole": {
-      "file": "voice/river/pole.mp3",
+      "file": "voice/river/pole.flac",
       "text": "pole"
     },
     "bike": {
-      "file": "voice/river/bike.mp3",
+      "file": "voice/river/bike.flac",
       "text": "bike"
     },
     "scooter": {
-      "file": "voice/river/scooter.mp3",
+      "file": "voice/river/scooter.flac",
       "text": "scooter"
     },
     "car": {
-      "file": "voice/river/car.mp3",
+      "file": "voice/river/car.flac",
       "text": "car"
     },
     "person": {
-      "file": "voice/river/person.mp3",
+      "file": "voice/river/person.flac",
       "text": "person"
     },
     "blocked": {
-      "file": "voice/river/blocked.mp3",
+      "file": "voice/river/blocked.flac",
       "text": "blocked"
     },
     "stairs": {
-      "file": "voice/river/stairs.mp3",
+      "file": "voice/river/stairs.flac",
       "text": "stairs"
     },
     "left": {
-      "file": "voice/river/left.mp3",
+      "file": "voice/river/left.flac",
       "text": "left"
     },
     "right": {
-      "file": "voice/river/right.mp3",
+      "file": "voice/river/right.flac",
       "text": "right"
     },
     "ahead": {
-      "file": "voice/river/ahead.mp3",
+      "file": "voice/river/ahead.flac",
       "text": "ahead"
     },
     "ready": {
-      "file": "voice/river/ready.mp3",
+      "file": "voice/river/ready.flac",
       "text": "beluga ready, tap to start"
     },
     "take_steps": {
-      "file": "voice/river/take_steps.mp3",
+      "file": "voice/river/take_steps.flac",
       "text": "take three slow steps"
     },
     "calibrated": {
-      "file": "voice/river/calibrated.mp3",
+      "file": "voice/river/calibrated.flac",
       "text": "calibrated"
     },
     "hold_steady": {
-      "file": "voice/river/hold_steady.mp3",
+      "file": "voice/river/hold_steady.flac",
       "text": "hold steady"
     },
     "stopped": {
-      "file": "voice/river/stopped.mp3",
+      "file": "voice/river/stopped.flac",
       "text": "beluga stopped"
     },
     "reported": {
-      "file": "voice/river/reported.mp3",
+      "file": "voice/river/reported.flac",
       "text": "reported"
     },
     "reporting_on": {
-      "file": "voice/river/reporting_on.mp3",
+      "file": "voice/river/reporting_on.flac",
       "text": "reporting on"
     },
     "reporting_off": {
-      "file": "voice/river/reporting_off.mp3",
+      "file": "voice/river/reporting_off.flac",
       "text": "reporting off"
     },
     "ask_offline": {
-      "file": "voice/river/ask_offline.mp3",
+      "file": "voice/river/ask_offline.flac",
       "text": "Ask is offline. Obstacle alerts still on."
     },
     "sorry": {
-      "file": "voice/river/sorry.mp3",
+      "file": "voice/river/sorry.flac",
       "text": "Sorry, I couldn't see that."
     },
     "alongside": {
-      "file": "voice/river/alongside.mp3",
+      "file": "voice/river/alongside.flac",
       "text": "beluga works alongside your cane or guide dog. It can miss things."
+    },
+    "start_failed": {
+      "file": "voice/river/start_failed.flac",
+      "text": "beluga could not start."
+    },
+    "no_depth": {
+      "file": "voice/river/no_depth.flac",
+      "text": "No depth on this phone. Obstacle alerts can't run."
+    },
+    "camera_only": {
+      "file": "voice/river/camera_only.flac",
+      "text": "Camera-only mode. It warns about things it can name, like people, bikes and chairs, and yellow edge strips. No step warnings."
+    },
+    "tap_camera": {
+      "file": "voice/river/tap_camera.flac",
+      "text": "Tap the screen once to start the camera."
+    },
+    "camera_dark": {
+      "file": "voice/river/camera_dark.flac",
+      "text": "The camera is covered or it's too dark. Warnings are off until it can see."
+    },
+    "camera_light": {
+      "file": "voice/river/camera_light.flac",
+      "text": "The camera can see again."
+    },
+    "camera_denied": {
+      "file": "voice/river/camera_denied.flac",
+      "text": "beluga needs the camera. Allow it in the browser's settings for this site, then tap Start again."
+    },
+    "problem_frames": {
+      "file": "voice/river/problem_frames.flac",
+      "text": "beluga stopped getting camera frames, so warnings are off. Press Stop, then Start again."
+    },
+    "problem_depth": {
+      "file": "voice/river/problem_depth.flac",
+      "text": "beluga isn't getting depth, so warnings are off. Point the phone at the path ahead. If this stays, press Stop, then Start again."
     }
   },
   "voices": {
     "river": {
       "clips": {
         "edge": {
-          "file": "voice/river/edge.mp3",
+          "file": "voice/river/edge.flac",
           "text": "edge"
         },
         "step_down": {
-          "file": "voice/river/step_down.mp3",
+          "file": "voice/river/step_down.flac",
           "text": "step down"
         },
         "head": {
-          "file": "voice/river/head.mp3",
+          "file": "voice/river/head.flac",
           "text": "head"
         },
         "pole": {
-          "file": "voice/river/pole.mp3",
+          "file": "voice/river/pole.flac",
           "text": "pole"
         },
         "bike": {
-          "file": "voice/river/bike.mp3",
+          "file": "voice/river/bike.flac",
           "text": "bike"
         },
         "scooter": {
-          "file": "voice/river/scooter.mp3",
+          "file": "voice/river/scooter.flac",
           "text": "scooter"
         },
         "car": {
-          "file": "voice/river/car.mp3",
+          "file": "voice/river/car.flac",
           "text": "car"
         },
         "person": {
-          "file": "voice/river/person.mp3",
+          "file": "voice/river/person.flac",
           "text": "person"
         },
         "blocked": {
-          "file": "voice/river/blocked.mp3",
+          "file": "voice/river/blocked.flac",
           "text": "blocked"
         },
         "stairs": {
-          "file": "voice/river/stairs.mp3",
+          "file": "voice/river/stairs.flac",
           "text": "stairs"
         },
         "left": {
-          "file": "voice/river/left.mp3",
+          "file": "voice/river/left.flac",
           "text": "left"
         },
         "right": {
-          "file": "voice/river/right.mp3",
+          "file": "voice/river/right.flac",
           "text": "right"
         },
         "ahead": {
-          "file": "voice/river/ahead.mp3",
+          "file": "voice/river/ahead.flac",
           "text": "ahead"
         },
         "ready": {
-          "file": "voice/river/ready.mp3",
+          "file": "voice/river/ready.flac",
           "text": "beluga ready, tap to start"
         },
         "take_steps": {
-          "file": "voice/river/take_steps.mp3",
+          "file": "voice/river/take_steps.flac",
           "text": "take three slow steps"
         },
         "calibrated": {
-          "file": "voice/river/calibrated.mp3",
+          "file": "voice/river/calibrated.flac",
           "text": "calibrated"
         },
         "hold_steady": {
-          "file": "voice/river/hold_steady.mp3",
+          "file": "voice/river/hold_steady.flac",
           "text": "hold steady"
         },
         "stopped": {
-          "file": "voice/river/stopped.mp3",
+          "file": "voice/river/stopped.flac",
           "text": "beluga stopped"
         },
         "reported": {
-          "file": "voice/river/reported.mp3",
+          "file": "voice/river/reported.flac",
           "text": "reported"
         },
         "reporting_on": {
-          "file": "voice/river/reporting_on.mp3",
+          "file": "voice/river/reporting_on.flac",
           "text": "reporting on"
         },
         "reporting_off": {
-          "file": "voice/river/reporting_off.mp3",
+          "file": "voice/river/reporting_off.flac",
           "text": "reporting off"
         },
         "ask_offline": {
-          "file": "voice/river/ask_offline.mp3",
+          "file": "voice/river/ask_offline.flac",
           "text": "Ask is offline. Obstacle alerts still on."
         },
         "sorry": {
-          "file": "voice/river/sorry.mp3",
+          "file": "voice/river/sorry.flac",
           "text": "Sorry, I couldn't see that."
         },
         "alongside": {
-          "file": "voice/river/alongside.mp3",
+          "file": "voice/river/alongside.flac",
           "text": "beluga works alongside your cane or guide dog. It can miss things."
+        },
+        "start_failed": {
+          "file": "voice/river/start_failed.flac",
+          "text": "beluga could not start."
+        },
+        "no_depth": {
+          "file": "voice/river/no_depth.flac",
+          "text": "No depth on this phone. Obstacle alerts can't run."
+        },
+        "camera_only": {
+          "file": "voice/river/camera_only.flac",
+          "text": "Camera-only mode. It warns about things it can name, like people, bikes and chairs, and yellow edge strips. No step warnings."
+        },
+        "tap_camera": {
+          "file": "voice/river/tap_camera.flac",
+          "text": "Tap the screen once to start the camera."
+        },
+        "camera_dark": {
+          "file": "voice/river/camera_dark.flac",
+          "text": "The camera is covered or it's too dark. Warnings are off until it can see."
+        },
+        "camera_light": {
+          "file": "voice/river/camera_light.flac",
+          "text": "The camera can see again."
+        },
+        "camera_denied": {
+          "file": "voice/river/camera_denied.flac",
+          "text": "beluga needs the camera. Allow it in the browser's settings for this site, then tap Start again."
+        },
+        "problem_frames": {
+          "file": "voice/river/problem_frames.flac",
+          "text": "beluga stopped getting camera frames, so warnings are off. Press Stop, then Start again."
+        },
+        "problem_depth": {
+          "file": "voice/river/problem_depth.flac",
+          "text": "beluga isn't getting depth, so warnings are off. Point the phone at the path ahead. If this stays, press Stop, then Start again."
         }
       },
-      "sample": "voice/river/sample.mp3"
+      "sample": "voice/river/sample.flac"
     },
     "sarah": {
       "clips": {
         "edge": {
-          "file": "voice/sarah/edge.mp3",
+          "file": "voice/sarah/edge.flac",
           "text": "edge"
         },
         "step_down": {
-          "file": "voice/sarah/step_down.mp3",
+          "file": "voice/sarah/step_down.flac",
           "text": "step down"
         },
         "head": {
-          "file": "voice/sarah/head.mp3",
+          "file": "voice/sarah/head.flac",
           "text": "head"
         },
         "pole": {
-          "file": "voice/sarah/pole.mp3",
+          "file": "voice/sarah/pole.flac",
           "text": "pole"
         },
         "bike": {
-          "file": "voice/sarah/bike.mp3",
+          "file": "voice/sarah/bike.flac",
           "text": "bike"
         },
         "scooter": {
-          "file": "voice/sarah/scooter.mp3",
+          "file": "voice/sarah/scooter.flac",
           "text": "scooter"
         },
         "car": {
-          "file": "voice/sarah/car.mp3",
+          "file": "voice/sarah/car.flac",
           "text": "car"
         },
         "person": {
-          "file": "voice/sarah/person.mp3",
+          "file": "voice/sarah/person.flac",
           "text": "person"
         },
         "blocked": {
-          "file": "voice/sarah/blocked.mp3",
+          "file": "voice/sarah/blocked.flac",
           "text": "blocked"
         },
         "stairs": {
-          "file": "voice/sarah/stairs.mp3",
+          "file": "voice/sarah/stairs.flac",
           "text": "stairs"
         },
         "left": {
-          "file": "voice/sarah/left.mp3",
+          "file": "voice/sarah/left.flac",
           "text": "left"
         },
         "right": {
-          "file": "voice/sarah/right.mp3",
+          "file": "voice/sarah/right.flac",
           "text": "right"
         },
         "ahead": {
-          "file": "voice/sarah/ahead.mp3",
+          "file": "voice/sarah/ahead.flac",
           "text": "ahead"
         },
         "ready": {
-          "file": "voice/sarah/ready.mp3",
+          "file": "voice/sarah/ready.flac",
           "text": "beluga ready, tap to start"
         },
         "take_steps": {
-          "file": "voice/sarah/take_steps.mp3",
+          "file": "voice/sarah/take_steps.flac",
           "text": "take three slow steps"
         },
         "calibrated": {
-          "file": "voice/sarah/calibrated.mp3",
+          "file": "voice/sarah/calibrated.flac",
           "text": "calibrated"
         },
         "hold_steady": {
-          "file": "voice/sarah/hold_steady.mp3",
+          "file": "voice/sarah/hold_steady.flac",
           "text": "hold steady"
         },
         "stopped": {
-          "file": "voice/sarah/stopped.mp3",
+          "file": "voice/sarah/stopped.flac",
           "text": "beluga stopped"
         },
         "reported": {
-          "file": "voice/sarah/reported.mp3",
+          "file": "voice/sarah/reported.flac",
           "text": "reported"
         },
         "reporting_on": {
-          "file": "voice/sarah/reporting_on.mp3",
+          "file": "voice/sarah/reporting_on.flac",
           "text": "reporting on"
         },
         "reporting_off": {
-          "file": "voice/sarah/reporting_off.mp3",
+          "file": "voice/sarah/reporting_off.flac",
           "text": "reporting off"
         },
         "ask_offline": {
-          "file": "voice/sarah/ask_offline.mp3",
+          "file": "voice/sarah/ask_offline.flac",
           "text": "Ask is offline. Obstacle alerts still on."
         },
         "sorry": {
-          "file": "voice/sarah/sorry.mp3",
+          "file": "voice/sarah/sorry.flac",
           "text": "Sorry, I couldn't see that."
         },
         "alongside": {
-          "file": "voice/sarah/alongside.mp3",
+          "file": "voice/sarah/alongside.flac",
           "text": "beluga works alongside your cane or guide dog. It can miss things."
+        },
+        "start_failed": {
+          "file": "voice/sarah/start_failed.flac",
+          "text": "beluga could not start."
+        },
+        "no_depth": {
+          "file": "voice/sarah/no_depth.flac",
+          "text": "No depth on this phone. Obstacle alerts can't run."
+        },
+        "camera_only": {
+          "file": "voice/sarah/camera_only.flac",
+          "text": "Camera-only mode. It warns about things it can name, like people, bikes and chairs, and yellow edge strips. No step warnings."
+        },
+        "tap_camera": {
+          "file": "voice/sarah/tap_camera.flac",
+          "text": "Tap the screen once to start the camera."
+        },
+        "camera_dark": {
+          "file": "voice/sarah/camera_dark.flac",
+          "text": "The camera is covered or it's too dark. Warnings are off until it can see."
+        },
+        "camera_light": {
+          "file": "voice/sarah/camera_light.flac",
+          "text": "The camera can see again."
+        },
+        "camera_denied": {
+          "file": "voice/sarah/camera_denied.flac",
+          "text": "beluga needs the camera. Allow it in the browser's settings for this site, then tap Start again."
+        },
+        "problem_frames": {
+          "file": "voice/sarah/problem_frames.flac",
+          "text": "beluga stopped getting camera frames, so warnings are off. Press Stop, then Start again."
+        },
+        "problem_depth": {
+          "file": "voice/sarah/problem_depth.flac",
+          "text": "beluga isn't getting depth, so warnings are off. Point the phone at the path ahead. If this stays, press Stop, then Start again."
         }
       },
-      "sample": "voice/sarah/sample.mp3"
+      "sample": "voice/sarah/sample.flac"
     },
     "alice": {
       "clips": {
         "edge": {
-          "file": "voice/alice/edge.mp3",
+          "file": "voice/alice/edge.flac",
           "text": "edge"
         },
         "step_down": {
-          "file": "voice/alice/step_down.mp3",
+          "file": "voice/alice/step_down.flac",
           "text": "step down"
         },
         "head": {
-          "file": "voice/alice/head.mp3",
+          "file": "voice/alice/head.flac",
           "text": "head"
         },
         "pole": {
-          "file": "voice/alice/pole.mp3",
+          "file": "voice/alice/pole.flac",
           "text": "pole"
         },
         "bike": {
-          "file": "voice/alice/bike.mp3",
+          "file": "voice/alice/bike.flac",
           "text": "bike"
         },
         "scooter": {
-          "file": "voice/alice/scooter.mp3",
+          "file": "voice/alice/scooter.flac",
           "text": "scooter"
         },
         "car": {
-          "file": "voice/alice/car.mp3",
+          "file": "voice/alice/car.flac",
           "text": "car"
         },
         "person": {
-          "file": "voice/alice/person.mp3",
+          "file": "voice/alice/person.flac",
           "text": "person"
         },
         "blocked": {
-          "file": "voice/alice/blocked.mp3",
+          "file": "voice/alice/blocked.flac",
           "text": "blocked"
         },
         "stairs": {
-          "file": "voice/alice/stairs.mp3",
+          "file": "voice/alice/stairs.flac",
           "text": "stairs"
         },
         "left": {
-          "file": "voice/alice/left.mp3",
+          "file": "voice/alice/left.flac",
           "text": "left"
         },
         "right": {
-          "file": "voice/alice/right.mp3",
+          "file": "voice/alice/right.flac",
           "text": "right"
         },
         "ahead": {
-          "file": "voice/alice/ahead.mp3",
+          "file": "voice/alice/ahead.flac",
           "text": "ahead"
         },
         "ready": {
-          "file": "voice/alice/ready.mp3",
+          "file": "voice/alice/ready.flac",
           "text": "beluga ready, tap to start"
         },
         "take_steps": {
-          "file": "voice/alice/take_steps.mp3",
+          "file": "voice/alice/take_steps.flac",
           "text": "take three slow steps"
         },
         "calibrated": {
-          "file": "voice/alice/calibrated.mp3",
+          "file": "voice/alice/calibrated.flac",
           "text": "calibrated"
         },
         "hold_steady": {
-          "file": "voice/alice/hold_steady.mp3",
+          "file": "voice/alice/hold_steady.flac",
           "text": "hold steady"
         },
         "stopped": {
-          "file": "voice/alice/stopped.mp3",
+          "file": "voice/alice/stopped.flac",
           "text": "beluga stopped"
         },
         "reported": {
-          "file": "voice/alice/reported.mp3",
+          "file": "voice/alice/reported.flac",
           "text": "reported"
         },
         "reporting_on": {
-          "file": "voice/alice/reporting_on.mp3",
+          "file": "voice/alice/reporting_on.flac",
           "text": "reporting on"
         },
         "reporting_off": {
-          "file": "voice/alice/reporting_off.mp3",
+          "file": "voice/alice/reporting_off.flac",
           "text": "reporting off"
         },
         "ask_offline": {
-          "file": "voice/alice/ask_offline.mp3",
+          "file": "voice/alice/ask_offline.flac",
           "text": "Ask is offline. Obstacle alerts still on."
         },
         "sorry": {
-          "file": "voice/alice/sorry.mp3",
+          "file": "voice/alice/sorry.flac",
           "text": "Sorry, I couldn't see that."
         },
         "alongside": {
-          "file": "voice/alice/alongside.mp3",
+          "file": "voice/alice/alongside.flac",
           "text": "beluga works alongside your cane or guide dog. It can miss things."
+        },
+        "start_failed": {
+          "file": "voice/alice/start_failed.flac",
+          "text": "beluga could not start."
+        },
+        "no_depth": {
+          "file": "voice/alice/no_depth.flac",
+          "text": "No depth on this phone. Obstacle alerts can't run."
+        },
+        "camera_only": {
+          "file": "voice/alice/camera_only.flac",
+          "text": "Camera-only mode. It warns about things it can name, like people, bikes and chairs, and yellow edge strips. No step warnings."
+        },
+        "tap_camera": {
+          "file": "voice/alice/tap_camera.flac",
+          "text": "Tap the screen once to start the camera."
+        },
+        "camera_dark": {
+          "file": "voice/alice/camera_dark.flac",
+          "text": "The camera is covered or it's too dark. Warnings are off until it can see."
+        },
+        "camera_light": {
+          "file": "voice/alice/camera_light.flac",
+          "text": "The camera can see again."
+        },
+        "camera_denied": {
+          "file": "voice/alice/camera_denied.flac",
+          "text": "beluga needs the camera. Allow it in the browser's settings for this site, then tap Start again."
+        },
+        "problem_frames": {
+          "file": "voice/alice/problem_frames.flac",
+          "text": "beluga stopped getting camera frames, so warnings are off. Press Stop, then Start again."
+        },
+        "problem_depth": {
+          "file": "voice/alice/problem_depth.flac",
+          "text": "beluga isn't getting depth, so warnings are off. Point the phone at the path ahead. If this stays, press Stop, then Start again."
         }
       },
-      "sample": "voice/alice/sample.mp3"
+      "sample": "voice/alice/sample.flac"
     },
     "eric": {
       "clips": {
         "edge": {
-          "file": "voice/eric/edge.mp3",
+          "file": "voice/eric/edge.flac",
           "text": "edge"
         },
         "step_down": {
-          "file": "voice/eric/step_down.mp3",
+          "file": "voice/eric/step_down.flac",
           "text": "step down"
         },
         "head": {
-          "file": "voice/eric/head.mp3",
+          "file": "voice/eric/head.flac",
           "text": "head"
         },
         "pole": {
-          "file": "voice/eric/pole.mp3",
+          "file": "voice/eric/pole.flac",
           "text": "pole"
         },
         "bike": {
-          "file": "voice/eric/bike.mp3",
+          "file": "voice/eric/bike.flac",
           "text": "bike"
         },
         "scooter": {
-          "file": "voice/eric/scooter.mp3",
+          "file": "voice/eric/scooter.flac",
           "text": "scooter"
         },
         "car": {
-          "file": "voice/eric/car.mp3",
+          "file": "voice/eric/car.flac",
           "text": "car"
         },
         "person": {
-          "file": "voice/eric/person.mp3",
+          "file": "voice/eric/person.flac",
           "text": "person"
         },
         "blocked": {
-          "file": "voice/eric/blocked.mp3",
+          "file": "voice/eric/blocked.flac",
           "text": "blocked"
         },
         "stairs": {
-          "file": "voice/eric/stairs.mp3",
+          "file": "voice/eric/stairs.flac",
           "text": "stairs"
         },
         "left": {
-          "file": "voice/eric/left.mp3",
+          "file": "voice/eric/left.flac",
           "text": "left"
         },
         "right": {
-          "file": "voice/eric/right.mp3",
+          "file": "voice/eric/right.flac",
           "text": "right"
         },
         "ahead": {
-          "file": "voice/eric/ahead.mp3",
+          "file": "voice/eric/ahead.flac",
           "text": "ahead"
         },
         "ready": {
-          "file": "voice/eric/ready.mp3",
+          "file": "voice/eric/ready.flac",
           "text": "beluga ready, tap to start"
         },
         "take_steps": {
-          "file": "voice/eric/take_steps.mp3",
+          "file": "voice/eric/take_steps.flac",
           "text": "take three slow steps"
         },
         "calibrated": {
-          "file": "voice/eric/calibrated.mp3",
+          "file": "voice/eric/calibrated.flac",
           "text": "calibrated"
         },
         "hold_steady": {
-          "file": "voice/eric/hold_steady.mp3",
+          "file": "voice/eric/hold_steady.flac",
           "text": "hold steady"
         },
         "stopped": {
-          "file": "voice/eric/stopped.mp3",
+          "file": "voice/eric/stopped.flac",
           "text": "beluga stopped"
         },
         "reported": {
-          "file": "voice/eric/reported.mp3",
+          "file": "voice/eric/reported.flac",
           "text": "reported"
         },
         "reporting_on": {
-          "file": "voice/eric/reporting_on.mp3",
+          "file": "voice/eric/reporting_on.flac",
           "text": "reporting on"
         },
         "reporting_off": {
-          "file": "voice/eric/reporting_off.mp3",
+          "file": "voice/eric/reporting_off.flac",
           "text": "reporting off"
         },
         "ask_offline": {
-          "file": "voice/eric/ask_offline.mp3",
+          "file": "voice/eric/ask_offline.flac",
           "text": "Ask is offline. Obstacle alerts still on."
         },
         "sorry": {
-          "file": "voice/eric/sorry.mp3",
+          "file": "voice/eric/sorry.flac",
           "text": "Sorry, I couldn't see that."
         },
         "alongside": {
-          "file": "voice/eric/alongside.mp3",
+          "file": "voice/eric/alongside.flac",
           "text": "beluga works alongside your cane or guide dog. It can miss things."
+        },
+        "start_failed": {
+          "file": "voice/eric/start_failed.flac",
+          "text": "beluga could not start."
+        },
+        "no_depth": {
+          "file": "voice/eric/no_depth.flac",
+          "text": "No depth on this phone. Obstacle alerts can't run."
+        },
+        "camera_only": {
+          "file": "voice/eric/camera_only.flac",
+          "text": "Camera-only mode. It warns about things it can name, like people, bikes and chairs, and yellow edge strips. No step warnings."
+        },
+        "tap_camera": {
+          "file": "voice/eric/tap_camera.flac",
+          "text": "Tap the screen once to start the camera."
+        },
+        "camera_dark": {
+          "file": "voice/eric/camera_dark.flac",
+          "text": "The camera is covered or it's too dark. Warnings are off until it can see."
+        },
+        "camera_light": {
+          "file": "voice/eric/camera_light.flac",
+          "text": "The camera can see again."
+        },
+        "camera_denied": {
+          "file": "voice/eric/camera_denied.flac",
+          "text": "beluga needs the camera. Allow it in the browser's settings for this site, then tap Start again."
+        },
+        "problem_frames": {
+          "file": "voice/eric/problem_frames.flac",
+          "text": "beluga stopped getting camera frames, so warnings are off. Press Stop, then Start again."
+        },
+        "problem_depth": {
+          "file": "voice/eric/problem_depth.flac",
+          "text": "beluga isn't getting depth, so warnings are off. Point the phone at the path ahead. If this stays, press Stop, then Start again."
         }
       },
-      "sample": "voice/eric/sample.mp3"
+      "sample": "voice/eric/sample.flac"
     },
     "chris": {
       "clips": {
         "edge": {
-          "file": "voice/chris/edge.mp3",
+          "file": "voice/chris/edge.flac",
           "text": "edge"
         },
         "step_down": {
-          "file": "voice/chris/step_down.mp3",
+          "file": "voice/chris/step_down.flac",
           "text": "step down"
         },
         "head": {
-          "file": "voice/chris/head.mp3",
+          "file": "voice/chris/head.flac",
           "text": "head"
         },
         "pole": {
-          "file": "voice/chris/pole.mp3",
+          "file": "voice/chris/pole.flac",
           "text": "pole"
         },
         "bike": {
-          "file": "voice/chris/bike.mp3",
+          "file": "voice/chris/bike.flac",
           "text": "bike"
         },
         "scooter": {
-          "file": "voice/chris/scooter.mp3",
+          "file": "voice/chris/scooter.flac",
           "text": "scooter"
         },
         "car": {
-          "file": "voice/chris/car.mp3",
+          "file": "voice/chris/car.flac",
           "text": "car"
         },
         "person": {
-          "file": "voice/chris/person.mp3",
+          "file": "voice/chris/person.flac",
           "text": "person"
         },
         "blocked": {
-          "file": "voice/chris/blocked.mp3",
+          "file": "voice/chris/blocked.flac",
           "text": "blocked"
         },
         "stairs": {
-          "file": "voice/chris/stairs.mp3",
+          "file": "voice/chris/stairs.flac",
           "text": "stairs"
         },
         "left": {
-          "file": "voice/chris/left.mp3",
+          "file": "voice/chris/left.flac",
           "text": "left"
         },
         "right": {
-          "file": "voice/chris/right.mp3",
+          "file": "voice/chris/right.flac",
           "text": "right"
         },
         "ahead": {
-          "file": "voice/chris/ahead.mp3",
+          "file": "voice/chris/ahead.flac",
           "text": "ahead"
         },
         "ready": {
-          "file": "voice/chris/ready.mp3",
+          "file": "voice/chris/ready.flac",
           "text": "beluga ready, tap to start"
         },
         "take_steps": {
-          "file": "voice/chris/take_steps.mp3",
+          "file": "voice/chris/take_steps.flac",
           "text": "take three slow steps"
         },
         "calibrated": {
-          "file": "voice/chris/calibrated.mp3",
+          "file": "voice/chris/calibrated.flac",
           "text": "calibrated"
         },
         "hold_steady": {
-          "file": "voice/chris/hold_steady.mp3",
+          "file": "voice/chris/hold_steady.flac",
           "text": "hold steady"
         },
         "stopped": {
-          "file": "voice/chris/stopped.mp3",
+          "file": "voice/chris/stopped.flac",
           "text": "beluga stopped"
         },
         "reported": {
-          "file": "voice/chris/reported.mp3",
+          "file": "voice/chris/reported.flac",
           "text": "reported"
         },
         "reporting_on": {
-          "file": "voice/chris/reporting_on.mp3",
+          "file": "voice/chris/reporting_on.flac",
           "text": "reporting on"
         },
         "reporting_off": {
-          "file": "voice/chris/reporting_off.mp3",
+          "file": "voice/chris/reporting_off.flac",
           "text": "reporting off"
         },
         "ask_offline": {
-          "file": "voice/chris/ask_offline.mp3",
+          "file": "voice/chris/ask_offline.flac",
           "text": "Ask is offline. Obstacle alerts still on."
         },
         "sorry": {
-          "file": "voice/chris/sorry.mp3",
+          "file": "voice/chris/sorry.flac",
           "text": "Sorry, I couldn't see that."
         },
         "alongside": {
-          "file": "voice/chris/alongside.mp3",
+          "file": "voice/chris/alongside.flac",
           "text": "beluga works alongside your cane or guide dog. It can miss things."
+        },
+        "start_failed": {
+          "file": "voice/chris/start_failed.flac",
+          "text": "beluga could not start."
+        },
+        "no_depth": {
+          "file": "voice/chris/no_depth.flac",
+          "text": "No depth on this phone. Obstacle alerts can't run."
+        },
+        "camera_only": {
+          "file": "voice/chris/camera_only.flac",
+          "text": "Camera-only mode. It warns about things it can name, like people, bikes and chairs, and yellow edge strips. No step warnings."
+        },
+        "tap_camera": {
+          "file": "voice/chris/tap_camera.flac",
+          "text": "Tap the screen once to start the camera."
+        },
+        "camera_dark": {
+          "file": "voice/chris/camera_dark.flac",
+          "text": "The camera is covered or it's too dark. Warnings are off until it can see."
+        },
+        "camera_light": {
+          "file": "voice/chris/camera_light.flac",
+          "text": "The camera can see again."
+        },
+        "camera_denied": {
+          "file": "voice/chris/camera_denied.flac",
+          "text": "beluga needs the camera. Allow it in the browser's settings for this site, then tap Start again."
+        },
+        "problem_frames": {
+          "file": "voice/chris/problem_frames.flac",
+          "text": "beluga stopped getting camera frames, so warnings are off. Press Stop, then Start again."
+        },
+        "problem_depth": {
+          "file": "voice/chris/problem_depth.flac",
+          "text": "beluga isn't getting depth, so warnings are off. Point the phone at the path ahead. If this stays, press Stop, then Start again."
         }
       },
-      "sample": "voice/chris/sample.mp3"
+      "sample": "voice/chris/sample.flac"
     }
   }
 }

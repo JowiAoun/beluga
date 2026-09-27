@@ -2,11 +2,14 @@
 // says the warning words ("pole", "left") and speaks Ask's answers. Its recorded clips live in
 // `public/sounds/voice/<key>`, made by `npm run sounds`.
 
-// ElevenLabs' most expressive model, for every voice clip and every Ask answer, at the best MP3 the
-// account's plan allows. Eleven v3 takes about 2 s for a two-sentence Ask answer, against 0.5 s for
-// Flash v2.5; ELEVENLABS_TTS_MODEL can swap the model back on the server if that ever matters more.
+import type { SetupStep } from "./library";
+
+// ElevenLabs' most expressive model, for every voice clip and every Ask answer. Eleven v3 takes
+// about 2 s for a two-sentence Ask answer, against 0.5 s for Flash v2.5.
 export const TTS_MODEL = "eleven_v3";
-export const TTS_FORMAT = "mp3_44100_192";
+// Lossless 48 kHz, the best the plan gives (44.1 kHz lossless needs the Pro plan). Phones play at
+// 48 kHz, so nothing is resampled on the way out. A WAV file, which every browser decodes.
+export const TTS_FORMAT = "wav_48000";
 
 export interface Voice {
   key: string;
@@ -74,5 +77,10 @@ export function voiceOf(key: VoiceKey): Voice {
 
 // Where a voice's recorded sample is, under /sounds.
 export function samplePath(key: VoiceKey): string {
-  return `voice/${key}/sample.mp3`;
+  return `voice/${key}/sample.flac`;
+}
+
+// Where a voice's recording of a setup step is, under /sounds.
+export function setupPath(key: VoiceKey, step: SetupStep): string {
+  return `voice/${key}/setup-${step}.flac`;
 }

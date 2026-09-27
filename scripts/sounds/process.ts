@@ -1,5 +1,6 @@
 // ffmpeg steps that shape ElevenLabs downloads for bone-conduction earbuds: a high-pass, silence
-// trimmed off the start, a short fade, mono 44.1 kHz, then a level set by peak or by loudness.
+// trimmed off the start, a short fade, mono 48 kHz, then a level set by peak or by loudness. The
+// downloads are lossless and so is every file made here, so nothing is lost on the way.
 
 import { execFileSync, spawnSync } from "node:child_process";
 import { rmSync } from "node:fs";
@@ -7,6 +8,8 @@ import { AUDIO } from "@/lib/shared/params";
 
 const SILENCE_DB = -45;
 const FADE_S = 0.05;
+// The rate ElevenLabs sends and phones play at, so nothing is resampled.
+const RATE = "48000";
 
 function ffmpeg(...ffArgs: string[]): void {
   execFileSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", ...ffArgs], { stdio: "inherit" });
@@ -42,10 +45,10 @@ function normalisePeak(tmp: string, out: string, codec: string[]): void {
 }
 
 const WAV = ["-c:a", "pcm_s16le"];
-// The best VBR setting, so re-encoding keeps what the 192 kbps download has.
-const MP3 = ["-c:a", "libmp3lame", "-q:a", "0"];
+// Lossless like WAV, at about half the size, for the longer voice clips.
+const FLAC = ["-c:a", "flac", "-sample_fmt", "s16", "-compression_level", "12"];
 
-// Effects stay WAV: an MP3 starts with a few milliseconds of padding, and warnings need every one.
+// Effects stay WAV: they are short, and every browser decodes WAV the moment it has it.
 export function processEffect(raw: string, out: string, seconds: number): void {
   const tmp = `${out}.tmp.wav`;
   const fade = `afade=t=out:st=${Math.max(0, seconds - FADE_S).toFixed(3)}:d=${FADE_S}`;
@@ -57,7 +60,7 @@ export function processEffect(raw: string, out: string, seconds: number): void {
     "-ac",
     "1",
     "-ar",
-    "44100",
+    RATE,
     ...WAV,
     tmp,
   );
@@ -67,7 +70,7 @@ export function processEffect(raw: string, out: string, seconds: number): void {
 // A loop keeps its full length and its ends, or it would click where it wraps.
 export function processLoop(raw: string, out: string): void {
   const tmp = `${out}.tmp.wav`;
-  ffmpeg("-i", raw, "-af", HIGH_PASS, "-ac", "1", "-ar", "44100", ...WAV, tmp);
+  ffmpeg("-i", raw, "-af", HIGH_PASS, "-ac", "1", "-ar", RATE, ...WAV, tmp);
   normalisePeak(tmp, out, WAV);
 }
 
@@ -104,7 +107,7 @@ const CLIP_TRIM_END = "silenceremove=start_periods=1:start_threshold=-50dB:start
 export function processClip(raw: string, out: string): void {
   const tmp = `${out}.tmp.wav`;
   const trimBothEnds = `${CLIP_TRIM_START},areverse,${CLIP_TRIM_END},areverse`;
-  ffmpeg("-i", raw, "-af", `${HIGH_PASS},${trimBothEnds}`, "-ac", "1", "-ar", "44100", ...WAV, tmp);
+  ffmpeg("-i", raw, "-af", `${HIGH_PASS},${trimBothEnds}`, "-ac", "1", "-ar", RATE, ...WAV, tmp);
   const tail = quietTailStart(tmp);
   if (tail !== null) {
     const cut = `${out}.cut.wav`;
@@ -114,9 +117,9 @@ export function processClip(raw: string, out: string): void {
     execFileSync("mv", [cut, tmp]);
   }
   if (durationS(tmp) < 0.5) {
-    normalisePeak(tmp, out, MP3);
+    normalisePeak(tmp, out, FLAC);
     return;
   }
-  ffmpeg("-i", tmp, "-af", `loudnorm=I=${AUDIO.voiceLufs}:TP=-1.5:LRA=11`, "-ar", "44100", ...MP3, out);
+  ffmpeg("-i", tmp, "-af", `loudnorm=I=${AUDIO.voiceLufs}:TP=-1.5:LRA=11`, "-ar", RATE, ...FLAC, out);
   rmSync(tmp);
 }

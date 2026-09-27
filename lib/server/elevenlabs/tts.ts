@@ -1,14 +1,14 @@
 import "server-only";
 
 // Best Use of ElevenLabs: the live Ask voice, in the voice the user picked, from ElevenLabs' most
-// expressive model at the best MP3 the plan allows (lib/audio/voices.ts).
+// expressive model as lossless 48 kHz audio (lib/audio/voices.ts).
 
 import { TTS_FORMAT, TTS_MODEL, voiceOf, type VoiceKey } from "@/lib/audio/voices";
 import { env } from "../env";
 
 const API = "https://api.elevenlabs.io/v1";
 
-// The whole MP3 in one piece: the phone decodes it with Web Audio, which can't play half a file.
+// The whole WAV in one piece: the phone decodes it with Web Audio, which can't play half a file.
 export async function speak(text: string, voice: VoiceKey, signal?: AbortSignal): Promise<ArrayBuffer> {
   const { ELEVENLABS_API_KEY } = env("ELEVENLABS_API_KEY");
   const response = await fetch(`${API}/text-to-speech/${voiceOf(voice).elevenId}?output_format=${TTS_FORMAT}`, {

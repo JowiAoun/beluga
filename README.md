@@ -79,7 +79,7 @@ Every event lands in one hypertable, and every dashboard view reads a continuous
 | reported | Report sent | Soft single water-drop blip | 0.2 s |
 | centre\_tick | Straight ahead | Very short soft click | 0.05 s |
 
-- **Shaped for bone conduction**: ffmpeg cuts everything below 250 Hz (bone conduction only buzzes there), trims and fades each sound, and levels it by peak. Warnings stay WAV, so no MP3 padding delays them. Voice clips say the hazard and its side, like "pole, left", since side cues are weak on bone conduction.
+- **Shaped for bone conduction**: ffmpeg cuts everything below 250 Hz (bone conduction only buzzes there), trims and fades each sound, and levels it by peak. Every sound is lossless at 48 kHz: warnings as WAV, voice clips as FLAC. Voice clips say the hazard and its side, like "pole, left", since side cues are weak on bone conduction.
 - **The Ask voice**: Flash v2.5 speaks each answer, and the phone plays it from the side of the object described.
 
 ## Gemini

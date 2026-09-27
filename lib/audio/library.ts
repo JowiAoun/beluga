@@ -67,9 +67,34 @@ export const CLIP_TEXT = {
   ask_offline: "Ask is offline. Obstacle alerts still on.",
   sorry: "Sorry, I couldn't see that.",
   alongside: "beluga works alongside your cane or guide dog. It can miss things.",
+  start_failed: "beluga could not start.",
+  no_depth: "No depth on this phone. Obstacle alerts can't run.",
+  camera_only:
+    "Camera-only mode. It warns about things it can name, like people, bikes and chairs, and yellow edge strips. No step warnings.",
+  tap_camera: "Tap the screen once to start the camera.",
+  camera_dark: "The camera is covered or it's too dark. Warnings are off until it can see.",
+  camera_light: "The camera can see again.",
+  camera_denied: "beluga needs the camera. Allow it in the browser's settings for this site, then tap Start again.",
+  problem_frames: "beluga stopped getting camera frames, so warnings are off. Press Stop, then Start again.",
+  problem_depth:
+    "beluga isn't getting depth, so warnings are off. Point the phone at the path ahead. If this stays, press Stop, then Start again.",
 } as const;
 
 export type ClipId = keyof typeof CLIP_TEXT;
+
+// The first-run steps, said in the chosen voice as each one opens. Fetched one at a time from
+// `setupPath`, since a walk never needs them.
+export const SETUP_TEXT = {
+  welcome: "beluga works alongside your cane or guide dog. It can miss things.",
+  voice: "Pick the voice that says warnings and answers your questions. Tap Play to hear each one.",
+  reporting: "Help the city by sharing anonymous hazard reports? You can change this any time in settings.",
+  location:
+    "Location marks where hazard reports happen, to about 100 metres. Chrome can't ask during a walk, so it asks now.",
+  height: "How tall are you? beluga uses it to watch for things at head height.",
+  ready: "Put the phone on your chest mount, camera facing forward, then tap Start.",
+} as const;
+
+export type SetupStep = keyof typeof SETUP_TEXT;
 
 export function isClipId(word: string): word is ClipId {
   return Object.hasOwn(CLIP_TEXT, word);
@@ -112,7 +137,7 @@ export async function fetchLibrary(voice?: VoiceKey): Promise<RawLibrary | null>
     const files = new Map<string, ArrayBuffer>();
     await Promise.all(
       [...paths].map(async (file) => {
-        if (!/^[a-zA-Z0-9_/-]+\.(mp3|wav)$/.test(file) || file.includes("..")) return;
+        if (!/^[a-zA-Z0-9_/-]+\.(mp3|wav|flac)$/.test(file) || file.includes("..")) return;
         // Version the cache keys so regenerated clips replace their previous versions.
         const url = `${SOUNDS_PATH}/${file}?v=${encodeURIComponent(manifest.generatedAt)}`;
         const got = await cachedSound(url, cache);

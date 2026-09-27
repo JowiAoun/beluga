@@ -6,14 +6,22 @@
 // spends no credits on what it already has. Options: `--only tick,ping`, `--fresh`, and
 // `--voices`, which makes only the five voices' clips and samples and leaves the effects alone.
 //
-// Every voice clip comes from ElevenLabs' best model at the best MP3 the plan allows (voices.ts).
+// Everything downloads lossless at 48 kHz, the best the plan allows: voices from ElevenLabs' best
+// model (voices.ts), effects as raw PCM, which gets a WAV header here.
 
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { CLIP_TEXT, type ClipId, type LibraryManifest, type LibrarySound } from "@/lib/audio/library";
+import {
+  CLIP_TEXT,
+  SETUP_TEXT,
+  type ClipId,
+  type LibraryManifest,
+  type LibrarySound,
+  type SetupStep,
+} from "@/lib/audio/library";
 import { SOUND_IDS } from "@/lib/shared/enums";
-import { DEFAULT_VOICE, samplePath, TTS_FORMAT, TTS_MODEL, VOICES, type VoiceKey } from "@/lib/audio/voices";
+import { DEFAULT_VOICE, samplePath, setupPath, TTS_FORMAT, TTS_MODEL, VOICES, type VoiceKey } from "@/lib/audio/voices";
 import { processClip, processEffect, processLoop } from "./process";
 import { EFFECTS, loopPrompt } from "./prompts";
 
@@ -23,6 +31,10 @@ const OUT_DIR = "public/sounds";
 const MANIFEST = path.join(OUT_DIR, "manifest.json");
 
 const EFFECT_VARIANTS = 3;
+// Sound Effects has no WAV format, only headerless 16-bit PCM, and it comes in stereo.
+const EFFECT_FORMAT = "pcm_48000";
+const EFFECT_RATE = 48000;
+const EFFECT_CHANNELS = 2;
 const LOOP_VARIANTS = 2;
 const PROMPT_INFLUENCE = 0.75;
 // Requests at the same time. Each one takes a second or two.
@@ -54,6 +66,28 @@ async function elevenlabs(route: string, body: object): Promise<Buffer> {
   });
   if (!response.ok) throw new Error(`${route}: ${response.status} ${await response.text()}`);
   return Buffer.from(await response.arrayBuffer());
+}
+
+// A 44-byte WAV header in front of raw 16-bit PCM, so ffmpeg can read it like any file.
+function wav(pcm: Buffer, rate: number, channels: number): Buffer {
+  const header = Buffer.alloc(44);
+  header.write("RIFF", 0);
+  header.writeUInt32LE(36 + pcm.length, 4);
+  header.write("WAVEfmt ", 8);
+  header.writeUInt32LE(16, 16);
+  header.writeUInt16LE(1, 20);
+  header.writeUInt16LE(channels, 22);
+  header.writeUInt32LE(rate, 24);
+  header.writeUInt32LE(rate * channels * 2, 28);
+  header.writeUInt16LE(channels * 2, 32);
+  header.writeUInt16LE(16, 34);
+  header.write("data", 36);
+  header.writeUInt32LE(pcm.length, 40);
+  return Buffer.concat([header, pcm]);
+}
+
+async function soundEffect(body: object): Promise<Buffer> {
+  return wav(await elevenlabs(`/sound-generation?output_format=${EFFECT_FORMAT}`, body), EFFECT_RATE, EFFECT_CHANNELS);
 }
 
 // Reuses a download unless --fresh, so reruns cost nothing.
@@ -110,8 +144,9 @@ async function main(): Promise<void> {
     const requestS = Math.min(1, Math.max(0.5, effect.seconds * 2));
     for (let v = 1; v <= EFFECT_VARIANTS; v++) {
       jobs.push(async () => {
-        const raw = await download(`${id}-${v}.mp3`, () =>
-          elevenlabs("/sound-generation?output_format=mp3_44100_128", {
+        // The format is in the name, so a better format later makes new downloads.
+        const raw = await download(`${id}-${v}-${EFFECT_FORMAT}.wav`, () =>
+          soundEffect({
             text: effect.prompt,
             duration_seconds: requestS,
             prompt_influence: PROMPT_INFLUENCE,
@@ -125,8 +160,8 @@ async function main(): Promise<void> {
     if (!effect.loop) continue;
     for (let v = 1; v <= LOOP_VARIANTS; v++) {
       jobs.push(async () => {
-        const raw = await download(`${id}-loop-${v}.mp3`, () =>
-          elevenlabs("/sound-generation?output_format=mp3_44100_128", {
+        const raw = await download(`${id}-loop-${v}-${EFFECT_FORMAT}.wav`, () =>
+          soundEffect({
             text: loopPrompt(effect),
             duration_seconds: 1,
             prompt_influence: PROMPT_INFLUENCE,
@@ -147,18 +182,29 @@ async function main(): Promise<void> {
     mkdirSync(path.join(OUT_DIR, "voice", voice.key), { recursive: true });
     for (const id of clipIds) {
       jobs.push(async () => {
-        // The model is in the name, so a better model later makes new downloads.
-        const raw = await download(`voice-${voice.key}-${TTS_MODEL}-${id}.mp3`, () => tts(voice, spoken(CLIP_TEXT[id])));
-        processClip(raw, path.join(OUT_DIR, "voice", voice.key, `${id}.mp3`));
+        // The model and format are in the name, so a better one later makes new downloads.
+        const raw = await download(`voice-${voice.key}-${TTS_MODEL}-${TTS_FORMAT}-${id}.wav`, () =>
+          tts(voice, spoken(CLIP_TEXT[id])),
+        );
+        processClip(raw, path.join(OUT_DIR, "voice", voice.key, `${id}.flac`));
         console.info(`clip ${voice.key} ${id}`);
       });
     }
     if (only) continue;
     jobs.push(async () => {
-      const raw = await download(`sample-${voice.key}-${TTS_MODEL}.mp3`, () => tts(voice, voice.sample));
+      const raw = await download(`sample-${voice.key}-${TTS_MODEL}-${TTS_FORMAT}.wav`, () => tts(voice, voice.sample));
       processClip(raw, path.join(OUT_DIR, samplePath(voice.key)));
       console.info(`sample ${voice.key}`);
     });
+    for (const step of Object.keys(SETUP_TEXT) as SetupStep[]) {
+      jobs.push(async () => {
+        const raw = await download(`setup-${voice.key}-${TTS_MODEL}-${TTS_FORMAT}-${step}.wav`, () =>
+          tts(voice, SETUP_TEXT[step]),
+        );
+        processClip(raw, path.join(OUT_DIR, setupPath(voice.key, step)));
+        console.info(`setup ${voice.key} ${step}`);
+      });
+    }
   }
 
   const failures = await inParallel(jobs);
@@ -191,7 +237,7 @@ async function main(): Promise<void> {
   for (const voice of VOICES) {
     const clips: LibraryManifest["clips"] = {};
     for (const id of Object.keys(CLIP_TEXT) as ClipId[]) {
-      const file = `voice/${voice.key}/${id}.mp3`;
+      const file = `voice/${voice.key}/${id}.flac`;
       if (existsSync(path.join(OUT_DIR, file))) clips[id] = { file, text: CLIP_TEXT[id] };
     }
     const sample = samplePath(voice.key);
