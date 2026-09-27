@@ -111,18 +111,19 @@ export function headHeightTopM(userHeightM: number = USER.defaultHeightM): numbe
 }
 
 // Repeat interval and volume by distance ahead, nearest band first. Past the last band: silent.
+// Only the last metre sounds: further out a thing is still a few steps away, and fewer sounds
+// keep each one clear. Hazards are still found out to 3 m, so they sound the moment they come in.
 export const AUDIO_BANDS = [
-  { upToM: 0.5, repeatMs: 80, gainDb: 0 },
-  { upToM: 1.0, repeatMs: 120, gainDb: 0 },
-  { upToM: 1.5, repeatMs: 220, gainDb: -3 },
-  { upToM: 2.0, repeatMs: 350, gainDb: -6 },
-  { upToM: 2.5, repeatMs: 500, gainDb: -9 },
-  { upToM: 3.0, repeatMs: 700, gainDb: -12 },
+  { upToM: 0.3, repeatMs: 80, gainDb: 0 },
+  { upToM: 0.5, repeatMs: 120, gainDb: 0 },
+  { upToM: 0.75, repeatMs: 220, gainDb: -3 },
+  { upToM: 1.0, repeatMs: 350, gainDb: -6 },
 ] as const;
 
 export type AudioBand = (typeof AUDIO_BANDS)[number];
 
-// Drop-offs use the same table shifted one band outward: they start at 3.5 m and go continuous under 1.0 m.
+// Drop-offs use the same table 0.5 m further out: they start at 1.5 m and go continuous under 0.8 m,
+// since stopping before a step down takes longer than stepping around a pole.
 export const DROP_OFF_BAND_SHIFT_M = 0.5;
 
 export function audioBandFor(distanceM: number, kind: HazardKind): AudioBand | null {
@@ -153,7 +154,7 @@ export const AUDIO = {
   stationaryAfterMs: 5000,
   stationaryReductionDb: -6,
   stationaryStopAfterRepeats: 3,
-  voiceClipBandM: { from: 1.5, to: 2.0 },
+  voiceClipBandM: { from: 0.5, to: 1.0 },
   voiceClipCooldownMs: 8000,
   schedulerTickMs: 25,
   // A new repeat cuts the one still playing with this fade.

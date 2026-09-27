@@ -622,10 +622,10 @@ Voice clips (one calm voice): "edge", "step down", "head", "pole", "bike", "scoo
 - Bluetooth lead: the table uses the distance the user will be at when the sound plays, distance − speed × Chrome's output latency (capped at 0.4 s). At 1.4 m/s and 0.25 s that is 0.35 m, most of a band.
 - Keep-alive: a noise at −70 dBFS plays for the whole walk. Without it, Android and the earbuds go idle after a few seconds of silence and clip the start of the next warning. Raise it if the first sound still clips; lower it if anyone hears a hiss.
 - A limiter on the mix (threshold −3 dB), since clipping buzzes on bone conduction.
-- Scheduling runs on the audio clock: a 25 ms timer checks each voice and schedules the next repeat when due. Repeat interval and volume come from the distance table in "Tunable parameters". Under 0.5 m (1.0 m for drop-offs), repeat every 80 ms (effectively continuous).
+- Scheduling runs on the audio clock: a 25 ms timer checks each voice and schedules the next repeat when due. Repeat interval and volume come from the distance table in "Tunable parameters". Under 0.3 m (0.8 m for drop-offs), repeat every 80 ms (effectively continuous). Nothing further than 1 m sounds (1.5 m for drop-offs).
 - Each hazard plays one instance at a time. A new repeat cuts the one still playing with a 10 ms fade. In the closest band, a sound longer than its interval switches to its loop variant. Without this, a 0.25 s sound every 80 ms stacks three deep and turns to mush.
-- Drop-offs use the table shifted one band outward (start at 3.5 m).
-- Voice clip: when a hazard enters the 1.5 to 2.0 m band for the first time, play its word and then its side ("pole, left") once through the same voice, subject to the 8 s cooldown per word + side. The side is spoken because side cues are weak on bone conduction. Until the clips exist, the phone's own voice says them, from both sides.
+- Drop-offs use the table 0.5 m further out (start at 1.5 m), since stopping before a step down takes longer than stepping around a pole.
+- Voice clip: when a hazard enters the 0.5 to 1.0 m band for the first time, play its word and then its side ("pole, left") once through the same voice, subject to the 8 s cooldown per word + side. The side is spoken because side cues are weak on bone conduction. Until the clips exist, the phone's own voice says them, from both sides.
 - One hazard sounds at a time: the one in the nearest band, then the most urgent kind by priority. In a tie the one already sounding stays, so the sound doesn't jump between sides. Tuned up to 2, lower-priority voices drop by 12 dB while a drop-off plays.
 - A setting plays one sound (tick, ping or marimba) for every hazard, with no words and no centre marker, for users who find a sound per kind too much.
 - Stationary for more than 5 s: obstacle voices drop 6 dB and stop after 3 more repeats until the user moves; drop-off voices are never reduced.
@@ -1140,15 +1140,13 @@ The repo is public, the README renders with working links and images, no secret 
 
 | Distance ahead | Repeat every | Volume |
 | --- | --- | --- |
-| more than 3.0 m | silent | — |
-| 2.5–3.0 m | 700 ms | −12 dB |
-| 2.0–2.5 m | 500 ms | −9 dB |
-| 1.5–2.0 m | 350 ms | −6 dB |
-| 1.0–1.5 m | 220 ms | −3 dB |
-| 0.5–1.0 m | 120 ms | 0 dB |
-| under 0.5 m | 80 ms (continuous) | 0 dB |
+| more than 1.0 m | silent | none |
+| 0.75 to 1.0 m | 350 ms | −6 dB |
+| 0.5 to 0.75 m | 220 ms | −3 dB |
+| 0.3 to 0.5 m | 120 ms | 0 dB |
+| under 0.3 m | 80 ms (continuous) | 0 dB |
 
-Drop-offs: same table shifted one band outward (start 3.5 m, continuous under 1.0 m).
+Hazards are still found out to 3 m, so they sound the moment they come within 1 m. Drop-offs: same table 0.5 m further out (start 1.5 m, continuous under 0.8 m).
 
 | Parameter | Default |
 | --- | --- |
@@ -1159,7 +1157,7 @@ Drop-offs: same table shifted one band outward (start 3.5 m, continuous under 1.
 | Centre marker | first repeat straight ahead, then at most every 1 s |
 | Lower-priority duck | −12 dB |
 | Stationary reduction | −6 dB, stop after 3 repeats (never for drop-offs) |
-| Voice clip trigger | entering 1.5–2.0 m band |
+| Voice clip trigger | entering the 0.5 to 1.0 m band |
 | Voice clip | the word, then the side ("pole, left") |
 | Voice clip cooldown | 8 s per word + side |
 | Scheduler tick / schedule ahead | 25 ms / 100 ms |

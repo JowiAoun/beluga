@@ -35,7 +35,7 @@ flowchart LR
 
 - **Warnings stay on the phone**: depth, the hazard engine and the sounds never touch the network, so a slow or dead connection can't silence a warning.
 - **Calibrate before detecting**: in depth mode, object detection, hazard warnings, and Ask wait for successful floor calibration. A timeout with too few floor samples keeps calibration running; it does not unlock detection. Calibration instructions remain audible. Camera-only mode starts paused and requires a separate **Start estimated warnings** tap; it does not provide calibrated distances, drop-off warnings, or head-height warnings.
-- **A narrow walking corridor**: only things about 0.9 m wide ahead of you, within 3 m, make a sound. Drop-offs and head-height hazards have their own sounds.
+- **A narrow walking corridor**: only things about 0.9 m wide ahead of you, within 1 m (1.5 m for drop-offs), make a sound. Drop-offs and head-height hazards have their own sounds.
 - **Made for bone-conduction earbuds**: they keep the ears open to traffic but lose 3D sound, so the side comes from a level and time difference between the ears, and pitch stands for height.
 - **Ask**: one tap sends one camera frame to an ElevenLabs agent that sees with Gemini, and the answer plays from the side of the object it describes.
 - **Reports for the city**: with consent, a frame gate picks a few moments worth a look, an agent answers yes or no questions about them, fixed rules decide what gets reported, and Tiger Data ranks the spots worth fixing first.

@@ -10,7 +10,7 @@ Belugas find their way by echolocation: they listen to sound bouncing back from 
 
 ## What it does
 
-- **Warns with sound**: the phone measures depth 10 times a second. Anything in a 0.9 m walking corridor within 3 m plays a short sound from its side, faster as you get closer. Drop-offs and head-height hazards have their own sounds, and named things (people, bikes, cars, poles) get theirs, with a voice clip like "pole, left".
+- **Warns with sound**: the phone measures depth 10 times a second. Anything in a 0.9 m walking corridor within 1 m (1.5 m for a drop-off) plays a short sound from its side, faster as you get closer. Drop-offs and head-height hazards have their own sounds, and named things (people, bikes, cars, poles) get theirs, with a voice clip like "pole, left".
 - **Made for bone-conduction earbuds**: they keep the ears open to traffic but can't do 3D sound, so the side comes from a level and time difference between the ears, and pitch stands for height.
 - **Ask**: one tap, or the earbuds' play button, sends one camera frame to an ElevenLabs agent that sees with Gemini. The answer plays from the side of the object it describes.
 - **Reports for the city, only with consent**: a frame gate picks a few moments worth a look, an agent answers yes or no questions about them, and fixed rules tied to Ontario accessibility standards decide the severity. Only the hazard type, distance, a location rounded to about 100 m and the time are sent. Never an image.

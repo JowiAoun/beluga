@@ -42,15 +42,13 @@ Copied from `docs/PLAN.md` on Sept 26, 2026. When this file and `lib/shared` dif
 
 | Distance ahead | Repeat every | Volume |
 | --- | --- | --- |
-| more than 3.0 m | silent | — |
-| 2.5–3.0 m | 700 ms | −12 dB |
-| 2.0–2.5 m | 500 ms | −9 dB |
-| 1.5–2.0 m | 350 ms | −6 dB |
-| 1.0–1.5 m | 220 ms | −3 dB |
-| 0.5–1.0 m | 120 ms | 0 dB |
-| under 0.5 m | 80 ms (continuous) | 0 dB |
+| more than 1.0 m | silent | none |
+| 0.75 to 1.0 m | 350 ms | −6 dB |
+| 0.5 to 0.75 m | 220 ms | −3 dB |
+| 0.3 to 0.5 m | 120 ms | 0 dB |
+| under 0.3 m | 80 ms (continuous) | 0 dB |
 
-Drop-offs: same table shifted one band outward (start 3.5 m, continuous under 1.0 m).
+Hazards are still found out to 3 m, so they sound the moment they come within 1 m. Drop-offs: same table 0.5 m further out (start 1.5 m, continuous under 0.8 m).
 
 | Parameter | Default |
 | --- | --- |
@@ -61,7 +59,7 @@ Drop-offs: same table shifted one band outward (start 3.5 m, continuous under 1.
 | Centre marker | first repeat straight ahead, then at most every 1 s |
 | Lower-priority duck | −12 dB |
 | Stationary reduction | −6 dB, stop after 3 repeats (never for drop-offs) |
-| Voice clip trigger | entering 1.5–2.0 m band |
+| Voice clip trigger | entering the 0.5 to 1.0 m band |
 | Voice clip | the word, then the side ("pole, left") |
 | Voice clip cooldown | 8 s per word + side |
 | Scheduler tick / schedule ahead | 25 ms / 100 ms |

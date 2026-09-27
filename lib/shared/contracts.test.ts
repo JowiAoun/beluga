@@ -83,11 +83,12 @@ describe("params helpers", () => {
     expect(headHeightTopM(1.7)).toBeCloseTo(1.8);
   });
 
-  it("picks audio bands, with drop-offs shifted one band outward", () => {
-    expect(audioBandFor(3.2, "obstacle")).toBeNull();
-    expect(audioBandFor(3.2, "drop_off")?.repeatMs).toBe(700);
-    expect(audioBandFor(0.4, "obstacle")?.repeatMs).toBe(80);
-    expect(audioBandFor(0.9, "drop_off")?.repeatMs).toBe(80);
-    expect(audioBandFor(1.8, "head_height")?.repeatMs).toBe(350);
+  it("picks audio bands within 1 m, with drop-offs 0.5 m further out", () => {
+    expect(audioBandFor(1.2, "obstacle")).toBeNull();
+    expect(audioBandFor(1.4, "drop_off")?.repeatMs).toBe(350);
+    expect(audioBandFor(1.6, "drop_off")).toBeNull();
+    expect(audioBandFor(0.2, "obstacle")?.repeatMs).toBe(80);
+    expect(audioBandFor(0.7, "drop_off")?.repeatMs).toBe(80);
+    expect(audioBandFor(0.9, "head_height")?.repeatMs).toBe(350);
   });
 });

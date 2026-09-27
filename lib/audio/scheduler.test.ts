@@ -44,40 +44,40 @@ function hitTimes(actions: Action[], id?: string): number[] {
 }
 
 describe("Scheduler", () => {
-  it("stays silent past 3 m, but a drop-off already sounds at 3.2 m", () => {
-    expect(run(new Scheduler(INFO), 0, 1, scene([hazard("a", 3.2)]))).toEqual([]);
-    const drop = run(new Scheduler(INFO), 0, 1, scene([hazard("d", 3.2, 0, { kind: "drop_off" })]));
+  it("stays silent past 1 m, but a drop-off already sounds at 1.3 m", () => {
+    expect(run(new Scheduler(INFO), 0, 1, scene([hazard("a", 1.2)]))).toEqual([]);
+    const drop = run(new Scheduler(INFO), 0, 1, scene([hazard("d", 1.3, 0, { kind: "drop_off" })]));
     expect(hitTimes(drop).length).toBeGreaterThan(0);
   });
 
-  it("repeats on the distance table: every 500 ms at 2.2 m, at -9 dB", () => {
-    const actions = run(new Scheduler(INFO), 0, 2, scene([hazard("a", 2.2)]));
+  it("repeats on the distance table: every 350 ms at 0.9 m, at -6 dB", () => {
+    const actions = run(new Scheduler(INFO), 0, 2, scene([hazard("a", 0.9)]));
     const times = hitTimes(actions);
     expect(times[0]).toBe(0);
-    for (let i = 1; i < times.length; i++) expect(times[i] - times[i - 1]).toBeCloseTo(0.5, 6);
-    expect(actions.find((a) => a.type === "voice")).toMatchObject({ gainDb: -9 });
+    for (let i = 1; i < times.length; i++) expect(times[i] - times[i - 1]).toBeCloseTo(0.35, 6);
+    expect(actions.find((a) => a.type === "voice")).toMatchObject({ gainDb: -6 });
   });
 
   it("brings the next repeat forward when the hazard comes closer", () => {
     const s = new Scheduler(INFO);
-    run(s, 0, 0.1, scene([hazard("a", 2.8)]));
-    // The 700 ms repeat was due at 0.7 s; at 0.9 m it is 120 ms after the last one.
-    const closer = run(s, 0.1, 0.3, scene([hazard("a", 0.9)]));
+    run(s, 0, 0.1, scene([hazard("a", 0.9)]));
+    // The 350 ms repeat was due at 0.35 s; at 0.4 m it is 120 ms after the last one.
+    const closer = run(s, 0.1, 0.3, scene([hazard("a", 0.4)]));
     expect(hitTimes(closer)[0]).toBeCloseTo(0.12, 6);
   });
 
   it("switches a long sound to its loop in the closest band, and back to repeats after", () => {
     const s = new Scheduler(INFO);
-    const near = run(s, 0, 0.5, scene([hazard("h", 0.4, 0, { kind: "head_height" })]));
+    const near = run(s, 0, 0.5, scene([hazard("h", 0.2, 0, { kind: "head_height" })]));
     expect(near.filter((a) => a.type === "loop_start")).toHaveLength(1);
     expect(hitTimes(near)).toEqual([]);
-    const back = run(s, 0.5, 1, scene([hazard("h", 0.8, 0, { kind: "head_height" })]));
+    const back = run(s, 0.5, 1, scene([hazard("h", 0.6, 0, { kind: "head_height" })]));
     expect(back[1]).toMatchObject({ type: "loop_stop" });
     expect(hitTimes(back)[0]).toBeCloseTo(0.5, 6);
   });
 
   it("repeats a short tick every 80 ms in the closest band instead of looping", () => {
-    const actions = run(new Scheduler(INFO), 0, 0.5, scene([hazard("a", 0.4)]));
+    const actions = run(new Scheduler(INFO), 0, 0.5, scene([hazard("a", 0.2)]));
     expect(actions.some((a) => a.type === "loop_start")).toBe(false);
     const times = hitTimes(actions);
     expect(times[1] - times[0]).toBeCloseTo(0.08, 6);
@@ -87,26 +87,26 @@ describe("Scheduler", () => {
     const ids = (hazards: HazardUpdate[]) =>
       new Set(run(new Scheduler(INFO), 0, 0.2, scene(hazards)).flatMap((a) => (a.type === "voice" ? [a.id] : [])));
     const drop = (d: number) => hazard("drop", d, 0, { kind: "drop_off" });
-    const pole = hazard("pole", 1.2, -0.2, { label: "pole_like" });
-    // A drop-off at 2.2 m is a band further out than a pole at 1.2 m, even with its bands shifted.
-    expect(ids([drop(2.2), pole, hazard("box", 1.4, 0.3)])).toEqual(new Set(["pole"]));
+    const pole = hazard("pole", 0.6, -0.2, { label: "pole_like" });
+    // A drop-off at 1.4 m is a band further out than a pole at 0.6 m, even with its bands shifted.
+    expect(ids([drop(1.4), pole, hazard("box", 0.7, 0.3)])).toEqual(new Set(["pole"]));
     // In the same band, the drop-off comes first.
-    expect(ids([drop(1.6), pole])).toEqual(new Set(["drop"]));
+    expect(ids([drop(1.2), pole])).toEqual(new Set(["drop"]));
   });
 
   it("keeps the hazard already sounding against a closer one in the same band, until it is a band nearer", () => {
     const s = new Scheduler(INFO);
     const voiced = (actions: Action[]) => actions.flatMap((a) => (a.type === "voice" ? [a.id] : []));
-    expect(voiced(run(s, 0, 0.1, scene([hazard("a", 1.4, -0.3)])))).toEqual(["a", "a", "a", "a"]);
-    const same = run(s, 0.1, 0.3, scene([hazard("b", 1.1, 0.3), hazard("a", 1.4, -0.3)]));
+    expect(voiced(run(s, 0, 0.1, scene([hazard("a", 0.7, -0.3)])))).toEqual(["a", "a", "a", "a"]);
+    const same = run(s, 0.1, 0.3, scene([hazard("b", 0.55, 0.3), hazard("a", 0.7, -0.3)]));
     expect(new Set(voiced(same))).toEqual(new Set(["a"]));
-    const nearer = run(s, 0.3, 0.4, scene([hazard("b", 0.9, 0.3), hazard("a", 1.3, -0.3)]));
+    const nearer = run(s, 0.3, 0.4, scene([hazard("b", 0.45, 0.3), hazard("a", 0.65, -0.3)]));
     expect(nearer[0]).toEqual({ type: "end", id: "a" });
     expect(new Set(voiced(nearer))).toEqual(new Set(["b"]));
   });
 
   it("lets a drop-off duck a second hazard by 12 dB when two can play", () => {
-    const hazards = [hazard("drop", 1.6, 0, { kind: "drop_off" }), hazard("pole", 1.2, -0.2, { label: "pole_like" })];
+    const hazards = [hazard("drop", 1.2, 0, { kind: "drop_off" }), hazard("pole", 0.6, -0.2, { label: "pole_like" })];
     const voices = run(new Scheduler(INFO, 2), 0, 0.2, scene(hazards)).filter((a) => a.type === "voice");
     expect(voices.find((v) => v.id === "pole")).toMatchObject({ gainDb: -3 - 12 });
     expect(voices.find((v) => v.id === "drop")).toMatchObject({ gainDb: -3 });
@@ -114,66 +114,66 @@ describe("Scheduler", () => {
 
   it("drops an obstacle 6 dB when standing still, then stops it after 3 repeats until moving", () => {
     const s = new Scheduler(INFO);
-    const still = run(s, 0, 3, scene([hazard("a", 1.2)], { stationary: true }));
+    const still = run(s, 0, 3, scene([hazard("a", 0.9)], { stationary: true }));
     expect(hitTimes(still)).toHaveLength(3);
-    expect(still.find((a) => a.type === "voice")).toMatchObject({ gainDb: -3 - 6 });
-    const moving = run(s, 3, 3.1, scene([hazard("a", 1.2)]));
+    expect(still.find((a) => a.type === "voice")).toMatchObject({ gainDb: -6 - 6 });
+    const moving = run(s, 3, 3.1, scene([hazard("a", 0.9)]));
     expect(hitTimes(moving)[0]).toBe(3);
   });
 
   it("never quietens a drop-off for standing still", () => {
-    const actions = run(new Scheduler(INFO), 0, 3, scene([hazard("d", 1.2, 0, { kind: "drop_off" })], { stationary: true }));
+    const actions = run(new Scheduler(INFO), 0, 3, scene([hazard("d", 0.9, 0, { kind: "drop_off" })], { stationary: true }));
     expect(hitTimes(actions).length).toBeGreaterThan(10);
-    // Drop-offs use the table shifted 0.5 m out, so 1.2 m is already in the 0 dB band.
+    // Drop-offs use the table shifted 0.5 m out, so 0.9 m is already in the 0 dB band.
     expect(actions.find((a) => a.type === "voice")).toMatchObject({ gainDb: 0 });
   });
 
-  it("says the word and the side once, in the 1.5 to 2.0 m band, with an 8 s cooldown per word and side", () => {
+  it("says the word and the side once, in the 0.5 to 1.0 m band, with an 8 s cooldown per word and side", () => {
     const s = new Scheduler(INFO);
     const pole = (id: string, d: number) => hazard(id, d, -0.3, { label: "pole_like" });
     const says = (actions: Action[]) => actions.filter((a) => a.type === "say");
-    expect(says(run(s, 0, 0.5, scene([pole("p1", 2.4)])))).toEqual([]);
-    expect(says(run(s, 0.5, 1, scene([pole("p1", 1.8)])))).toEqual([
+    expect(says(run(s, 0, 0.5, scene([pole("p1", 1.2)])))).toEqual([]);
+    expect(says(run(s, 0.5, 1, scene([pole("p1", 0.9)])))).toEqual([
       { type: "say", id: "p1", words: ["pole", "left"], pan: expect.closeTo(-0.667, 2) },
     ]);
-    expect(says(run(s, 1, 1.5, scene([pole("p1", 1.6)])))).toEqual([]);
+    expect(says(run(s, 1, 1.5, scene([pole("p1", 0.7)])))).toEqual([]);
     // A second pole on the same side 3 s later stays quiet; one on the right speaks.
-    expect(says(run(s, 4, 4.5, scene([pole("p2", 1.8)])))).toEqual([]);
-    const right = says(run(s, 4.5, 5, scene([hazard("p3", 1.8, 0.3, { label: "pole_like" })])));
+    expect(says(run(s, 4, 4.5, scene([pole("p2", 0.9)])))).toEqual([]);
+    const right = says(run(s, 4.5, 5, scene([hazard("p3", 0.9, 0.3, { label: "pole_like" })])));
     expect(right.map((a) => a.type === "say" && a.words)).toEqual([["pole", "right"]]);
   });
 
   it("keeps the sound but says no word once names are turned off", () => {
     const s = new Scheduler(INFO);
     s.setWords(false);
-    const actions = run(s, 0, 1, scene([hazard("p1", 1.8, -0.3, { label: "pole_like" })]));
+    const actions = run(s, 0, 1, scene([hazard("p1", 0.9, -0.3, { label: "pole_like" })]));
     expect(actions.filter((a) => a.type === "say")).toEqual([]);
     expect(hitTimes(actions).length).toBeGreaterThan(0);
   });
 
   it("uses the distance the user will be at when Bluetooth plays it", () => {
-    // 2.05 m is in the 2.0 to 2.5 m band, but 1.4 m/s × 0.25 s takes it to 1.7 m.
-    const actions = run(new Scheduler(INFO), 0, 0.1, scene([hazard("a", 2.05)], { speed: 1.4, leadS: 0.25 }));
-    expect(actions.find((a) => a.type === "voice")).toMatchObject({ gainDb: -6 });
+    // 1.05 m is past the last band, but 1.4 m/s × 0.25 s takes it to 0.7 m.
+    const actions = run(new Scheduler(INFO), 0, 0.1, scene([hazard("a", 1.05)], { speed: 1.4, leadS: 0.25 }));
+    expect(actions.find((a) => a.type === "voice")).toMatchObject({ gainDb: -3 });
   });
 
   it("marks the first hit straight ahead for the centre tick, then once a second", () => {
-    const ahead = run(new Scheduler(INFO), 0, 0.1, scene([hazard("a", 1.2, 0.02)]));
-    const side = run(new Scheduler(INFO), 0, 0.1, scene([hazard("a", 1.2, 0.3)]));
+    const ahead = run(new Scheduler(INFO), 0, 0.1, scene([hazard("a", 0.9, 0.02)]));
+    const side = run(new Scheduler(INFO), 0, 0.1, scene([hazard("a", 0.9, 0.3)]));
     expect(ahead.find((a) => a.type === "hit")).toMatchObject({ centre: true });
     expect(side.find((a) => a.type === "hit")).toMatchObject({ centre: false });
-    // Every 220 ms for 2 s, with the marker at 0, 1.1 and 2.2 s at most.
-    const hits = run(new Scheduler(INFO), 0, 2, scene([hazard("a", 1.2, 0.02)])).filter((a) => a.type === "hit");
-    expect(hits.length).toBeGreaterThan(8);
-    expect(hits.flatMap((a) => (a.type === "hit" && a.centre ? [a.at] : []))).toEqual([0, expect.closeTo(1.1, 6)]);
+    // Every 350 ms for 2 s, with the marker at 0 and 1.05 s.
+    const hits = run(new Scheduler(INFO), 0, 2, scene([hazard("a", 0.9, 0.02)])).filter((a) => a.type === "hit");
+    expect(hits.length).toBeGreaterThan(5);
+    expect(hits.flatMap((a) => (a.type === "hit" && a.centre ? [a.at] : []))).toEqual([0, expect.closeTo(1.05, 6)]);
   });
 
   it("plays the one sound picked for every hazard, with no words and no centre tick", () => {
     const s = new Scheduler(INFO);
     s.setOneSound("ping");
     const hazards = [
-      hazard("drop", 1.8, 0.02, { kind: "drop_off" }),
-      hazard("pole", 1.8, 0.02, { label: "pole_like" }),
+      hazard("drop", 0.9, 0.02, { kind: "drop_off" }),
+      hazard("pole", 0.9, 0.02, { label: "pole_like" }),
     ];
     const actions = run(s, 0, 1, scene(hazards));
     const hits = actions.filter((a) => a.type === "hit");
@@ -186,8 +186,8 @@ describe("Scheduler", () => {
 
   it("ends a voice when its hazard goes, and every voice on clear", () => {
     const s = new Scheduler(INFO);
-    run(s, 0, 0.2, scene([hazard("a", 0.4, 0, { kind: "head_height" }), hazard("b", 2)]));
-    const gone = s.tick(0.2, scene([hazard("b", 2)]));
+    run(s, 0, 0.2, scene([hazard("a", 0.2, 0, { kind: "head_height" }), hazard("b", 0.9)]));
+    const gone = s.tick(0.2, scene([hazard("b", 0.9)]));
     expect(gone.slice(0, 2)).toEqual([
       { type: "loop_stop", id: "a", at: 0.2 },
       { type: "end", id: "a" },
