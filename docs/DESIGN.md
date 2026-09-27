@@ -93,7 +93,7 @@ All four load in `app/layout.tsx` with `next/font/google` as CSS variables, behi
 - **Corners**: square for panels, cards, images, tables and the map. `rounded-md` (6 px) for buttons, inputs, selects, badges and pills. `rounded-[1.5rem]` for the footer panel only. Dots and rings stay round.
 - **Cards**: `CARD` in `components/brand/Card.tsx`, a hairline `line` border on `surface`. `NotchCard` is the outline card with a label tab at the bottom right.
 - **Buttons**: `rounded-md`, Mona Sans uppercase, at least 48 px tall (64 px on `/walk`). The main button is blue with `on-accent` text and turns `foreground` on hover. The second button is a `line-strong` outline. On `/walk` the buttons keep Atkinson in sentence case.
-- **Backgrounds**: `Contours`, the depth lines in `public/textures`, masked over the `line` colour.
+- **Backgrounds**: depth contours in the `line` colour. `LiveContours` draws them moving, like the lines on landonorris.com: a shader draws contour lines of slowly changing noise, one WebGL2 context for the whole page (`components/brand/contourField.ts`), only for sections on screen, 30 frames a second. `Contours` is the still version from `public/textures`: it shows first, and stays with Pause motion, reduced motion, no WebGL2, and on `/walk`.
 - **Icons**: [Tabler](https://tabler.io/icons) at 24 px, always next to a word.
 
 ## Motion
@@ -150,7 +150,7 @@ To add a component:
 | --- | --- | --- |
 | Magic UI | `animated-beam` | The two speeds diagram |
 | Magic UI | `number-ticker` | Dashboard and "For the city" numbers |
-| Our own | `Contours`, `Scribble`, `NotchCard`, `Marquee`, `Roll`, `RevealHeading` | Every page, in `components/brand` |
+| Our own | `LiveContours`, `Contours`, `Scribble`, `NotchCard`, `Marquee`, `Roll`, `RevealHeading` | Every page, in `components/brand` |
 | shadcn/ui | `switch`, `slider`, `tooltip`, `dialog`, `sonner` | If a page needs one |
 
 Leave out:
@@ -171,7 +171,7 @@ Fix these when you use them:
 | Path | Holds |
 | --- | --- |
 | `components/ui` | Copied Magic UI and shadcn components. Edit them only to fix accessibility or to match the look |
-| `components/brand` | Logo, Display (`DISPLAY`, `Serif`, `Name`, `Eyebrow`), Button and `Roll`, Card, NotchCard, Section and its tones, Contours, Scribble, Marquee, SonarRings, Navbar, PauseMotion |
+| `components/brand` | Logo, Display (`DISPLAY`, `Serif`, `Name`, `Eyebrow`), Button and `Roll`, Card, NotchCard, Section and its tones, LiveContours and Contours, Scribble, Marquee, SonarRings, Navbar, PauseMotion |
 | `components/three` | 3D scenes and the typed model components |
 | `lib/utils.ts` | `cn()` |
 | `public/3d` | GLB models, and a still `.webp` of each scene with the same name |
@@ -185,7 +185,7 @@ These belong to track D. Restyling `app/map` (track C) or `app/walk` (track A) g
 
 | File | Status | Where | Parts |
 | --- | --- | --- | --- |
-| `public/3d/trekz-air.glb` | Done (390 KB, 120 KB after meshopt) | Hear a warning, then the exploded view | Shells, contact pads, rear pods, neckband. Hide `TrekzAir_wordmark_00`, `TrekzAir_wordmark_01` and `TrekzAir_emblem`: they carry the AfterShokz marks |
+| `public/3d/trekz-air.glb` | Done (390 KB, 120 KB after meshopt) | Hear a warning | Shells, contact pads, rear pods, neckband. Hide `TrekzAir_wordmark_00`, `TrekzAir_wordmark_01` and `TrekzAir_emblem`: they carry the AfterShokz marks |
 | `public/3d/beluga.glb` | Done (560 KB, 146 KB after `dedup` and meshopt): the beluga riding a wave | Hero | Body, tail flukes, flippers, face, sunglasses, cane, wave, foam and droplets, 50 named parts. The parts are baked in place, so `BelugaScene.tsx` finds the tail and flipper pivots from their bounds |
 | `public/3d/phone.glb` | Done (1.54 MB, 79 KB after `resize`, `webp` and meshopt) | How it works, step 1 | Frame, glass, display, camera plate and lenses, 31 named parts. Its OnePlus and Hasselblad marks are swapped for plain panels, and its screen shows the beluga walk screen. No mount yet |
 | `public/3d/scooter.glb` | Maybe later | How it works | Until then, boxes and cylinders |
@@ -222,7 +222,7 @@ app/page.tsx (server)
    ├ mounts the canvas only when on screen, with WebGL2 and motion allowed
    └ dynamic(() => import("@/components/three/<Scene>"), { ssr: false })
       └ <Canvas dpr={[1, 1.5]} frameloop={onScreen ? "always" : "never"} aria-hidden>
-         ├ PerformanceMonitor: drop to dpr 1, then back to the still image
+         ├ Watchdog: under 24 fps drops to dpr 1, then back to the still image; so does a lost context
          ├ ambient and directional light
          ├ Suspense > the model, reading a scroll value in useFrame
          └ ContactShadows frames={1}
@@ -231,6 +231,7 @@ app/page.tsx (server)
 - `ssr: false` only works inside a Client Component (`node_modules/next/dist/docs/01-app/02-guides/lazy-loading.md`).
 - Scroll: `useScroll({ target })` from `motion/react`, read with `scrollYProgress.get()` in `useFrame`. It follows normal page scroll, so the keyboard and screen readers keep working.
 - Every canvas is `aria-hidden`, with the same meaning in real text beside it.
+- A scene starts in its still image's pose and eases into its movement over 3 seconds, so the fade from the still shows one model, not two.
 - Per scene: under 100k triangles and 30 draw calls. No postprocessing and no live shadows. No drei `Environment`, which downloads lighting files at runtime. No `OrbitControls`, which blocks page scrolling on touch.
 - Lint: `react-hooks/immutability` fails when code changes `useGLTF`'s `nodes` or `materials`. Give the part its own `<meshStandardMaterial ref>` and change that.
 - The 3D code is about 263 KB gzip and loads only on `/`, after the first paint. Leaving the page unmounts the canvas and frees the GPU before `/walk`.
@@ -313,7 +314,7 @@ Feature freeze is 02:00, Sunday Sept 27.
 When behind, cut from the top:
 
 1. The corridor in 3D (done in `PhoneScene.tsx`; the 2D drawing is its still)
-2. The exploded view
+2. The exploded view (cut: with no labels, the parts coming apart looked broken)
 3. The 3D map (the flat squares stay)
 4. The view transitions
 
