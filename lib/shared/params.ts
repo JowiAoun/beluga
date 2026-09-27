@@ -417,3 +417,11 @@ export const TILT = {
   // Past the limits this long before the banner shows, so a sway never flashes it.
   showAfterMs: 1000,
 } as const;
+
+// Keeping a walk going (app/walk/health.ts). Warnings count as stopped after this long with no
+// sensing update, with no trusted depth where depth should be, or with the sound paused.
+export const WALK_HEALTH = {
+  framesMissingMs: 3000,
+  depthMissingMs: 3000,
+  soundPausedMs: 2000,
+} as const;

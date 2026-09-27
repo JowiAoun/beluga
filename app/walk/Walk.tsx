@@ -46,6 +46,7 @@ import ReplayPlayer from "./ReplayPlayer";
 import { Reporting } from "./reporting";
 import { DEFAULT_SETTINGS, readSettings, saveSettings, type Settings } from "./settings";
 import SettingsPanel from "./SettingsPanel";
+import { HealthWatch, keepScreenOn, PROBLEM_TEXT, type HealthCounts, type Problem } from "./health";
 import { heardHazards, offText } from "./warnings";
 import VibrationControls from "./VibrationControls";
 import { HapticEngine } from "@/lib/haptics/engine";
@@ -82,14 +83,6 @@ function saveDebugDefault(on: boolean): void {
     localStorage.setItem(DEBUG_KEY, on ? "1" : "0");
   } catch {
     // Private mode: the switch still works for this visit.
-  }
-}
-
-async function requestWakeLock(): Promise<WakeLockSentinel | null> {
-  try {
-    return "wakeLock" in navigator ? await navigator.wakeLock.request("screen") : null;
-  } catch {
-    return null;
   }
 }
 
@@ -150,6 +143,13 @@ export default function Walk() {
   const latestRef = useRef<Latest>(freshLatest());
   const tiltRef = useRef<TiltWatch | null>(null);
   const [tilt, setTilt] = useState<TiltFix | null>(null);
+  // What keeps the walk going: the screen lock, and checks on updates, depth and sound.
+  const healthRef = useRef<HealthWatch | null>(null);
+  const screenRef = useRef<{ retry: () => void } | null>(null);
+  const lastUpdateAtRef = useRef<number | null>(null);
+  const lastDepthAtRef = useRef<number | null>(null);
+  const [problem, setProblem] = useState<Problem | null>(null);
+  const [lastHealth, setLastHealth] = useState<HealthCounts | null>(null);
   const engineRef = useRef<HazardEngine | null>(null);
   // Camera-only mode (Phase 10) swaps the depth engine for one that reads detector boxes.
   const cameraEngineRef = useRef<CameraOnlyEngine | null>(null);
@@ -297,6 +297,22 @@ export default function Walk() {
         reporting: reportingRef.current?.stats() ?? null,
       });
       setTilt(latestRef.current.tilt);
+
+      const ctx = audioRef.current;
+      // Android can pause the page's sound (another app's sound, a call, the earbuds reconnecting).
+      if (ctx && ctx.state !== "running") void ctx.resume().catch(() => {});
+      screenRef.current?.retry();
+      const health = healthRef.current;
+      if (health) {
+        const checked = health.update({
+          now: performance.now(),
+          lastUpdateAt: lastUpdateAtRef.current,
+          lastDepthAt: lastDepthAtRef.current,
+          soundRunning: !ctx || ctx.state === "running",
+        });
+        setProblem(checked.problem);
+        if (checked.started && checked.problem) speakLocalText(PROBLEM_TEXT[checked.problem]);
+      }
     }, DEBUG_OVERLAY.refreshMs);
     return () => window.clearInterval(id);
   }, [phase]);
@@ -304,6 +320,12 @@ export default function Walk() {
   const onUpdate = useCallback((update: SensingUpdate) => {
     const latest = latestRef.current;
     latest.update = update;
+    const now = performance.now();
+    lastUpdateAtRef.current = now;
+    // Depth counts as missing only while it should be there: tracking, with depth granted. The
+    // clock starts at the first update.
+    const wantsDepth = update.tracking && latest.granted?.depth === true && !cameraOnlyRef.current;
+    if (lastDepthAtRef.current === null || !wantsDepth || update.validCount > 0) lastDepthAtRef.current = now;
     // Also during calibration, which needs the floor in view.
     const tilts = (tiltRef.current ??= new TiltWatch());
     latest.tilt = update.tracking ? tilts.update(update.t, tiltOf(update.worldFromView)) : null;
@@ -379,10 +401,15 @@ export default function Walk() {
       sessionRef.current = null;
       setSession(null);
       runCleanups();
+      const health = healthRef.current;
+      healthRef.current = null;
+      screenRef.current = null;
+      setProblem(null);
       // A session that never got going is reported by the start handler instead.
       if (!result.granted) return;
       setPhase("ended");
       setSummary(result);
+      setLastHealth(health ? { ...health.counts } : null);
       say("stopped");
       if (debugRef.current) {
         console.info("[beluga walk] summary", result);
@@ -392,7 +419,7 @@ export default function Walk() {
         // Lands in the dev server terminal (or Vercel logs) for testers. No location in it.
         void fetch("/api/device-check", {
           method: "POST",
-          body: JSON.stringify({ kind: "walk", ...result, outputLatencyMs }),
+          body: JSON.stringify({ kind: "walk", ...result, outputLatencyMs, health: health?.counts ?? null }),
         }).catch(() => {});
       }
     },
@@ -449,11 +476,11 @@ export default function Walk() {
     });
     // The silent clip behind the earbuds' button needs this tap to play.
     if (settingsRef.current.headsetAsk) cleanupRef.current.push(startHeadsetButton(() => askRef.current()));
-    void requestWakeLock().then((lock) => {
-      if (!lock) return;
-      if (sessionRef.current === started) cleanupRef.current.push(() => void lock.release());
-      else void lock.release();
-    });
+    const health = new HealthWatch();
+    healthRef.current = health;
+    const screen = keepScreenOn(() => health.counts.screen++);
+    screenRef.current = screen;
+    cleanupRef.current.push(() => screen.stop());
     // Only with permission already given: a prompt inside AR may never show.
     if (locationGranted) {
       cleanupRef.current.push(
@@ -466,6 +493,9 @@ export default function Walk() {
     latestRef.current = freshLatest(latestRef.current.fix);
     tiltRef.current?.reset();
     setTilt(null);
+    lastUpdateAtRef.current = null;
+    lastDepthAtRef.current = null;
+    setProblem(null);
     // The head-height top follows the user's height.
     engineRef.current = new HazardEngine(settingsRef.current.heightM);
     cameraEngineRef.current = new CameraOnlyEngine();
@@ -623,6 +653,11 @@ export default function Walk() {
         // Three fingers toggle the debug overlay. TalkBack keeps multi-finger gestures, so this is for sighted testers.
         if (inAr && e.touches.length === 3) toggleDebug();
       }}
+      // Any tap during a walk turns paused sound back on.
+      onClick={() => {
+        const ctx = audioRef.current;
+        if (inAr && ctx && ctx.state !== "running") void ctx.resume().catch(() => {});
+      }}
       // During a walk this box fills the screen (Chrome's AR overlay, or camera mode), so it
       // scrolls itself when the debug numbers make it taller than the screen.
       className={`w-full ${inAr ? "h-dvh overflow-y-auto overscroll-contain bg-transparent" : "min-h-dvh bg-background"} text-foreground`}
@@ -646,6 +681,12 @@ export default function Walk() {
                 }`}
               >
                 {status}
+              </p>
+            )}
+            {problem && (
+              <p role="alert" className="flex items-center gap-3 rounded-md bg-danger px-4 py-3 text-xl font-bold text-white">
+                <IconAlertTriangle aria-hidden size={32} className="shrink-0" />
+                {PROBLEM_TEXT[problem]}
               </p>
             )}
             {tilt && (
@@ -801,7 +842,7 @@ export default function Walk() {
                 </p>
               )}
 
-              {summary && debug && <Summary summary={summary} />}
+              {summary && debug && <Summary summary={summary} health={lastHealth} />}
 
               <section className={cn(PANEL, "flex flex-col gap-2")}>
                 <label className="flex min-h-16 items-center gap-4 text-xl font-semibold">
@@ -900,8 +941,22 @@ function metres(value: number | null): string {
   return value === null ? "not measured" : `${value.toFixed(2)} m`;
 }
 
+const HEALTH_NAMES: Record<keyof HealthCounts, string> = {
+  frames: "camera frames stopped",
+  depth: "depth stopped",
+  sound: "sound paused",
+  screen: "screen lock lost",
+};
+
+function healthText(health: HealthCounts): string {
+  const parts = (Object.keys(HEALTH_NAMES) as Array<keyof HealthCounts>)
+    .filter((key) => health[key] > 0)
+    .map((key) => `${HEALTH_NAMES[key]} ${health[key]} ${health[key] === 1 ? "time" : "times"}`);
+  return parts.length > 0 ? parts.join(", ") : "nothing stopped";
+}
+
 // The last session's numbers against the Phase 1 targets.
-function Summary({ summary }: { summary: SessionSummary }) {
+function Summary({ summary, health }: { summary: SessionSummary; health: HealthCounts | null }) {
   const { floor } = summary;
   return (
     <section className={cn(PANEL, "flex flex-col gap-1 text-lg tabular-nums")}>
@@ -919,6 +974,7 @@ function Summary({ summary }: { summary: SessionSummary }) {
         Depth valid{" "}
         {summary.depthValidShare === null ? "never" : `${Math.round(summary.depthValidShare * 100)}% of points`}
         {summary.depthUnsteadyShare ? `, ${Math.round(summary.depthUnsteadyShare * 100)}% left out as unsteady` : ""}
+        {summary.depthFrozenS ? `, frozen for ${summary.depthFrozenS.toFixed(1)} s` : ""}
       </p>
       <p>
         Floor {floor.source.replace("_", " ")}
@@ -927,6 +983,7 @@ function Summary({ summary }: { summary: SessionSummary }) {
         {floor.moves ? `, moved to a new height ${floor.moves} ${floor.moves === 1 ? "time" : "times"}` : ""}
       </p>
       <p>Phone {metres(floor.phoneAboveFloorM)} above the floor on average</p>
+      {health && <p>During the walk: {healthText(health)}</p>}
     </section>
   );
 }
