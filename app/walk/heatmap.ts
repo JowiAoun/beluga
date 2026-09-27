@@ -7,10 +7,21 @@ import type { SensingUpdate } from "@/lib/xr/types";
 
 export const HEATMAP_FAR_M = 4;
 
-// Near to far. The legend on the walking screen draws the same stops.
-export const HEATMAP_STOPS = ["#ff4d4d", "#ff9f1c", "#ffe066", "#29b8ff", "#1c3c6b"] as const;
+// Near to far. The legend on the walking screen draws the same stops. The colour changes about as
+// much for each metre, so depth noise flickers no more at 2 to 3 m than anywhere else.
+export const HEATMAP_STOPS = ["#ff4d4d", "#ff9f1c", "#ffe066", "#9be38f", "#3cc8e0", "#1c3c6b"] as const;
 
 const SHADES = 64;
+
+// The screen picture is this many times the size of the depth grid, and blurred by this share of a
+// cell, so the dots run together into one smooth field.
+const SCALE = 8;
+const BLUR_CELLS = 0.6;
+// Each update fades the last picture by half and lays the new one over it at 60%, so noise from
+// one update to the next doesn't flicker and an empty spot fades out in about 0.3 s. The page's
+// see-through level allows for the picture never quite reaching full cover.
+const FADE = 0.5;
+const NEW = 0.6;
 
 function channels(hex: string): [number, number, number] {
   return [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)) as [number, number, number];
@@ -29,18 +40,15 @@ const LUT: string[] = Array.from({ length: SHADES }, (_, i) => {
 });
 
 // Draws one solid dot per depth point on a canvas the size of the depth grid, turned to match the
-// screen, so every point has its own pixel and none are left empty. The page stretches it over the
-// screen with smoothing and makes it see-through: a soft heatmap with no seams, cheap to draw.
-export function drawHeatmap(canvas: HTMLCanvasElement, update: SensingUpdate): void {
+// screen, so every point has its own pixel.
+export function drawDots(canvas: HTMLCanvasElement, update: SensingUpdate, portrait: boolean): void {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
-  const w = canvas.clientWidth;
-  const h = canvas.clientHeight;
   const { cols, rows } = SENSING.depthGrid;
   const long = Math.max(cols, rows);
   const short = Math.min(cols, rows);
-  const gw = h > w ? short : long;
-  const gh = h > w ? long : short;
+  const gw = portrait ? short : long;
+  const gh = portrait ? long : short;
   if (canvas.width !== gw || canvas.height !== gh) {
     canvas.width = gw;
     canvas.height = gh;
@@ -72,4 +80,34 @@ export function drawHeatmap(canvas: HTMLCanvasElement, update: SensingUpdate): v
     ctx.fillStyle = LUT[shade];
     ctx.fillRect(Math.floor(gx), Math.floor(gy), 1, 1);
   }
+}
+
+// The grid-sized canvas the dots go on before they are softened onto the screen.
+let dotsCanvas: HTMLCanvasElement | null = null;
+
+// Draws the heatmap on the screen canvas: the dots scaled up and blurred into a smooth field, over
+// a faded copy of the last picture. The page stretches the result over the screen.
+export function drawHeatmap(canvas: HTMLCanvasElement, update: SensingUpdate, dots?: HTMLCanvasElement): void {
+  const source = dots ?? (dotsCanvas ??= document.createElement("canvas"));
+  drawDots(source, update, canvas.clientHeight > canvas.clientWidth);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  const w = source.width * SCALE;
+  const h = source.height * SCALE;
+  if (canvas.width !== w || canvas.height !== h) {
+    canvas.width = w;
+    canvas.height = h;
+  }
+  ctx.globalCompositeOperation = "destination-out";
+  ctx.globalAlpha = FADE;
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, w, h);
+  ctx.globalCompositeOperation = "source-over";
+  ctx.globalAlpha = NEW;
+  ctx.filter = `blur(${SCALE * BLUR_CELLS}px)`;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(source, 0, 0, w, h);
+  ctx.filter = "none";
+  ctx.globalAlpha = 1;
 }

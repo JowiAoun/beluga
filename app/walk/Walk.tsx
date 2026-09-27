@@ -756,7 +756,7 @@ export default function Walk() {
         className={inAr && mode === "camera" ? "fixed inset-0 h-full w-full object-cover" : "hidden"}
       />
       {inAr && settings?.heatmap && (
-        <canvas ref={heatmapRef} aria-hidden className="pointer-events-none fixed inset-0 z-[5] size-full opacity-60" />
+        <canvas ref={heatmapRef} aria-hidden className="pointer-events-none fixed inset-0 z-[5] size-full opacity-80" />
       )}
       {inAr ? (
         <main className="relative z-10 flex min-h-dvh flex-col justify-between gap-3 px-3 pt-safe pb-safe">
