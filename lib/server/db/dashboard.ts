@@ -85,11 +85,13 @@ export async function queue(sql: postgres.Sql, filters: Filters): Promise<QueueR
 }
 
 // "Check now": severity 4 in the last 14 days, by cell and day only, with no reporter minimum.
-// One row per spot, with the latest day it was reported.
+// One row per spot, with the latest day it was reported. The aggregate's days are UTC, so the day
+// shown comes from the latest report in Ottawa time: a report at 11 pm is still that evening.
 export async function urgent(sql: postgres.Sql, filters: Filters): Promise<UrgentResponse> {
-  const rows = await sql<Array<{ cell: string; category: CivicCategory; day: Date; source: Source; name: string | null }>>`
-    select * from (
-      select distinct on (d.cell, d.category, d.source) d.cell, d.category, d.day, d.source, n.name
+  const rows = await sql<Array<{ cell: string; category: CivicCategory; day: string; source: Source; name: string | null }>>`
+    select cell, category, day, source, name from (
+      select distinct on (d.cell, d.category, d.source) d.cell, d.category, d.source, n.name, d.last_report,
+             to_char(d.last_report at time zone 'America/Toronto', 'YYYY-MM-DD') as day
       from cell_daily d
       left join lateral (
         select s.name from stations s
@@ -101,9 +103,9 @@ export async function urgent(sql: postgres.Sql, filters: Filters): Promise<Urgen
         and d.day >= now() - interval '14 days'
         and d.source = any(${sourcesFor(filters.source)})
         and (${filters.category}::text is null or d.category = ${filters.category})
-      order by d.cell, d.category, d.source, d.day desc
+      order by d.cell, d.category, d.source, d.last_report desc
     ) latest
-    order by day desc, cell
+    order by last_report desc, cell
     limit ${DASHBOARD.queueLimit}`;
   return {
     includesSimulated: rows.some((r) => r.source === "simulated"),
@@ -112,7 +114,7 @@ export async function urgent(sql: postgres.Sql, filters: Filters): Promise<Urgen
       placeLabel: placeLabel(r.name, r.cell),
       category: r.category,
       whoFixesIt: ownerFor(r.category, { nearStation: r.name !== null, indoor: false }),
-      day: r.day.toISOString().slice(0, 10),
+      day: r.day,
       source: r.source,
     })),
   };
