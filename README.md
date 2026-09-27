@@ -129,6 +129,8 @@ beluga runs at two speeds:
 
 ## ElevenLabs
 
+<picture><source media="(prefers-color-scheme: dark)" srcset="images/logos/elevenlabs-dark.png"><img src="images/logos/elevenlabs.png" alt="ElevenLabs" height="26"></picture>
+
 - **Three agents do the seeing and the looking up**: triage, Ask and Ask the data, each with a Gemini model from the ElevenLabs model list and one client tool that carries its answer back. `npm run agents` sets them up from the repo ([`lib/server/agents/config.ts`](lib/server/agents/config.ts), [`scripts/agents`](scripts/agents)). Each backend route runs one text-only turn over the agent's WebSocket, uploads the frame into the conversation, and deletes the conversation once the answer is in ([`lib/server/agents/turn.ts`](lib/server/agents/turn.ts)).
 - **Five voices on Eleven v3**: every warning word, status line, setup step and Ask answer is spoken by Eleven v3 in the voice you pick, recorded lossless at 48 kHz ([`lib/audio/voices.ts`](lib/audio/voices.ts)). Every clip in all five voices was checked with Scribe, and the bad takes were recorded again.
 - **Ask, spoken back from the object's side**: the answer comes back as a 48 kHz WAV and plays from where the object is. A full Ask takes about 5 to 6 s: about 2.5 s for the agent to see and answer, and about 2 s for the voice.
@@ -159,6 +161,8 @@ beluga runs at two speeds:
 
 ## Gemini
 
+<picture><source media="(prefers-color-scheme: dark)" srcset="images/logos/google-cloud-dark.png"><img src="images/logos/google-cloud.png" alt="Google Cloud" height="32"></picture>
+
 Gemini (`gemini-3.5-flash-lite`) is the model inside all three agents.
 
 - **Triage answers questions, and code decides**: the agent picks one of 8 categories and answers yes or no questions about the photo. Severity and whether to report come from fixed rules tied to Ontario and Ottawa accessibility standards ([`lib/shared/reporting.ts`](lib/shared/reporting.ts)), so the same answers always give the same result.
@@ -168,6 +172,8 @@ Gemini (`gemini-3.5-flash-lite`) is the model inside all three agents.
 - **Never "safe to cross"**: every answer passes a filter that swaps crossing advice for "I can't judge traffic" ([`lib/server/safety.ts`](lib/server/safety.ts)).
 
 ## Tiger Data
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="images/logos/tiger-data-dark.png"><img src="images/logos/tiger-data.png" alt="Tiger Data" height="38"></picture>
 
 Every event lands in one hypertable. The map, the fix-first queue, Check now and the station trends read continuous aggregates in real-time mode, so a report shows up the moment it arrives. The live feed reads the newest rows straight from the hypertable. The setup is in [`db/migrations`](db/migrations), applied by `npm run db:migrate`.
 
@@ -186,6 +192,8 @@ Every event lands in one hypertable. The map, the fix-first queue, Check now and
 - **Performance panel**: the same question, "events and near-misses per cell over the last 7 days", timed by the database on the raw hypertable and on `cell_15m`, next to the compression ratio. On Tiger Cloud's free service with the simulated seed: 429,093 rows loaded in 53 s, about 390 ms raw against 17 to 92 ms from the aggregate, and compressed chunks 10.4 times smaller.
 
 ## Domain
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="images/logos/godaddy-registry-dark.png"><img src="images/logos/godaddy-registry.png" alt="GoDaddy Registry" height="29"></picture>
 
 beluga lives at [beluga.surf](https://beluga.surf), a GoDaddy Registry domain: the landing page, the app at `/walk` and the city dashboard at `/map`. A beluga on a wave needed a `.surf`. 🏄
 
