@@ -127,9 +127,7 @@ beluga runs at two speeds:
 - **Depth decides**: with depth, a warning comes from depth alone. The detector and the agents only pick which sound and word it uses.
 - **Calibration first**: detection, warnings and Ask wait until three slow steps have found the floor. Camera-only mode starts paused until you tap **Start estimated warnings**, and it has no drop-off or head-height warnings.
 
-## ElevenLabs
-
-<picture><source media="(prefers-color-scheme: dark)" srcset="images/logos/elevenlabs-dark.png"><img src="images/logos/elevenlabs.png" alt="ElevenLabs" height="26"></picture>
+<h2 id="elevenlabs"><picture><source media="(prefers-color-scheme: dark)" srcset="images/logos/elevenlabs-dark.png"><img src="images/logos/elevenlabs.png" alt="ElevenLabs" height="26"></picture></h2>
 
 - **Three agents do the seeing and the looking up**: triage, Ask and Ask the data, each with a Gemini model from the ElevenLabs model list and one client tool that carries its answer back. `npm run agents` sets them up from the repo ([`lib/server/agents/config.ts`](lib/server/agents/config.ts), [`scripts/agents`](scripts/agents)). Each backend route runs one text-only turn over the agent's WebSocket, uploads the frame into the conversation, and deletes the conversation once the answer is in ([`lib/server/agents/turn.ts`](lib/server/agents/turn.ts)).
 - **Five voices on Eleven v3**: every warning word, status line, setup step and Ask answer is spoken by Eleven v3 in the voice you pick, recorded lossless at 48 kHz ([`lib/audio/voices.ts`](lib/audio/voices.ts)). Every clip in all five voices was checked with Scribe, and the bad takes were recorded again.
@@ -159,9 +157,7 @@ beluga runs at two speeds:
 
 - **Shaped for bone conduction**: ffmpeg cuts everything below 250 Hz, trims and fades each sound, and levels it by peak. Every sound stays lossless at 48 kHz: warnings as WAV and voice clips as FLAC. Voice clips say the hazard and its side, like "pole, left".
 
-## Gemini
-
-<picture><source media="(prefers-color-scheme: dark)" srcset="images/logos/google-cloud-dark.png"><img src="images/logos/google-cloud.png" alt="Google Cloud" height="32"></picture>
+<h2 id="gemini"><picture><source media="(prefers-color-scheme: dark)" srcset="images/logos/google-cloud-dark.png"><img src="images/logos/google-cloud.png" alt="Google Cloud" height="32"></picture></h2>
 
 Gemini (`gemini-3.5-flash-lite`) is the model inside all three agents.
 
@@ -171,9 +167,7 @@ Gemini (`gemini-3.5-flash-lite`) is the model inside all three agents.
 - **Answers from the data**: Ask the data calls five lookup tools that the backend answers from the dashboard's own queries, over a read-only connection. It never writes SQL, and the answer lists the lookups it used ([`lib/server/agents/data.ts`](lib/server/agents/data.ts)).
 - **Never "safe to cross"**: every answer passes a filter that swaps crossing advice for "I can't judge traffic" ([`lib/server/safety.ts`](lib/server/safety.ts)).
 
-## Tiger Data
-
-<picture><source media="(prefers-color-scheme: dark)" srcset="images/logos/tiger-data-dark.png"><img src="images/logos/tiger-data.png" alt="Tiger Data" height="38"></picture>
+<h2 id="tiger-data"><picture><source media="(prefers-color-scheme: dark)" srcset="images/logos/tiger-data-dark.png"><img src="images/logos/tiger-data.png" alt="Tiger Data" height="38"></picture></h2>
 
 Every event lands in one hypertable. The map, the fix-first queue, Check now and the station trends read continuous aggregates in real-time mode, so a report shows up the moment it arrives. The live feed reads the newest rows straight from the hypertable. The setup is in [`db/migrations`](db/migrations), applied by `npm run db:migrate`.
 
@@ -191,9 +185,7 @@ Every event lands in one hypertable. The map, the fix-first queue, Check now and
 - **The fix-first score**, in [`fix_first_for(sources)`](db/migrations/010_fix_first.sql): severity weight (1, 2, 4, 8) × log₂(1 + reporters) × (1 + log₁₀(1 + near-misses)) × recency (1.5 within 48 hours, then 0.5^(days ÷ 7)) × 1.3 near a station. A spot needs 3 different reporters to join the queue. Severity 4 goes to Check now instead.
 - **Performance panel**: the same question, "events and near-misses per cell over the last 7 days", timed by the database on the raw hypertable and on `cell_15m`, next to the compression ratio. On Tiger Cloud's free service with the simulated seed: 429,093 rows loaded in 53 s, about 390 ms raw against 17 to 92 ms from the aggregate, and compressed chunks 10.4 times smaller.
 
-## Domain
-
-<picture><source media="(prefers-color-scheme: dark)" srcset="images/logos/godaddy-registry-dark.png"><img src="images/logos/godaddy-registry.png" alt="GoDaddy Registry" height="29"></picture>
+<h2 id="domain"><picture><source media="(prefers-color-scheme: dark)" srcset="images/logos/godaddy-registry-dark.png"><img src="images/logos/godaddy-registry.png" alt="GoDaddy Registry" height="29"></picture></h2>
 
 beluga lives at [beluga.surf](https://beluga.surf), a GoDaddy Registry domain: the landing page, the app at `/walk` and the city dashboard at `/map`. A beluga on a wave needed a `.surf`. 🏄
 
